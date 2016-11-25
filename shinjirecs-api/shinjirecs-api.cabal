@@ -2,7 +2,7 @@ name:                shinjirecs-api
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/https://github.com/shinjiro-itagaki/shinjirecs/shinjirecs-api#readme
+homepage:            https://github.com/https://github.com/shinjiro-itagaki/shinjirecs/shinjirecs-api
 license:             BSD3
 license-file:        LICENSE
 author:              Shinjiro Itagaki
@@ -16,7 +16,15 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Lib
+                     , App
+                     , Config
   build-depends:       base >= 4.7 && < 5
+                     , scotty
+                     , http-types
+                     , scientific
+                     , text
+                     , unordered-containers
+                     , yaml
   default-language:    Haskell2010
 
 executable shinjirecs-api-exe

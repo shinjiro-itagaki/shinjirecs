@@ -1,6 +1,11 @@
+
 module Main where
 
-import Lib
+-- import Lib
+import App
 
 main :: IO ()
-main = someFunc
+-- main = someFunc
+main = do
+  -- scotty 3000 $ do
+  App.app 3000
