@@ -24,6 +24,9 @@ library
                      , http-types
                      , persistent
                      , persistent-template
+                     , persistent-mysql
+                     , persistent-postgresql
+                     , persistent-sqlite
                      , scientific
                      , text
                      , time

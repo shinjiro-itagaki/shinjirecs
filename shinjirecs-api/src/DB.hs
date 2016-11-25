@@ -19,7 +19,13 @@ import Database.Persist.Quasi (lowerCaseSettings, PersistSettings) -- persistent
 import Database.Persist.Sql (ConnectionPool, runSqlPool, SqlPersistT) -- persistent
 import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith) -- persistent-template
 
+import Database.Persist.MySQL (createMySQLPool) -- persistent-mysql
+import Database.Persist.Sqlite (createSqlitePool) -- persistent-sqlite
+import Database.Persist.Postgresql (createPostgresqlPool) -- persistent-postgresql
+
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
+
+-- findAdapter :: AdapterType -> Maybe
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
   $(persistFileWith lowerCaseSettings "config/models")
