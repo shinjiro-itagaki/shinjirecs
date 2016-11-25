@@ -10,7 +10,7 @@ import Data.Text (Text, pack, unpack)
 import Data.HashMap.Strict as M
 
 data Env = Production | Development | Test deriving Show
-data DatabaseAdapter = MySQL | PostgreSQL | SQLite3 | UndefinedDB deriving Show
+data DatabaseAdapter = MySQL | PostgreSQL | SQLite3 | UnknownDB deriving Show
 data Database = Database {
   adapter  :: DatabaseAdapter,
   database :: FilePath,
@@ -32,7 +32,7 @@ stringToDatabaseAdapter str =
     "mysql"      -> MySQL
     "postgresql" -> PostgreSQL
     "sqlite3"    -> SQLite3
-    _            -> UndefinedDB
+    _            -> UnknownDB
 
 
 load :: FilePath -> Env -> IO Config
@@ -78,10 +78,10 @@ load path env = do
         Just (Y.String t) ->
           let adapter = stringToDatabaseAdapter $ Data.Text.unpack t
           in case adapter of
-            UndefinedDB  -> valueInvalid' k' t
-            _            -> return adapter
-        Just _           -> typeInvalid' k'
-        Nothing          -> notFound' k'
+            UnknownDB -> valueInvalid' k' t
+            _         -> return adapter
+        Just _        -> typeInvalid' k'
+        Nothing       -> notFound' k'
 
     readDBPath' :: Y.Object -> IO (FilePath)
     readDBPath' config = do
