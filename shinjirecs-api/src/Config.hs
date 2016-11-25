@@ -11,9 +11,10 @@ import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, Str
 import Data.Scientific (Scientific(..), coefficient)
 import Data.Text (Text, pack, unpack)
 import Data.HashMap.Strict as M
+import DB (AdapterType(..))
 
 data Env = Production | Development | Test deriving Show
-data DatabaseAdapter = MySQL | PostgreSQL | SQLite3 | UnknownDB deriving Show
+type DatabaseAdapter = DB.AdapterType
 data Database = Database {
   adapter  :: DatabaseAdapter,
   database :: FilePath,
@@ -39,7 +40,7 @@ stringToDatabaseAdapter str =
     "mysql"      -> MySQL
     "postgresql" -> PostgreSQL
     "sqlite3"    -> SQLite3
-    _            -> UnknownDB
+    _            -> Unsupported
 
 
 load :: ConfigFilePaths -> Env -> IO Config
@@ -85,7 +86,7 @@ load paths env = do
         Just (Y.String t) ->
           let adapter = stringToDatabaseAdapter $ Data.Text.unpack t
           in case adapter of
-            UnknownDB -> valueInvalid' k' t
+            Unsupported -> valueInvalid' k' t
             _         -> return adapter
         Just _        -> typeInvalid' k'
         Nothing       -> notFound' k'
