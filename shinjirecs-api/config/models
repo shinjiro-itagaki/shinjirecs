@@ -1,0 +1,5 @@
+Reservation json
+  start_time UTCTime
+  duration Int default=0
+  title String
+  description Text

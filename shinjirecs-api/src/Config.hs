@@ -3,6 +3,9 @@
 module Config
     ( load
     , Config
+    , ConfigFilePaths(ConfigFilePaths)
+    , dbpath
+    , Env(..)
     ) where
 import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, String, Number))
 import Data.Scientific (Scientific(..), coefficient)
@@ -23,6 +26,10 @@ data Config = Config {
   db  :: Database
   } deriving Show -- (Data, Typeable)
 
+data ConfigFilePaths = ConfigFilePaths {
+  dbpath :: FilePath
+  } deriving Show
+
 envToText :: Env -> Data.Text.Text
 envToText = Data.Text.pack . show
 
@@ -35,9 +42,9 @@ stringToDatabaseAdapter str =
     _            -> UnknownDB
 
 
-load :: FilePath -> Env -> IO Config
-load path env = do
-  configs <- toConfigs' =<< toAllConfigs' =<< loadFile'
+load :: ConfigFilePaths -> Env -> IO Config
+load paths env = do
+  configs <- toConfigs' =<< toAllConfigs' =<< loadDbFile'
   adapter  <- readAdapter' configs
   database <- readDBPath'  configs
   pool     <- readInteger' "pool"    configs 5
@@ -53,8 +60,8 @@ load path env = do
   }
 
   where
-    loadFile' :: IO (Maybe Y.Value)
-    loadFile' = Y.decodeFile path
+    loadDbFile' :: IO (Maybe Y.Value)
+    loadDbFile' = Y.decodeFile $ dbpath paths
     
     toAllConfigs' :: Maybe Y.Value -> IO (Y.Value)
     toAllConfigs' = maybe (fail "Invalid YAML file" :: IO (Y.Value)) return
