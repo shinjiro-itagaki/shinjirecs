@@ -31,7 +31,7 @@ stringToDatabaseAdapter str =
   case str of
     "mysql"      -> MySQL
     "postgresql" -> PostgreSQL
-    "sqlite"     -> SQLite3
+    "sqlite3"    -> SQLite3
     _            -> UndefinedDB
 
 
