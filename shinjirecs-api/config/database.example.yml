@@ -2,20 +2,48 @@
 #   - mysql
 #   - postgresql
 #   - sqlite3
+
+# default-sqlite3:
+#   database: db/development.sqlite3
+#   pool: 5
+#   timeout: 5000
+
+# default-mysql:
+#   username: shinjiro-itagaki
+#   password: password001
+#   host: localhost
+#   port: 5432  
+#   pool: 5
+#   timeout: 5000
+
+# default-mysql-local:
+#   username: shinjiro-itagaki
+#   password: password001
+#   socket: /tmp/mysql.sock
+#   pool: 5
+#   timeout: 5000
+
+default:
+  password: password001
+  encoding: utf8  
+  pool: 5
+  timeout: 5000
+
 development:
-  adapter: sqlite3
-  database: db/development.sqlite3
-  pool: 5
-  timeout: 5000
-
+  <<: default
+  adapter: mysql
+  database: shinjirecs_development
+  socket: /tmp/mysql.sock
+  
 test:
-  adapter: sqlite3
-  database: db/test.sqlite3
-  pool: 5
-  timeout: 5000
-
+  <<: development
+  database: shinjirecs_test
+  
 production:
-  adapter: sqlite3
-  database: db/production.sqlite3
-  pool: 5
-  timeout: 5000
+  <<: default
+  adapter: mysql  
+  database: shinjirecs
+  username: shinjiro-itagaki
+  password: password001
+  host: localhost
+  port: 5432
