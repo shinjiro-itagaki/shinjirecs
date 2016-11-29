@@ -30,6 +30,7 @@ import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl) 
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.Reader (ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
+import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
 
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
 data Config = Config {
@@ -74,6 +75,13 @@ run pool = runSqlPersistMPool' pool
   where
     runSqlPersistMPool' pool' action' = runSqlPersistMPool action' pool'
 
+
+getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backend, MonadBaseControl IO m1, MonadBaseControl IO m) =>
+  ((backend -> m1 a1) -> ResourceT (NoLoggingT m) a)
+  -> ReaderT backend m1 a1
+  -> m a
+getSQLActionRunner' func = runNoLoggingT . runResourceT . func . runSqlConn
+
 connect :: Config -> IO (SqlPersistT (ResourceT (NoLoggingT IO)) a -> IO a)
 connect config = 
   case adapter' of
@@ -85,5 +93,4 @@ connect config =
     path'    = database config :: Text
     pool'    = pool     config :: Int
     adapter' = adapter  config :: AdapterType
-    getSQLActionRunner' func = runNoLoggingT . runResourceT . func . runSqlConn
     
