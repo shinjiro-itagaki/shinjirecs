@@ -20,16 +20,23 @@ library
                      , Config
                      , DB
   build-depends:       base >= 4.7 && < 5
+                     , bytestring
                      , scotty
                      , http-types
+                     , mtl
+                     , mysql-simple
+                     , monad-logger
                      , persistent
                      , persistent-template
                      , persistent-mysql
                      , persistent-postgresql
                      , persistent-sqlite
+                     , postgresql-simple
+                     , resourcet
                      , scientific
                      , text
                      , time
+                     , transformers
                      , unordered-containers
                      , yaml
   default-language:    Haskell2010

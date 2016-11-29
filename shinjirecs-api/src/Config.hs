@@ -1,30 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Config
-    ( load
-    , Config
-    , ConfigFilePaths(ConfigFilePaths)
-    , dbpath
-    , Env(..)
-    ) where
+where
 import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, String, Number))
 import Data.Scientific (Scientific(..), coefficient)
 import Data.Text (Text, pack, unpack)
 import Data.HashMap.Strict as M
-import DB (AdapterType(..))
+import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
 
 data Env = Production | Development | Test deriving Show
-type DatabaseAdapter = DB.AdapterType
-data Database = Database {
-  adapter  :: DatabaseAdapter,
-  database :: FilePath,
-  pool     :: Integer,
-  timeout  :: Integer
-  } deriving Show
 
 data Config = Config {
   env :: Env,
-  db  :: Database
+  db  :: DB.Config
   } deriving Show -- (Data, Typeable)
 
 data ConfigFilePaths = ConfigFilePaths {
@@ -34,29 +22,20 @@ data ConfigFilePaths = ConfigFilePaths {
 envToText :: Env -> Data.Text.Text
 envToText = Data.Text.pack . show
 
-stringToDatabaseAdapter :: String -> DatabaseAdapter
-stringToDatabaseAdapter str =
-  case str of
-    "mysql"      -> MySQL
-    "postgresql" -> PostgreSQL
-    "sqlite3"    -> SQLite3
-    _            -> Unsupported
-
-
 load :: ConfigFilePaths -> Env -> IO Config
 load paths env = do
   configs <- toConfigs' =<< toAllConfigs' =<< loadDbFile'
   adapter  <- readAdapter' configs
   database <- readDBPath'  configs
-  pool     <- readInteger' "pool"    configs 5
-  timeout  <- readInteger' "timeout" configs 3000
+  pool     <- readInt' "pool"    configs 5
+  timeout  <- readInt' "timeout" configs 3000
   return Config {
     env = env, 
-    db = Database {
-      adapter  = adapter,
-      database = database,
-      pool     = pool,
-      timeout  = timeout
+    db = DB.Config {
+      DB.adapter  = adapter,
+      DB.database = database,
+      DB.pool     = pool,
+      DB.timeout  = timeout
     }
   }
 
@@ -79,25 +58,24 @@ load paths env = do
     notFound' :: Text -> IO (a)
     notFound' k = fail $ "Not found: " ++ show k
 
-    readAdapter' :: Y.Object -> IO (DatabaseAdapter)
+    readAdapter' :: Y.Object -> IO (DB.AdapterType)
     readAdapter' config =
       let k' = Data.Text.pack "adapter"
       in case M.lookup k' config of
         Just (Y.String t) ->
-          let adapter = stringToDatabaseAdapter $ Data.Text.unpack t
+          let adapter = DB.stringToAdapterType $ Data.Text.unpack t
           in case adapter of
-            Unsupported -> valueInvalid' k' t
+            DB.Unsupported -> valueInvalid' k' t
             _         -> return adapter
         Just _        -> typeInvalid' k'
         Nothing       -> notFound' k'
 
-    readDBPath' :: Y.Object -> IO (FilePath)
+    readDBPath' :: Y.Object -> IO (Text)
     readDBPath' config = do
-      path <- lookupText' (Data.Text.pack "database") config
-      return $ Data.Text.unpack path
+      return =<< lookupText' (Data.Text.pack "database") config
 
-    readInteger' :: String -> Y.Object -> Integer -> IO (Integer)
-    readInteger' key config ifnotfound = do
+    readInt' :: String -> Y.Object -> Integer -> IO (Int)
+    readInt' key config ifnotfound = do
       v <- lookupInteger' (Data.Text.pack key) config ifnotfound
       return $ fromIntegral v
 
