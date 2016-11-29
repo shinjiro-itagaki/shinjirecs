@@ -28,4 +28,3 @@ app port = do
   } Config.Development
   db <- (DB.connect (Config.db config))
   appImpl port db
-  return ()

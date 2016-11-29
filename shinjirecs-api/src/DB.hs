@@ -18,23 +18,18 @@ import Data.Word -- base
 import Database.Persist -- persistent
 import Database.Persist.Types -- persistent
 import Database.Persist.Quasi (lowerCaseSettings, PersistSettings) -- persistent
-import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, runSqlPersistMPool, IsSqlBackend) -- persistent
+import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool) -- persistent
 import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith) -- persistent-template
 
-import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
-import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
-import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
+import Database.Persist.MySQL (withMySQLConn) -- persistent-mysql
+import Database.Persist.Sqlite (withSqliteConn) -- persistent-sqlite
+import Database.Persist.Postgresql (withPostgresqlConn) -- persistent-postgresql
 import qualified Database.PostgreSQL.Simple as PgSQL -- postgresql-simple
 import qualified Database.MySQL.Simple      as MySQL -- mysql-simple
-
-
 import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl) -- resourcet
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.Reader (ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-
-type MySQLConnectInfo = MySQL.ConnectInfo
-type PgSQLConnectInfo = PgSQL.ConnectInfo
 
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
 data Config = Config {
@@ -48,10 +43,10 @@ data Config = Config {
   timeout  :: Int
   } deriving Show
 
-configToMySQLConnectInfo :: Config -> MySQLConnectInfo
+configToMySQLConnectInfo :: Config -> MySQL.ConnectInfo
 configToMySQLConnectInfo config = MySQL.defaultConnectInfo
 
-configToPgSQLConnectInfo :: Config -> PgSQLConnectInfo
+configToPgSQLConnectInfo :: Config -> PgSQL.ConnectInfo
 configToPgSQLConnectInfo config =  PgSQL.ConnectInfo
                                   { PgSQL.connectHost     = "host"
                                   , PgSQL.connectPort     = 5432
