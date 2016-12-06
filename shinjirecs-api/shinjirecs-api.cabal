@@ -21,6 +21,7 @@ library
                      , DB
   build-depends:       base >= 4.7 && < 5
                      , bytestring
+                     , extra
                      , scotty
                      , http-types
                      , mtl

@@ -10,7 +10,7 @@
 module DB where
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Control.Monad.Logger (MonadLogger)
-import Data.Text (Text) -- text
+import Data.Text (Text,pack) -- text
 import qualified Data.Text as Text --text
 import Data.Time -- time
 import Data.ByteString -- bytestring
@@ -34,28 +34,39 @@ import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
 
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
 data Config = Config {
-  -- host :: Host,
-  -- port :: Int,
-  -- user :: Text,
-  -- password :: Text
+  host     :: Maybe String,
+  socket   :: Maybe String,
+  port     :: Maybe Integer,
+  user     :: Maybe String,
+  password :: Maybe String,
   adapter  :: AdapterType,
-  database :: Text, --FilePath,
+  database :: String, --FilePath,
   pool     :: Int,
   timeout  :: Int
   } deriving Show
 
+(.||.) :: Maybe a -> a -> a
+(Just x) .||. y = x
+Nothing  .||. y = y
+
 configToMySQLConnectInfo :: Config -> MySQL.ConnectInfo
 configToMySQLConnectInfo config = MySQL.defaultConnectInfo
+                                  { MySQL.connectHost     = (host config) .||. "localhost"
+                                  , MySQL.connectPort     = fromInteger $ (port config) .||. 5432
+                                  , MySQL.connectUser     = (user config) .||. "root" 
+                                  , MySQL.connectPassword = (password config) .||. ""
+                                  , MySQL.connectDatabase = database config
+                                  , MySQL.connectPath     = (socket config) .||. ""
+                                  }
 
 configToPgSQLConnectInfo :: Config -> PgSQL.ConnectInfo
 configToPgSQLConnectInfo config =  PgSQL.ConnectInfo
-                                  { PgSQL.connectHost     = "host"
-                                  , PgSQL.connectPort     = 5432
-                                  , PgSQL.connectUser     = "user"
-                                  , PgSQL.connectPassword = "password"
-                                  , PgSQL.connectDatabase = Text.unpack $ database config
+                                  { PgSQL.connectHost     = (host config) .||. "localhost"
+                                  , PgSQL.connectPort     = fromInteger $ (port config) .||. 5432
+                                  , PgSQL.connectUser     = (user config) .||. "root" 
+                                  , PgSQL.connectPassword = (password config) .||. ""
+                                  , PgSQL.connectDatabase = database config
                                   }
-
 
 configToPgSQLConnectionString :: Config -> ByteString
 configToPgSQLConnectionString = PgSQL.postgreSQLConnectionString . configToPgSQLConnectInfo 
@@ -90,7 +101,7 @@ connect config =
     SQLite3    -> return $ getSQLActionRunner' (withSqliteConn     path')
     _          -> fail $ "invalid db adapter: " ++ (show 'adapter)
   where
-    path'    = database config :: Text
+    path'    = Data.Text.pack $ database config :: Text
     pool'    = pool     config :: Int
     adapter' = adapter  config :: AdapterType
     

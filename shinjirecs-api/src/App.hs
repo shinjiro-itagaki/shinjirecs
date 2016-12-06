@@ -23,8 +23,11 @@ appImpl port db = do
 
 app :: Int -> IO ()
 app port = do
-  config <- Config.load Config.ConfigFilePaths {
+  maybe_config <- Config.load Config.ConfigFilePaths {
     Config.dbpath = "config/database.yml"
   } Config.Development
-  db <- (DB.connect (Config.db config))
-  appImpl port db
+  case maybe_config of
+    Just config -> do
+      db <- (DB.connect (Config.db config))
+      appImpl port db
+    _           -> fail "read config error"
