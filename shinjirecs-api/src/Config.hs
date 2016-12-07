@@ -21,85 +21,42 @@ data ConfigFilePaths = ConfigFilePaths {
   dbpath :: FilePath
   } deriving Show
 
-envToText :: Env -> Data.Text.Text
-envToText = Data.Text.pack . lower . show
+data PreDBConfig = PreDBConfig {
+  include  :: Maybe String,
+  host     :: Maybe String,
+  socket   :: Maybe String,
+  port     :: Maybe Integer,
+  user     :: Maybe String,
+  password :: Maybe String,
+  adapter  :: Maybe DB.AdapterType,
+  database :: Maybe String,
+  pool     :: Maybe Int,
+  timeout  :: Maybe Int
+  }
 
-ifnotfound :: Maybe a -> a -> a
-ifnotfound (Just x) y = x
-ifnotfound _        y = y
-
-
-load :: ConfigFilePaths -> Env -> IO (Maybe Config)
-load paths env = do
-  maybe_configs <- config'
-  case maybe_configs of
-    Just configs -> return $ Just Config { env = env, db = configsToDBConfig' configs }
-    _            -> return Nothing
+objectToPreDBConfig :: Y.Object -> PreDBConfig
+objectToPreDBConfig configs =
+  PreDBConfig
+  {
+    include  = readInclude'              configs,
+    adapter  = readAdapter'   "adapter"  configs,
+    database = lookupString'  "database" configs,
+    pool     = lookupInt'     "pool"     configs,
+    timeout  = lookupInt'     "timeout"  configs,
+    host     = lookupString'  "host"     configs,
+    port     = lookupInteger' "port"     configs,
+    user     = lookupString'  "user"     configs,
+    password = lookupString'  "password" configs,
+    socket   = lookupString'  "socket"   configs    
+  }
   where
-    config' :: IO (Maybe Y.Object)
-    config' = do
-      maybe_allconfigs <- loadDbFile'
-      case maybe_allconfigs of
-        Just allconfigs -> return $ getObject (Data.Text.pack envstr') allconfigs
-        _               -> return Nothing
-      
-    envstr' = lower $ show env
-    configsToDBConfig' :: Y.Object -> DB.Config
-    configsToDBConfig' configs =
-      DB.Config
-      {
-        DB.adapter  = (readAdapter'   "adapter"  configs) `ifnotfound` DB.SQLite3,
-        DB.database = (lookupString'  "database" configs) `ifnotfound` ("db/" ++ envstr' ++ ".sqlite3"),
-        DB.pool     = (lookupInt'     "pool"     configs) `ifnotfound` (5 :: Int),
-        DB.timeout  = (lookupInt'     "timeout"  configs) `ifnotfound` (3000 :: Int),
-        DB.host     = lookupString'  "host"     configs,
-        DB.port     = lookupInteger' "port"     configs,
-        DB.user     = lookupString'  "user"     configs,
-        DB.password = lookupString'  "password" configs,
-        DB.socket   = lookupString'  "socket"   configs
-      }
+    readInclude' :: Y.Object -> Maybe String
+    readInclude' config =
+      case M.lookup "<<" configs of
+        Just (Y.String s) -> Just $ Data.Text.unpack s
+        Nothing           -> Nothing
+        _                 -> fail "Invalid type for: <<"
     
-    loadDbFile' :: IO (Maybe Y.Value)
-    loadDbFile' = Y.decodeFile $ dbpath paths
-    
-    -- toAllConfigs' :: Maybe Y.Value -> IO (Maybe Y.Value)
-    -- toAllConfigs' = maybe (fail "Invalid YAML file" :: Maybe (Y.Value)) return
-
-    -- toConfigs' :: Maybe Y.Value -> Maybe Y.Object
-    -- toConfigs' = getObject $ Data.Text.pack $ lower $ show env
-
-    importOtherConfig' :: Y.Object -> Y.Value -> [String] -> Maybe(Y.Object)
-    importOtherConfig' config allconfig imported =
-      let i = M.lookup "<<" config
-      in case i of
-        Just (Y.String str) -> do
-          if' (exists' imported (Data.Text.unpack str))
-            (fail $ "value of << is duplicated : " ++ (Data.Text.unpack str))
-            (do
-                iconf <- getObject str allconfig
-                importOtherConfig' iconf allconfig (imported ++ [(Data.Text.unpack str)])                
-            )
-
-        Nothing  -> return config
-        _        -> fail "Invalid type for: <<"
-      where
-        exists' :: (Eq e) => [e] -> e -> Bool
-        exists' [] elem = True
-        exists' (e:ex) elem = e == elem || exists' ex elem
-        if' :: Bool -> a -> a -> a
-        if' True  x _ = x
-        if' False _ y = y
-        
-
-    typeInvalid' :: Text -> IO (a)
-    typeInvalid' k = fail $ "Invalid type for: " ++ show k
-
-    valueInvalid' :: Text -> Text -> IO (a)
-    valueInvalid' k t = fail $ (show t) ++ " is invalid value for: " ++ (show k)
-
-    notFound' :: Text -> IO (a)
-    notFound' k = fail $ "Not found: " ++ show k
-
     readAdapter' :: String -> Y.Object -> Maybe (DB.AdapterType)
     readAdapter' key config =
       let k' = Data.Text.pack key
@@ -134,6 +91,105 @@ load paths env = do
       case lookupText' k config of
         Just t -> Just (Data.Text.unpack t)
         _      -> Nothing
+    
+
+(<||>) :: Maybe a -> Maybe a -> Maybe a
+x@(Just _) <||> y = x
+Nothing    <||> y = y
+
+(<<<) :: PreDBConfig -> PreDBConfig -> PreDBConfig
+(>>>) :: PreDBConfig -> PreDBConfig -> PreDBConfig
+(<<<) l r = PreDBConfig {
+  include  = (include  l) <||> (include  r),
+  host     = (host     l) <||> (host     r),
+  socket   = (socket   l) <||> (socket   r),
+  port     = (port     l) <||> (port     r),
+  user     = (user     l) <||> (user     r),
+  password = (password l) <||> (password r),
+  adapter  = (adapter  l) <||> (adapter  r),
+  database = (database l) <||> (database r),
+  pool     = (pool     l) <||> (pool     r),
+  timeout  = (timeout  l) <||> (timeout  r)
+  }
+
+(>>>) l r = r <<< l
+
+preDBConfig2DBConfig :: Env -> PreDBConfig -> DB.Config
+preDBConfig2DBConfig env_ pre =
+  DB.Config
+  {
+    DB.adapter  = (adapter  pre) `ifnotfound` DB.SQLite3,
+    DB.database = (database pre) `ifnotfound` ("db/" ++ envstr' ++ ".sqlite3"),
+    DB.pool     = (pool     pre) `ifnotfound` (5 :: Int),
+    DB.timeout  = (timeout  pre) `ifnotfound` (3000 :: Int),
+    DB.host     = (host     pre),
+    DB.port     = (port     pre),
+    DB.user     = (user     pre),
+    DB.password = (password pre),
+    DB.socket   = (socket   pre)
+  }
+  where
+    envstr' = lower $ show env_
+  
+envToText :: Env -> Data.Text.Text
+envToText = Data.Text.pack . lower . show
+
+ifnotfound :: Maybe a -> a -> a
+ifnotfound (Just x) y = x
+ifnotfound _        y = y
+
+
+load :: ConfigFilePaths -> Env -> IO (Maybe Config)
+load paths env = do
+  maybe_allconfigs <- loadDbFile'
+  case maybe_allconfigs of
+    Just allconfigs ->
+      let maybe_config = getObject (Data.Text.pack envstr') allconfigs
+      in
+        case maybe_config of
+          Just config -> return $ Just Config { env = env, db = configsToDBConfig' allconfigs config }
+          _           -> return Nothing
+    _                 -> return Nothing
+    
+  where
+    envstr' = lower $ show env
+    configsToDBConfig' :: Y.Value -> Y.Object -> DB.Config
+    configsToDBConfig' allconfigs config = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config
+    
+    loadDbFile' :: IO (Maybe Y.Value)
+    loadDbFile' = Y.decodeFile $ dbpath paths
+    
+    importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig
+    importOtherConfig' allconfigs imported config =
+      case include config of
+        Just str ->
+          if' (exists' imported str)
+            (config)
+            (
+              let maybe_conf_obj = getObject (Data.Text.pack str) allconfigs -- :: Maybe (Y.Object)
+              in case maybe_conf_obj of
+                Just conf_obj -> config <<< importOtherConfig' allconfigs (imported ++ [str]) (objectToPreDBConfig conf_obj)
+                _             -> config
+            )
+        _  -> config
+      where
+        exists' :: (Eq e) => [e] -> e -> Bool
+        exists' [] elem = True
+        exists' (e:ex) elem = e == elem || exists' ex elem
+        if' :: Bool -> a -> a -> a
+        if' True  x _ = x
+        if' False _ y = y
+        
+
+    typeInvalid' :: Text -> IO (a)
+    typeInvalid' k = fail $ "Invalid type for: " ++ show k
+
+    valueInvalid' :: Text -> Text -> IO (a)
+    valueInvalid' k t = fail $ (show t) ++ " is invalid value for: " ++ (show k)
+
+    notFound' :: Text -> IO (a)
+    notFound' k = fail $ "Not found: " ++ show k
+
 
     -- 引数で指定したキーを持つオブジェクトを返す
     getObject :: Text -> Y.Value -> Maybe (Y.Object)
