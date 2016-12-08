@@ -174,8 +174,8 @@ load paths env = do
         _  -> config
       where
         exists' :: (Eq e) => [e] -> e -> Bool
-        exists' [] elem = True
-        exists' (e:ex) elem = e == elem || exists' ex elem
+        exists' [] elem = False
+        exists' (e:ex) elem = (e == elem) || exists' ex elem
         if' :: Bool -> a -> a -> a
         if' True  x _ = x
         if' False _ y = y
