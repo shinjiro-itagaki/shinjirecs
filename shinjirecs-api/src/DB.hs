@@ -19,7 +19,7 @@ import Database.Persist -- persistent
 import Database.Persist.Types -- persistent
 import Database.Persist.Quasi (lowerCaseSettings, PersistSettings) -- persistent
 import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool) -- persistent
-import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith) -- persistent-template
+import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith, derivePersistField) -- persistent-template
 
 import Database.Persist.MySQL (withMySQLConn) -- persistent-mysql
 import Database.Persist.Sqlite (withSqliteConn) -- persistent-sqlite
@@ -31,6 +31,13 @@ import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.Reader (ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
+
+import Models.Reservation(Status(..))
+
+type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
+
+share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+  $(persistFileWith lowerCaseSettings "config/models")
 
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
 data Config = Config {
@@ -79,9 +86,6 @@ stringToAdapterType str =
     "sqlite3"    -> SQLite3
     _            -> Unsupported
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
-  $(persistFileWith lowerCaseSettings "config/models")
-
 run pool = runSqlPersistMPool' pool
   where
     runSqlPersistMPool' pool' action' = runSqlPersistMPool action' pool'
@@ -93,7 +97,7 @@ getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backe
   -> m a
 getSQLActionRunner' func = runNoLoggingT . runResourceT . func . runSqlConn
 
-connect :: Config -> IO (SqlPersistT (ResourceT (NoLoggingT IO)) a -> IO a)
+connect :: Config -> IO (Sql a -> IO a)
 connect config = 
   case adapter' of
     MySQL      -> return $ getSQLActionRunner' (withMySQLConn      (configToMySQLConnectInfo config))

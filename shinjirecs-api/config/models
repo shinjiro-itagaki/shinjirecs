@@ -3,3 +3,21 @@ Reservation json
   duration Int default=0
   title String
   description Text
+--  category_id CategoryId
+  next Int
+  name Text
+  counter Int
+  keta Int
+  videofilenameformat FilePath
+  xwday Int
+-- UniqueUsername username
+--  status Models.Reservation.Status
+--  status Hoge
+  status Int
+
+Channel json
+  number Int
+  type Int
+  display_name Text
+  order Int
+  enable Bool
