@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
+-- {-# LANGUAGE ScopedTypeVariables #-}
 
 module DB where
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
@@ -15,15 +16,16 @@ import qualified Data.Text as Text --text
 import Data.Time -- time
 import Data.ByteString -- bytestring
 import Data.Word -- base
+import Data.Pool(Pool) -- base
 import Database.Persist -- persistent
 import Database.Persist.Types -- persistent
 import Database.Persist.Quasi (lowerCaseSettings, PersistSettings) -- persistent
 import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool) -- persistent
 import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith, derivePersistField) -- persistent-template
 
-import Database.Persist.MySQL (withMySQLConn) -- persistent-mysql
-import Database.Persist.Sqlite (withSqliteConn) -- persistent-sqlite
-import Database.Persist.Postgresql (withPostgresqlConn) -- persistent-postgresql
+import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
+import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
+import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
 import qualified Database.PostgreSQL.Simple as PgSQL -- postgresql-simple
 import qualified Database.MySQL.Simple      as MySQL -- mysql-simple
 import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl) -- resourcet
@@ -86,9 +88,9 @@ stringToAdapterType str =
     "sqlite3"    -> SQLite3
     _            -> Unsupported
 
-run pool = runSqlPersistMPool' pool
-  where
-    runSqlPersistMPool' pool' action' = runSqlPersistMPool action' pool'
+-- run pool = runSqlPersistMPool' pool
+--   where
+--    runSqlPersistMPool' pool' action' = runSqlPersistMPool action' pool'
 
 
 getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backend, MonadBaseControl IO m1, MonadBaseControl IO m) =>
@@ -96,6 +98,18 @@ getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backe
   -> ReaderT backend m1 a1
   -> m a
 getSQLActionRunner' func = runNoLoggingT . runResourceT . func . runSqlConn
+
+createPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m) => Config -> m ConnectionPool
+createPool config = 
+  case adapter' of
+    MySQL      -> createMySQLPool      (configToMySQLConnectInfo config)      pool'
+    PostgreSQL -> createPostgresqlPool (configToPgSQLConnectionString config) pool'
+    SQLite3    -> createSqlitePool     (path')                                pool'
+    _          -> fail $ "invalid db adapter: " ++ (show 'adapter)
+  where
+    path'    = Data.Text.pack $ database config :: Text
+    pool'    = pool     config :: Int
+    adapter' = adapter  config :: AdapterType
 
 connect :: Config -> IO (Sql a -> IO a)
 connect config = 
@@ -109,3 +123,5 @@ connect config =
     pool'    = pool     config :: Int
     adapter' = adapter  config :: AdapterType
     
+
+-- find = get
