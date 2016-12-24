@@ -15,6 +15,14 @@ Reservation json
 --  status Hoge
   status Int
 
+Program json
+--  category_id CategoryId
+  start_time UTCTime
+  duration Int default=0
+  title String
+  description Text
+  name Text
+
 Channel json
   number Int
   type Int
