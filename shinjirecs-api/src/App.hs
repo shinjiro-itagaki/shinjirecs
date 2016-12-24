@@ -52,17 +52,17 @@ appImpl port pool = do
       json records
       status status200
     get "/channels/:id" $ do
-      m_channel <- (findRecord db "id" :: ActionM (Maybe DB.Channel))
+      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Channel))
       status status200
-      case m_channel of
-        Just channel -> json channel
-        _            -> status status404
+      case m_record of
+        Just record -> json record
+        _           -> status status404
     patch "/channels/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
-      m_channel <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
+      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
       newrec <- (jsonData :: ActionM DB.Channel)
-      case m_channel of
-        Just channel -> do
+      case m_record of
+        Just record -> do
           res <- db $ P.replace key newrec
           json =<< DB.findRecord db key
           status status201
@@ -75,14 +75,14 @@ appImpl port pool = do
       
     delete "/channels/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
-      m_channel <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
-      case m_channel of
-        Just channel -> do
+      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
+      case m_record of
+        Just record -> do
           db $ P.delete key
-          m_channel2 <- DB.findRecord db key
-          case m_channel2 of
-            Just d_channel -> status status201
-            _              -> status status400
+          m_record2 <- DB.findRecord db key
+          case m_record2 of
+            Just d_record -> status status201
+            _             -> status status400
         _            -> status status404      
       
     get "/install/index" $ do
@@ -106,15 +106,20 @@ appImpl port pool = do
     get "/install/step5" $ do
       json True
       status status201
+      
     get "/programs" $ do
-      json True
-      status status201
+      -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
+      let filter = [] :: [P.Filter DB.Program]
+          opt = [] :: [P.SelectOpt DB.Program]
+      records <- db $ map P.entityVal <$> P.selectList filter opt
+      json records
+      status status200      
     get "/programs/:id" $ do
-      m_channel <- (findRecord db "id" :: ActionM (Maybe DB.Program))
+      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Program))
       status status200
-      case m_channel of
-        Just channel -> json channel
-        _            -> status status404
+      case m_record of
+        Just record -> json record
+        _           -> status status404
     patch "/programs/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Program))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
@@ -133,28 +138,58 @@ appImpl port pool = do
       
     delete "/programs/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Program))
-      m_channel <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
-      case m_channel of
-        Just channel -> do
+      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
+      case m_record of
+        Just record -> do
           db $ P.delete key
-          m_channel2 <- DB.findRecord db key
-          case m_channel2 of
-            Just d_channel -> status status201
+          m_record2 <- DB.findRecord db key
+          case m_record2 of
+            Just d_program -> status status201
             _              -> status status400
         _            -> status status404      
       
-    patch "/reservations/:id" $ do
-      json True
-      status status201
+
     get "/reservations" $ do
-      json True
-      status status201
+      -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
+      let filter = [] :: [P.Filter DB.Reservation]
+          opt = [] :: [P.SelectOpt DB.Reservation]
+      records <- db $ map P.entityVal <$> P.selectList filter opt
+      json records
+      status status200      
+    get "/reservations/:id" $ do
+      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Reservation))
+      status status200
+      case m_record of
+        Just record -> json record
+        _           -> status status404
+    patch "/reservations/:id" $ do
+      key <- (toKey "id" :: ActionM (PS.Key DB.Reservation))
+      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Reservation))
+      newrec <- (jsonData :: ActionM DB.Reservation)
+      case m_record of
+        Just record -> do
+          res <- db $ P.replace key newrec
+          json =<< DB.findRecord db key
+          status status201
+        _            -> status status404
     post "/reservations" $ do
-      json True
+      newrec <- jsonData :: ActionM DB.Reservation
+      key    <- db $ P.insert newrec
+      json =<< DB.findRecord db key
       status status201
+      
     delete "/reservations/:id" $ do
-      json True
-      status status201      
+      key <- (toKey "id" :: ActionM (PS.Key DB.Reservation))
+      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Reservation))
+      case m_record of
+        Just record -> do
+          db $ P.delete key
+          m_record2 <- DB.findRecord db key
+          case m_record2 of
+            Just d_program -> status status201
+            _              -> status status400
+        _            -> status status404      
+
 
 -- arg1 : port number
 app :: Int -> IO ()
