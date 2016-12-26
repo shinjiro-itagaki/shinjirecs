@@ -1,0 +1,9 @@
+node_modules
+typings
+npm-debug.log
+src/*
+!src/images/
+!src/lib/
+!src/images/common/
+app/*
+config/const.js

@@ -1,0 +1,31 @@
+<html>
+<head>
+<meta id="viewport-config" name="viewport">
+<meta name="viewport" content="width=device-width, maximum-scale=1.0, minimum-scale=0.5,user-scalable=yes,initial-scale=1.0" />
+<base href="/">
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">  
+<title>録画予約システム</title>
+<link rel="shortcut icon" href="./src/images/favicon.ico">
+<script src="./node_modules/es6-shim/es6-shim.min.js"></script>
+<script src="./node_modules/zone.js/dist/zone.js"></script>
+<script src="./node_modules/reflect-metadata/Reflect.js"></script>
+<script src="./node_modules/systemjs/dist/system.src.js"></script>
+<script src="systemjs.config.js"></script>
+<script src="./config/const.js"></script>
+<script>
+  System.import('app').catch(function(err){ console.error(err); });
+</script>
+<link rel="stylesheet" href="./src/css/app.css">
+<style>
+</style>
+</head>
+<body>
+  <my-app></my-app>
+
+  <script id="facebook-jssdk" src="./src/lib/facebook-sdk-ja_JP.js"></script>
+  <script src="./src/lib/jquery.min-1.11.1.js"></script>
+  <script src="./src/lib/bootstrap.min-3.3.6.js"></script>
+  <script>
+  </script>
+</body>
+</html>
