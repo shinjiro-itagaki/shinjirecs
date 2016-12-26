@@ -1,6 +1,5 @@
 /// <reference path="../src/lib/jquery.d.ts" />
 /// <reference path="./../config/config.d.ts" />
-/// <reference path="../src/lib/ga.d.ts" />
 import {Component,OnInit} from '@angular/core'
 import {provideRouter,ROUTER_DIRECTIVES, Router, Event, RoutesRecognized, NavigationStart, NavigationEnd, RouterStateSnapshot, ActivatedRouteSnapshot} from '@angular/router'
 import {CORE_DIRECTIVES,NgClass} from '@angular/common'
@@ -144,7 +143,6 @@ export class AppComponent implements OnInit, FlashServiceObserver {
   _flash_timer: any = null;
   _hide_header = true; // ここをfalseにすると、ヘッダを表示しないページでも一瞬だけ表示されてしまうので、初期状態ではヘッダを隠すようにする。
   _hide_login_btn_on_header = true;
-  mailto: string = Config.contact.mailto;
 
   private _network_observer : NetworkObserver = null;
   private _disp_network_error_id = 'now-network-error';
@@ -184,7 +182,6 @@ export class AppComponent implements OnInit, FlashServiceObserver {
 	  if(e instanceof NavigationEnd){
             let path : string = window.location.pathname;	    
 	    if(path && path != this._old_ga_pathname){ // 二重送信を防止
-              ga('send','pageview',path); // この処理を最優先にするため最初に実行する
 	      this._old_ga_pathname = window.location.pathname;
 	    }
 	    this._service.updateViewportUserScalable();
@@ -246,14 +243,5 @@ export class AppComponent implements OnInit, FlashServiceObserver {
   }
   
   onResize(){
-    this.screen_size_width = $(window).width();
-
-    let divW: number = Config.responsive_width; // pcかスマホか判別する基準となる幅
-    let realW: number = Math.min(window.innerWidth,window.screen.width); // 表示するウインドウと、デバイスの最大幅のどちらか短い方を基準にviewportのwidthを設定。スマホだと、デバイス幅は320pxなのに、windowの幅が960pxなどと出力されることがあるので
-    let viewportW : number = realW > divW ? Config.pc_width : Config.mb_width;
-    let scale : number = realW / viewportW;
-    let desc : string = "width=device-width,initial-scale=" + scale + ",minimum-scale=1.0,maximum-scale=1.0,user-scalable=no";
-    let meta : HTMLElement = document.getElementById('viewport-config');
-    meta.setAttribute("content",desc);
   }
 }
