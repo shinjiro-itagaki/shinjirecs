@@ -17,116 +17,19 @@ let thinkingLiveHref="http://idealive.bbt757.com/"; // 思考ライブのリン�
   ],
 
   template: `
-    <div id="{{_disp_network_error_id}}">ネットワークエラーが発生しています</div>
-    <div id="now-loading"></div>
-    <div (window:resize)="onResize();">
+    <div>
     <div id="update-view-trigger" (click)="updateView()" style="display:none;" class="click-btn"></div>
-    <header [ngClass]="{header_closed: _hide_header}">
-      <div id="flash-area" class="flash-area click-btn" (click)="hideFlash()" [ngClass]="{hidden: _flash_hidden, shown0: (!_flash_hidden && _flash_sw), shown1: (!_flash_hidden && !_flash_sw)}">
-      <div class="flash-area-wrapper">
-        <span [ngClass]="{hidden: (_flash_message == null)}" class="flash message">{{ _flash_message}}</span>
-        <span [ngClass]="{hidden: (_flash_error   == null)}" class="flash error"  >{{ _flash_error  }}</span>
-      </div>
-      </div>    
-    <div *ngIf="!_hide_header" class="header-main">
-    <h1><a [routerLink]="['']"><img src="./src/images/common/logo_200x76.png"></a></h1>
-    <nav><ul class="header-left-menu">
-      <li *ngIf="_service.session().isLogged()" ><a role="menuitem" [routerLink]="['/work']"         style="background-image: url(./src/images/common/icon_navi01.png);" class="budokai">武道会</a></li>
-      <li *ngIf="_service.session().isLogged()" ><a role="menuitem" [routerLink]="['/show_ranking']" style="background-image: url(./src/images/common/icon_navi02.png);">ランキング</a></li>
-      <li *ngIf="_service.session().isLogged()" ><a role="menuitem" [routerLink]="['/my_page_home']" style="background-image: url(./src/images/common/icon_navi03.png)">マイページ</a></li>
-    </ul></nav>
-    <nav class="header-right-menu">
-      <li class="header-right-menu-text"><a [routerLink]="['/knowhow']">利用方法</a>　|</li>
-      <li class="header-right-menu-text"><a [routerLink]="['/faq']">FAQ</a></li>
-      <li class="facobooklogin" *ngIf="!_hide_login_btn_on_header && !_service.session().isLogged()" ><a role="menuitem" (click)="_service.login()" class="click-btn"><span class="text">ログイン</span></a></li>
-      <li class="thinklivebutton" *ngIf="_service.session().isLogged()" ><a role="menuitem" href="${thinkingLiveHref}" ><span class="table_"><span class="cell icon" style="background-image: url(./src/images/common/icon_navi_live.png);"></span><span class="cell text">思考ライブ！</span></span></a></li>
-    </nav>
-
-    <nav class="sp">
-    <div class="menu-area">
-    <div class="btn-group">
-    <button class="btn btn-default dropdown-toggle" aria-label="Justify" type="button" data-toggle="dropdown" aria-expanded="false">
-    <span aria-hidden="true"><img src="./src/images/icon_header_menu.png" style="width: 30px;"></span>
-    </button>
-    <ul *ngIf="_service.session().isLogged()" class="dropdown-menu dropdown-menu-custom" role="menu" [style.width]="screen_size_width" >
-    <li role="presentation" class="close_img"><img src="./src/images/icon_close.png" style="width: 30px"></li>
-    <li role="presentation" class="top_img"><img src="./src/images/common/logo_200x76.png" style="width: 150px;"></li>
-    <li role="presentation">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/work']">
-      <img src="./src/images/common/icon_navi01.png" class="left-img">
-      <span class="center-text">武道会</span>
-      <img src="./src/images/icon_ar_right_w.png" class="right-img">
-      </a>
-    </li>
-    <li role="presentation">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/show_ranking']">
-       <img src="./src/images/common/icon_navi02.png" class="left-img">
-       <span class="center-text">ランキング</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">
-     </a>
-    </li>
-    <li role="presentation">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/my_page_home']">
-       <img src="./src/images/common/icon_navi03.png" class="left-img">
-       <span class="center-text">マイページ</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">     
-      </a>
-    </li>
-    <li role="presentation" class="howto">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/knowhow']">
-       <span>利用方法</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">
-      </a>
-    </li>
-    <li role="presentation" class="faq" >
-      <a role="menuitem" tabindex="-1" [routerLink]="['/faq']">
-       <span>FAQ</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">
-      </a>
-    </li>
-    <li role="presentation" class="live"><div class="thinklivebutton"><a role="menuitem" tabindex="-1" class="click-btn" href="${thinkingLiveHref}"><span class="table_"><span class="cell icon" style="background-image: url(./src/images/common/icon_navi_live.png);"></span><span class="cell text">思考ライブ！</span></span></a></div></li>
-    </ul>
-    <ul *ngIf="!_service.session().isLogged()" class="dropdown-menu dropdown-menu-custom" role="menu" [style.width]="screen_size_width">
-    <li role="presentation" class="close_img"><img src="./src/images/icon_close.png" style="width: 30px"></li>
-    <li role="presentation" class="top_img" style="border: none;"><img src="./src/images/common/logo_200x76.png" style="width: 150px;"></li>
-    <li role="presentation" class="facebook"><div class="facobooklogin" ><a role="menuitem" tabindex="-1" (click)="_service.login()" class="click-btn"><span class="text">Facebookで今すぐログイン</span></a></div><br><div class="facebooklogin_disc">本サービスのご利用はFacebookアカウントが必要です</div></li>
-    <li role="presentation">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/knowhow']">
-       <span>利用方法</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">
-      </a>
-    </li>
-    <li role="presentation">
-      <a role="menuitem" tabindex="-1" [routerLink]="['/faq']">
-       <span>FAQ</span>
-       <img src="./src/images/icon_ar_right_w.png" class="right-img">
-      </a>
-    </li>
-    </ul>
-    </div>
-    </div>
-    <span class="header-right-icon-menu">
-    <a class="menuitem" style="background-image: url(./src/images/common/icon_navi_live.png);" href="${thinkingLiveHref}"></a>
-    <a class="menuitem" style="background-image: url(./src/images/common/icon_navi02.png);" [routerLink]="['/show_ranking']"></a>
-    </span>
-    </nav>
-    
-
-    </div>
-    </header>
-    <div id="main" [ngClass]="{header_closed: _hide_header}">
+    <header> </header>
+    <div id="main">
     <router-outlet></router-outlet>
     </div>
     <footer>
-    <a [routerLink]="['']"><img class="footerlogo" src="./src/images/common/logo_200x76.png"></a>
     <nav>
     <ul>
-    <li><a href="mailto: {{mailto}}">お問い合わせ</a>　|</li>
-    <li><a [routerLink]="['/terms']">利用規約</a>　|</li>
-    <li><a href="https://www.bbt757.com/privacy.html">プライバシーポリシー</a></li>
+    <li><a [routerLink]="['/']">番組一覧</a></li>
     </ul>      
     </nav>
-    <p><small class="copyright">Copyright &copy; 2016 Business Breakthrough Inc. All Rights reserved. </small></p>
+    <p><small class="copyright">Copyright &copy; 2016 Shinjiro Itagaki. All Rights reserved. </small></p>
     </footer>
     `,
   directives: [CORE_DIRECTIVES,ROUTER_DIRECTIVES, NgClass]
@@ -145,9 +48,6 @@ export class AppComponent implements OnInit, FlashServiceObserver {
   _hide_login_btn_on_header = true;
 
   private _network_observer : NetworkObserver = null;
-  private _disp_network_error_id = 'now-network-error';
-
-  private _old_ga_pathname = '';
   
   constructor(private _router: Router, private _service: AllService) {
     this._network_observer = new NetworkObserver(_service.api(), 2000);
@@ -181,9 +81,6 @@ export class AppComponent implements OnInit, FlashServiceObserver {
 	}else{
 	  if(e instanceof NavigationEnd){
             let path : string = window.location.pathname;	    
-	    if(path && path != this._old_ga_pathname){ // 二重送信を防止
-	      this._old_ga_pathname = window.location.pathname;
-	    }
 	    this._service.updateViewportUserScalable();
 	    let rsss : RouterStateSnapshot = this._router.routerState.snapshot;
 	    let arss : ActivatedRouteSnapshot = rsss.firstChild(rsss.root);
@@ -211,7 +108,7 @@ export class AppComponent implements OnInit, FlashServiceObserver {
   }
 
   displayNetworkError(show: boolean){
-    document.getElementById(this._disp_network_error_id).style.display = ((show) ? "block" : "none");
+    // document.getElementById(this._disp_network_error_id).style.display = ((show) ? "block" : "none");
   }
   
   flashBeSet(key: string) {
