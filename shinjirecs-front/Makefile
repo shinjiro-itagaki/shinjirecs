@@ -5,3 +5,7 @@ all:
 
 start:
 	npm run start
+compile:
+	npm run tsc
+compilew:
+	npm run tsc:w

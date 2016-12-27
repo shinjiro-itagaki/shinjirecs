@@ -26,7 +26,7 @@ let thinkingLiveHref="http://idealive.bbt757.com/"; // 思考ライブのリン�
     <footer>
     <nav>
     <ul>
-    <li><a [routerLink]="['/']">番組一覧</a></li>
+    <li><a [routerLink]="['/']">番組一覧</a><a (click)="showChannelsJSON()" >json</a></li>
     </ul>      
     </nav>
     <p><small class="copyright">Copyright &copy; 2016 Shinjiro Itagaki. All Rights reserved. </small></p>
@@ -140,5 +140,9 @@ export class AppComponent implements OnInit, FlashServiceObserver {
   }
   
   onResize(){
+  }
+
+  showChannelsJSON(){
+    alert(this._service.api().get_reservations());
   }
 }

@@ -113,7 +113,8 @@ export class RemoteAPI implements API {
   }
 
   private mkUrl(path: string): string {
-    return Config.api_server.url + path + ".json";
+    // return Config.api_server.url + path + ".json";
+    return Config.api_server.url + path;
   }
   
   private _GET<T>(path: string, params: string, f: (res: any, success: boolean) => T) : T {
@@ -143,5 +144,17 @@ export class RemoteAPI implements API {
 
   get_reservations(): ReservationI[] {
     return this._GET<ReservationI[]>(`/reservations`, null, RemoteAPI.toReservationIs)
-  }  
+  }
+  get_reservation(id: number): ReservationI {
+    return this._GET<ReservationI>(`/reservations/${id}`, null, RemoteAPI.toReservationI)
+  }
+  post_reservation(record: ReservationI): ReservationI {
+    return this._POST<ReservationI>(`/reservations`, record, RemoteAPI.toReservationI)
+  }
+  patch_reservation(record: ReservationI): ReservationI {
+    return this._PATCH<ReservationI>(`/reservations/${record.id}`, record, RemoteAPI.toReservationI)
+  }
+  delete_reservation(id: number): Boolean {
+    return this._DELETE<Boolean>(`/reservations/${id}`, null, RemoteAPI.toBoolean)
+  }
 }

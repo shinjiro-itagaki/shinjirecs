@@ -44,7 +44,7 @@ appImpl port pool = do
     get "/" $ do
       json True
       status status200
-    get "/channels" $ do
+    get "/channels/list" $ do
       -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
       let filter = [] :: [P.Filter DB.Channel]
           opt = [] :: [P.SelectOpt DB.Channel]
@@ -107,7 +107,7 @@ appImpl port pool = do
       json True
       status status201
       
-    get "/programs" $ do
+    get "/programs/list" $ do
       -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
       let filter = [] :: [P.Filter DB.Program]
           opt = [] :: [P.SelectOpt DB.Program]
@@ -149,7 +149,7 @@ appImpl port pool = do
         _            -> status status404      
       
 
-    get "/reservations" $ do
+    get "/reservations/list" $ do
       -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
       let filter = [] :: [P.Filter DB.Reservation]
           opt = [] :: [P.SelectOpt DB.Reservation]

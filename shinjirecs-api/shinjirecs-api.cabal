@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
 homepage:            https://github.com/https://github.com/shinjiro-itagaki/shinjirecs/shinjirecs-api
-license:             BSD3
+license:             GPL-3
 license-file:        LICENSE
 author:              Shinjiro Itagaki
 maintainer:          ishinjiroster@gmail.com
@@ -71,4 +71,4 @@ test-suite shinjirecs-api-test
 
 source-repository head
   type:     git
-  location: https://github.com/https://github.com/shinjiro-itagaki/shinjirecs/shinjirecs-api
+  location: https://github.com/shinjiro-itagaki/shinjirecs.git
