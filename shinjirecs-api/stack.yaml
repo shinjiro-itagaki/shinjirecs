@@ -40,7 +40,7 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 # extra-deps: [persistent-mysql, mysql, mysql-simple]
-extra-deps: [persistent-mysql-2.6, mysql-0.1.4, mysql-simple-0.4.0.0]
+extra-deps: [persistent-mysql-2.6, mysql-0.1.4, mysql-simple-0.4.0.0, enumerator-0.4.20]
 
 # Override default flag values for local packages and extra-deps
 flags: {}

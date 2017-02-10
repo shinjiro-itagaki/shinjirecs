@@ -24,6 +24,7 @@ library
                      , Controllers.Channels
   build-depends:       base >= 4.7 && < 5
                      , bytestring
+                     , enumerator
                      , extra
                      , scotty
                      , http-types
