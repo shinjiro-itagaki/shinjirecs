@@ -25,7 +25,7 @@ import Control.Monad.Trans.Resource (ResourceT) -- resourcet
 import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
 
-import Lib(ControllerAction(..), Controller(..))
+import Controller(ControllerAction(..), Controller(..))
 import Controllers.Channels(Channels, list)
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
@@ -93,31 +93,33 @@ _DELETE = _COMMON delete
 
 _COMMON2 :: (Controller c) =>
   (RoutePattern -> ActionM () -> ScottyM ())
+  -> Sql.ConnectionPool
   -> RoutePattern
   -> ControllerAction c
   -> ScottyM ()
-_COMMON2 func pat act = do
+_COMMON2 func conn pat act = do
   routeOPTIONS pat
   func pat $ do
     impl' act
   where
     impl' :: (Controller c) => ControllerAction c -> ActionM ()
     impl' (ControllerAction sym main) = do
-      (res, c) <- beforeAction sym new
+      (res, c) <- beforeAction sym $ new conn -- $ DBTables { channels = db }
       case res of
         True -> do
           afterAction sym =<< main c
         False -> do
           return () -- do nothing
+-- MonadIO m => Sql.SqlPersistT IO a -> m a
+_GET2 :: (Controller c) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c -> ScottyM ()
+_GET2 conn =  _COMMON2 get conn
 
-_GET2    :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-_GET2    = _COMMON2 get
-_PATCH2  :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-_PATCH2  = _COMMON2 patch
-_POST2   :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-_POST2   = _COMMON2 post
-_DELETE2 :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-_DELETE2 = _COMMON2 delete
+-- _PATCH2  :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
+-- _PATCH2  = _COMMON2 patch
+-- _POST2   :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
+-- _POST2   = _COMMON2 post
+-- _DELETE2 :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
+-- _DELETE2 = _COMMON2 delete
 
 beforeStep :: ActionM ()
 beforeStep = do
@@ -133,7 +135,7 @@ appImpl port pool = do
     middleware logStdoutDev
 --    _GET2 "/" $ Direct $ do
 --      return ()
-    _GET2 "/channels/list" Controllers.Channels.list
+    _GET2 pool "/channels/list" Controllers.Channels.list
     _GET "/channels/list" $ do
       -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
       let filter = [] :: [P.Filter DB.Channel]
