@@ -39,6 +39,11 @@ import Models.Reservation(Status(..))
 
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
+-- make following datas
+-- Channel
+-- Reservation
+-- Program
+-- ... and others
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
   $(persistFileWith lowerCaseSettings "config/models")
 
