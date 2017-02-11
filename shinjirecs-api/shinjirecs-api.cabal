@@ -19,11 +19,14 @@ library
                      , App
                      , Config
                      , DB
+                     , Model
                      , Models.Reservation
                      , Controller
                      , Controllers.Channels
   build-depends:       base >= 4.7 && < 5
+                     , aeson
                      , bytestring
+                     , conduit
                      , enumerator
                      , extra
                      , scotty
@@ -32,6 +35,7 @@ library
                      , mysql-simple
                      , monad-logger
                      , resource-pool
+                     , resourcet
                      , persistent
                      , persistent-template
                      , persistent-mysql
