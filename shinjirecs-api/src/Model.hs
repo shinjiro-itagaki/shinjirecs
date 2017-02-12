@@ -29,14 +29,7 @@ data (PS.PersistEntity record) => Model record = Model {
 
 class (PS.PersistEntity record
       , PS.ToBackendKey SqlBackend record
-      -- , Show (PS.BackendKey backend)
-      -- , Read (PS.BackendKey backend)
-      -- , Eq (PS.BackendKey backend)
-      -- , Ord (PS.BackendKey backend)
-      -- , PS.PersistStoreRead backend
-      -- , PS.PersistField (PS.BackendKey backend)
-      -- , ToJSON (PS.BackendKey backend)
-      -- , FromJSON (PS.BackendKey backend)
+      , PS.PersistRecordBackend record SqlBackend
       ) => ModelClass record where
   get                :: (MonadIO m) => ConnectionPool -> PS.Key record -> m (Maybe record)
   get conn key                  = do { runDB conn $ PS.get key }
@@ -81,10 +74,13 @@ class (PS.PersistEntity record
   upsertBy           :: (MonadIO m) => ConnectionPool -> PS.Unique record -> record -> [Update record] -> m (Entity record)
   upsertBy conn uniq r updates  = do { runDB conn $ PS.upsertBy uniq r updates }
   getByValue         :: (MonadIO m) => ConnectionPool -> record -> m (Maybe (Entity record))
+  getByValue conn r             = do { runDB conn $ PS.getByValue r }
   insertBy           :: (MonadIO m) => ConnectionPool -> record -> m (Either (Entity record) (PS.Key record))
-  replaceUnique      :: (MonadIO m) => PS.Key record -> record -> m (Maybe (PS.Unique record))
+  insertBy conn r               = do { runDB conn $ PS.insertBy r }
   checkUnique        :: (MonadIO m) => ConnectionPool -> record -> m (Maybe (PS.Unique record))
+  checkUnique conn r            = do { runDB conn $ PS.checkUnique r }
   onlyUnique         :: (MonadIO m) => ConnectionPool -> record -> m (PS.Unique record)
+  onlyUnique conn r             = do { runDB conn $ PS.onlyUnique r }
   selectSourceRes    :: (MonadIO m1, MonadIO m2) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> m1 (Acquire (Source m2 (Entity record)))
   selectSourceRes conn filters conds = do { runDB conn $ PS.selectSourceRes filters conds }
   selectFirst        :: (MonadIO m) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> m (Maybe (Entity record))
@@ -95,22 +91,29 @@ class (PS.PersistEntity record
   count conn filters                 = do { runDB conn $ PS.count filters }
   updateWhere        :: (MonadIO m) => ConnectionPool -> [Filter record] -> [Update record] -> m ()
   updateWhere conn filters updates   = do { runDB conn $ PS.updateWhere filters updates }
-  deleteWhere        :: (MonadIO m) => ConnectionPool -> [Filter record] -> ReaderT backend m ()
+  deleteWhere        :: (MonadIO m) => ConnectionPool -> [Filter record] -> m ()
   deleteWhere conn filters           = do { runDB conn $ PS.deleteWhere filters }
-  selectSource       :: (MonadResource m) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> Source m (Entity record)
-  -- selectSource conn filters conds    = runDB conn $ PS.selectSource filters conds
-  selectKeys         :: (MonadResource m) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> Source m (PS.Key record)
-  -- selectKeys conn filters conds      = do { runDB conn $ PS.selectSource filters conds }
+  selectSource       :: (PS.PersistQueryRead (PS.BaseBackend backend), MonadResource m, PS.PersistEntityBackend record ~ PS.BaseBackend (PS.BaseBackend backend), MonadReader backend m, PS.HasPersistBackend backend) => [Filter record] -> [SelectOpt record] -> Source m (Entity record)
+  selectSource filters conds    = PS.selectSource filters conds
+  selectKeys         :: (PS.PersistQueryRead (PS.BaseBackend backend), MonadResource m, PS.BaseBackend (PS.BaseBackend backend) ~ PS.PersistEntityBackend record, MonadReader backend m, PS.HasPersistBackend backend) => [Filter record] -> [SelectOpt record] -> Source m (PS.Key record)
+  selectKeys filters conds      = PS.selectKeys filters conds
   selectList         :: (MonadIO m) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> m [Entity record]
   selectList conn filters conds      = do { runDB conn $ PS.selectList filters conds }
   selectKeysList     :: (MonadIO m) => ConnectionPool -> [Filter record] -> [SelectOpt record] -> m [PS.Key record]
   selectKeysList conn filters conds  = do { runDB conn $ PS.selectKeysList filters conds }
+
+
+class (ModelClass record, PS.DeleteCascade record SqlBackend) => CascadeDeletableModel record where
   deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()
-  -- deleteCascade conn key             = do { runDB conn $ PS.deleteCascade key }
+  deleteCascade conn key             = do { runDB conn $ PS.deleteCascade key }
   deleteCascadeWhere :: (MonadIO m) => ConnectionPool -> [Filter record] -> m ()
-  -- deleteCascadeWhere conn filters    = do { runDB conn $ PS.deleteCascadeWhere filters }
+  deleteCascadeWhere conn filters    = do { runDB conn $ PS.deleteCascadeWhere filters }
+
+class (ModelClass record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceableModel record where
+  replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
+  replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
   
--- instance ModelClass DB.Channel
+instance ModelClass DB.Channel
 
 data Models = Models {
   channels :: Model DB.Channel
