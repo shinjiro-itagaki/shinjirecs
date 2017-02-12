@@ -20,6 +20,7 @@ library
                      , Config
                      , DB
                      , Model
+                     , Models.Channel
                      , Models.Reservation
                      , Controller
                      , Controllers.Channels

@@ -23,10 +23,6 @@ import Data.Conduit(Source) --- conduit
 runDB :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
 
-data (PS.PersistEntity record) => Model record = Model {
-  finder :: (SqlPersistT IO (ActionM (Maybe record)) -> ActionM (ActionM (Maybe record)))
-  }
-
 class (PS.PersistEntity record
       , PS.ToBackendKey SqlBackend record
       , PS.PersistRecordBackend record SqlBackend
@@ -113,7 +109,8 @@ class (ModelClass record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceable
   replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
   replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
   
-instance ModelClass DB.Channel
+data (ModelClass record) => Model record = Model {
+                                                 }
 
 data Models = Models {
   channels :: Model DB.Channel
@@ -121,7 +118,7 @@ data Models = Models {
 
 getModel :: (PS.PersistEntity record) => ConnectionPool -> Model record
 getModel conn = Model {
-  finder = runDB conn
+--  finder = runDB conn
   }
 
 getModels :: ConnectionPool -> Models
