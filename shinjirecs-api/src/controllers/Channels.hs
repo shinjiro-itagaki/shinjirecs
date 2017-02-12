@@ -12,7 +12,7 @@ import qualified DB
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Model (ModelClass, Model, Models, getModel, getModels)
+import Model (Model, Models, getModel, getModels)
 
 data Channels = Channels { conn :: ConnectionPool, models :: Models }
 

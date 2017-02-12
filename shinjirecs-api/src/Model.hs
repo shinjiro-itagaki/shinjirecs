@@ -26,7 +26,7 @@ runDB p action = liftIO $ runSqlPool action p
 class (PS.PersistEntity record
       , PS.ToBackendKey SqlBackend record
       , PS.PersistRecordBackend record SqlBackend
-      ) => ModelClass record where
+      ) => BaseModel record where
   get                :: (MonadIO m) => ConnectionPool -> PS.Key record -> m (Maybe record)
   get conn key                  = do { runDB conn $ PS.get key }
   insert             :: (MonadIO m) => ConnectionPool -> record -> m (PS.Key record)
@@ -99,17 +99,17 @@ class (PS.PersistEntity record
   selectKeysList conn filters conds  = do { runDB conn $ PS.selectKeysList filters conds }
 
 
-class (ModelClass record, PS.DeleteCascade record SqlBackend) => CascadeDeletableModel record where
+class (BaseModel record, PS.DeleteCascade record SqlBackend) => CascadeDeletableModel record where
   deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()
   deleteCascade conn key             = do { runDB conn $ PS.deleteCascade key }
   deleteCascadeWhere :: (MonadIO m) => ConnectionPool -> [Filter record] -> m ()
   deleteCascadeWhere conn filters    = do { runDB conn $ PS.deleteCascadeWhere filters }
 
-class (ModelClass record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceableModel record where
+class (BaseModel record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceableModel record where
   replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
   replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
   
-data (ModelClass record) => Model record = Model {
+data (BaseModel record) => Model record = Model {
                                                  }
 
 data Models = Models {
