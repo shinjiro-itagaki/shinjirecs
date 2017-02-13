@@ -35,7 +35,7 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
 import qualified Database.Persist.Class as PS
 
-import Models.Reservation(Status(..))
+data ReservationStatus =  Waiting | Recording | Success | Failed deriving (Show, Read, Eq, Ord, Enum, Bounded)
 
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 

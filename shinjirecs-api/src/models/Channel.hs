@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Models.Channel where
-import DB
-import Model(BaseModel)
-instance BaseModel DB.Channel
+import DB(Channel)
+--import Model(BaseModel, CascadeDeletableModel, UniqueReplaceableModel)
+--instance BaseModel Channel
+-- instance UniqueReplaceableModel Channel
+-- instance CascadeDeletableModel Channel
+
 

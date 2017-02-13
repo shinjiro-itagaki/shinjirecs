@@ -1,16 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Models.Reservation where
+import DB(Reservation(..), ReservationStatus(..))
+import Model(Record)
 
-data Status =  Waiting | Recording | Success | Failed deriving (Show, Read, Eq, Ord, Enum, Bounded)
+instance Record Reservation
 
 -- select_label(lmap)
 -- excluded?(wday)
 -- self.find(id)
--- everyweek?() @next.to_i == 7 end
--- everyweek!() @next = 7 ; self; end
--- not_everyweek!() @next = 0 if @next == 7 ; self; end
--- self.find_all() self.find("*") end
--- self.find_by_id(id) self.find(id)[0] end
+isEveryweek :: Reservation -> Bool
+setEveryweek :: Reservation -> Reservation
+setNotEveryweek :: Reservation -> Reservation
+
+isEveryweek r = reservationNext r == 7
+setEveryweek r = r { reservationNext = 7 }
+setNotEveryweek r@Reservation { reservationNext = 7 } = r { reservationNext = 0 }
+setNotEveryweek r = r
 
 -- exist?() File.exist? self.filepath end
 -- videofileexist?() File.exist? self.videofilepath end

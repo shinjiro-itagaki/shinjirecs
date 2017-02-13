@@ -12,17 +12,18 @@ import qualified DB
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Model (Model, Models, getModel, getModels)
+-- import Model (Model, Models, getModel, getModels)
 
-data Channels = Channels { conn :: ConnectionPool, models :: Models }
-
+-- data Channels = Channels { conn :: ConnectionPool, models :: Models }
+data Channels = Channels
 -- before :: Channels -> DefaultActionSymbol -> (Bool, Channels)
 before :: Channels -> ActionSymbol -> (Bool, Channels)
 before c List = (True, c)
 before c _    = (True, c)
 
 instance Controller Channels where
-  new conn' = Channels { conn = conn', models = getModels conn' }
+--  new conn' = Channels { conn = conn', models = getModels conn' }
+  new conn' = Channels
   beforeAction i c = do
     return $ before c $ toActionSym i
     
