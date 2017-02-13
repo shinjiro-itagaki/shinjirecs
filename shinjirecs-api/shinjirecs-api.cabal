@@ -19,6 +19,7 @@ library
                      , App
                      , Config
                      , DB
+                     , DB.Status
                      , Model
                      , Models.Channel
                      , Models.Reservation

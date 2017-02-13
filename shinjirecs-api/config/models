@@ -13,7 +13,7 @@ Reservation json
 -- UniqueUsername username
 --  status Models.Reservation.Status
 --  status Hoge
-  status Int
+  state ReservationState
 
 Program json
 --  category_id CategoryId

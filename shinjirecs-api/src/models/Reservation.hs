@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Models.Reservation where
-import DB(Reservation(..), ReservationStatus(..))
+import DB(Reservation(..))
+import DB.Status(ReservationState(..))
 import Model(Record)
 
 instance Record Reservation
@@ -11,16 +12,17 @@ instance Record Reservation
 isEveryweek :: Reservation -> Bool
 setEveryweek :: Reservation -> Reservation
 setNotEveryweek :: Reservation -> Reservation
-
+isWaiting :: Reservation -> Bool
+  
 isEveryweek r = reservationNext r == 7
 setEveryweek r = r { reservationNext = 7 }
 setNotEveryweek r@Reservation { reservationNext = 7 } = r { reservationNext = 0 }
 setNotEveryweek r = r
+-- isVideoFileExist :: Reservation -> Bool ---File.exist? self.videofilepath end
+-- isVideoFileExist = 
+-- status :: () @status ||= @@waiting end
 
--- exist?() File.exist? self.filepath end
--- videofileexist?() File.exist? self.videofilepath end
--- status() @status ||= @@waiting end
--- waiting?() self.status == @@waiting  end
+isWaiting r = (reservationState r) == Waiting
 -- recording?() self.status == @@recording  end
 -- success?() self.status == @@success  end
 -- failed?() self.status == @@failed  end

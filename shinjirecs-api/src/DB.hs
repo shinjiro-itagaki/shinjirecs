@@ -34,8 +34,7 @@ import Control.Monad.Reader (ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
 import qualified Database.Persist.Class as PS
-
-data ReservationStatus =  Waiting | Recording | Success | Failed deriving (Show, Read, Eq, Ord, Enum, Bounded)
+import DB.Status(ReservationState(..))
 
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
@@ -46,6 +45,8 @@ type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 -- ... and others
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
   $(persistFileWith lowerCaseSettings "config/models")
+
+-- derivePersistField "ReservationState"
 
 findRecord :: (Monad m, PS.ToBackendKey SqlBackend record) => (SqlPersistT IO (Maybe record) -> m (Maybe record)) -> PS.Key record -> m (Maybe record)
 findRecord db key = do
