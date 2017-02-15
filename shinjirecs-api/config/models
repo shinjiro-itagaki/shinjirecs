@@ -1,5 +1,5 @@
 Reservation json
-  start_time UTCTime
+  startTime UTCTime
   duration Int default=0
   title String
   description Text
@@ -8,7 +8,7 @@ Reservation json
   name Text
   counter Int
   keta Int
-  videofilenameformat FilePath
+  videoFileNameFormat FilePath
   xwday Int
 -- UniqueUsername username
 --  status Models.Reservation.Status
@@ -17,7 +17,7 @@ Reservation json
 
 Program json
 --  category_id CategoryId
-  start_time UTCTime
+  startTime UTCTime
   duration Int default=0
   title String
   description Text
@@ -26,6 +26,6 @@ Program json
 Channel json
   number Int
   type Int
-  display_name Text
+  displayName Text
   order Int
   enable Bool
