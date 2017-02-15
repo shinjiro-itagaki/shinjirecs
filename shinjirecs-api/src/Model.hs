@@ -104,38 +104,50 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     return $ (case mEntity of
                 Just entity2 -> Just Entity {entityKey = key, entityVal = entity2 }
                 Nothing      -> Nothing )
-      
+
+class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordKeyVal entity) record where
+  getKey :: record -> Maybe (PS.Key entity)
+  getVal :: record -> entity
+
+instance (ActiveRecord entity) => (ActiveRecordKeyVal entity) entity where
+  getKey self = Nothing
+  getVal self = self
+  
+instance (ActiveRecord entity) => ActiveRecordKeyVal entity (Entity entity) where  
+  getKey = Just . entityKey
+  getVal = entityVal
+  
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordSaver entity) record where
   saveWithoutHook :: record -> ReaderT SqlBackend IO (Maybe (Entity entity))
   exist           :: record -> ReaderT SqlBackend IO Bool
   save :: record -> ReaderT SqlBackend IO (Maybe (Entity entity))
-
+  saveByKeyVal :: record -> Maybe (PS.Key entity) -> entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
+  saveByKeyVal self key val = do
+    res <- beforeSave (maybeToSaveType' key) val
+    case res of
+      Just val2 -> saveWithoutHook val2
+      Nothing   -> return Nothing
+    where
+      maybeToSaveType' Nothing = Insert
+      maybeToSaveType' (Just x)= Update
+  
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordDestroyer entity) record where
   destroyWithoutHook :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))
   destroy            :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))
   
-  
-instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
+instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity
 
 instance (ActiveRecord entity) => (ActiveRecordSaver entity) entity where
   exist = existOnDbBy
   saveWithoutHook = saveAsInsert
-  save val = do
-    res <- beforeSave Insert val
-    case res of
-      Just val2 -> saveWithoutHook val2
-      Nothing   -> return Nothing
-  
+  save self = saveByKeyVal self Nothing self
+
 instance (ActiveRecord entity) => ActiveRecordSaver entity (Entity entity) where
   exist = existOnDb . entityKey
   saveWithoutHook self = saveAsUpdate (entityKey self) (entityVal self)
-  save (Entity key val) = do
-    res <- beforeSave Update val
-    case res of
-      Just val2 -> saveWithoutHook val2
-      Nothing   -> return Nothing
+  save self@(Entity key val) = saveByKeyVal self (Just key) val
 
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
   destroyWithoutHook record = do
