@@ -24,11 +24,7 @@ import Control.Monad.Reader.Class(MonadReader) -- mtl
 import Data.Acquire(Acquire) -- resourcet
 import Data.Conduit(Source) --- conduit
 import Data.Int(Int64) -- base
-
-maybeToBool :: Maybe x -> Bool
-maybeToBool Nothing = False
-maybeToBool _       = True
-
+import Lib(success, failed, (=<<.),(.>>=),(<||>),(.>>||),(||<<.))
 
 runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
@@ -47,50 +43,6 @@ res <- save conn reservation [RerservationStart_time +=. ]
 data SaveType = Modify | Create
 
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
-  isSuccess :: (Bool, entity) -> Bool
-  isSuccess (b, v) = b
-  
-  returnValue :: (Bool, entity) -> entity
-  returnValue (b, v) = v
-  
-  (=<<.) :: (Monad m) => (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity))
-  (=<<.) f1 f2 = (\arg -> f1 arg >>= (\res -> let arg2 = returnValue res in if isSuccess res then f2 arg2 else return res))
-  infixr 8 =<<.
-
-
-  (.>>=) :: (Monad m) => (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity))
-  (.>>=) f1 f2 = f2 =<<. f1
-  infixl 8 .>>=
-
-  (<||>) :: (Monad m) =>
-             (entity -> m (Bool, entity)) -- on success
-          -> (entity -> m entity) -- on failed
-          -> ((Bool, entity) -> m (Bool, entity)) -- result
-  (<||>) onSuccess onFailed =
-    \arg ->
-      let rtn = returnValue arg in
-        if isSuccess arg
-        then onSuccess rtn
-        else onFailed rtn
-             >>= (\rtn2 -> return (False, rtn2))
-
-  infix 7 <||>
-
-  (.>>||) :: (Monad m) =>
-             (        entity -> m (Bool, entity))
-          -> ((Bool, entity) -> m (Bool, entity))
-          -> (        entity -> m (Bool, entity))
-          
-  (.>>||) f1 f2 = (\arg -> f1 arg >>= f2)
-  infixl 8 .>>||
-
-  (||<<.) :: (Monad m) =>
-             (        entity -> m (Bool, entity))
-          -> ((Bool, entity) -> m (Bool, entity))
-          -> (        entity -> m (Bool, entity))    
-  (||<<.) f1 f2 = f1 .>>|| f2 
-
-  -- ($>>) v f1 = f1 v 
 
   -- please override if you need
   afterFind :: entity -> ReaderT SqlBackend IO entity
@@ -98,15 +50,15 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   
   -- please override if you need
   beforeValidation :: SaveType -> entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeValidation type' = return . (,) True
+  beforeValidation type' = return . success
   
   -- please override if you need
   validate :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  validate = return . (,) True
+  validate = return . success
   
   -- please override if you need
   afterValidation :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterValidation = return . (,) True
+  afterValidation = return . success
 
   -- please override if you need
   afterValidationFailed :: entity -> ReaderT SqlBackend IO entity
@@ -114,11 +66,11 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   
   -- please override if you need
   beforeSave :: SaveType -> entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeSave _ = return . (,) True
+  beforeSave _ = return . success
 
   -- please override if you need
   afterSaved :: SaveType -> entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterSaved _ = return . (,) True
+  afterSaved _ = return . success
 
   -- please override if you need
   afterSaveFailed :: SaveType -> entity -> ReaderT SqlBackend IO entity
@@ -126,11 +78,11 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   
   -- please override if you need
   beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeCreate = return . (,) True
+  beforeCreate = return . success
 
   -- please override if you need
   afterCreated :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterCreated = return . (,) True
+  afterCreated = return . success
 
   -- please override if you need
   afterCreateFailed :: entity -> ReaderT SqlBackend IO entity
@@ -138,11 +90,11 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   -- please override if you need
   beforeModify :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeModify = return . (,) True
+  beforeModify = return . success
 
   -- please override if you need
   afterModified :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterModified = return . (,) True
+  afterModified = return . success
 
   -- please override if you need
   afterModifyFailed :: entity -> ReaderT SqlBackend IO entity
@@ -150,11 +102,11 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   -- please override if you need
   beforeDestroy :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeDestroy = return . (,) True
+  beforeDestroy = return . success
 
   -- please override if you need
   afterDestroyed :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterDestroyed = return . (,) True
+  afterDestroyed = return . success
 
   -- please override if you need
   afterDestroyFailed :: entity -> ReaderT SqlBackend IO entity
@@ -162,17 +114,17 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   -- please override if you need
   afterCommit :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  afterCommit = return . (,) True
+  afterCommit = return . success
 
   -- please override if you need
   afterRollback :: entity -> ReaderT SqlBackend IO entity
   afterRollback = return
   
   existOnDb :: PS.Key entity -> ReaderT SqlBackend IO Bool
-  existOnDb key = (return . maybeToBool) =<< (PS.liftPersist $ PS.get key)
+  existOnDb key = (return . isJust) =<< (PS.liftPersist $ PS.get key)
   
   existOnDbBy :: entity -> ReaderT SqlBackend IO Bool
-  existOnDbBy entity= (return . maybeToBool) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
+  existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
   modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity)), entity)
   modifyWithoutHooks key entity = do
