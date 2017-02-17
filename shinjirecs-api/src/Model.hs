@@ -220,13 +220,13 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
       beforeActionCommon' =
         beforeValidation saveType' .>>|| (afterValidation <||> afterValidationFailed) .>>= beforeSave saveType'
 
-      beforeActionCreateOrUpdate =
+      beforeActionCreateOrUpdate' =
         case saveType' of
           Modify -> beforeModify
           Create -> beforeCreate
         
       beforeActionAll' =
-        beforeActionCommon' .>>= beforeActionCreateOrUpdate
+        beforeActionCommon' .>>= beforeActionCreateOrUpdate'
 
       main' =
         case saveType' of
