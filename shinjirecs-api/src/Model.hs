@@ -10,7 +10,7 @@
 
 module Model where
 import Text.Read(readMaybe) -- !!!
-import Data.Maybe(fromMaybe, isJust) -- !!!
+import Data.Maybe(fromMaybe, isJust, fromJust) -- !!!
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
@@ -47,6 +47,50 @@ res <- save conn reservation [RerservationStart_time +=. ]
 data SaveType = Modify | Create
 
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
+  isSuccess :: (Bool, entity) -> Bool
+  isSuccess (b, v) = b
+  
+  returnValue :: (Bool, entity) -> entity
+  returnValue (b, v) = v
+  
+  (=<<.) :: (Monad m) => (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity))
+  (=<<.) f1 f2 = (\arg -> f1 arg >>= (\res -> let arg2 = returnValue res in if isSuccess res then f2 arg2 else return res))
+  infixr 8 =<<.
+
+
+  (.>>=) :: (Monad m) => (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity)) -> (entity -> m (Bool, entity))
+  (.>>=) f1 f2 = f2 =<<. f1
+  infixl 8 .>>=
+
+  (<||>) :: (Monad m) =>
+             (entity -> m (Bool, entity)) -- on success
+          -> (entity -> m entity) -- on failed
+          -> ((Bool, entity) -> m (Bool, entity)) -- result
+  (<||>) onSuccess onFailed =
+    \arg ->
+      let rtn = returnValue arg in
+        if isSuccess arg
+        then onSuccess rtn
+        else onFailed rtn
+             >>= (\rtn2 -> return (False, rtn2))
+
+  infix 7 <||>
+
+  (.>>||) :: (Monad m) =>
+             (        entity -> m (Bool, entity))
+          -> ((Bool, entity) -> m (Bool, entity))
+          -> (        entity -> m (Bool, entity))
+          
+  (.>>||) f1 f2 = (\arg -> f1 arg >>= f2)
+  infixl 8 .>>||
+
+  (||<<.) :: (Monad m) =>
+             (        entity -> m (Bool, entity))
+          -> ((Bool, entity) -> m (Bool, entity))
+          -> (        entity -> m (Bool, entity))    
+  (||<<.) f1 f2 = f1 .>>|| f2 
+
+  -- ($>>) v f1 = f1 v 
 
   -- please override if you need
   afterFind :: entity -> ReaderT SqlBackend IO entity
@@ -117,8 +161,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterDestroyFailed = return
 
   -- please override if you need
-  afterCommit :: entity -> ReaderT SqlBackend IO entity
-  afterCommit = return
+  afterCommit :: entity -> ReaderT SqlBackend IO (Bool, entity)
+  afterCommit = return . (,) True
 
   -- please override if you need
   afterRollback :: entity -> ReaderT SqlBackend IO entity
@@ -130,7 +174,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   existOnDbBy :: entity -> ReaderT SqlBackend IO Bool
   existOnDbBy entity= (return . maybeToBool) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
-  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
+  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity)), entity)
   modifyWithoutHooks key entity = do
     PS.replace key entity
     mEntity <- PS.liftPersist $ PS.get key
@@ -138,10 +182,10 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     -- need to check updated here
     
     return $ (case mEntity of
-                Just entity2 -> Just Entity {entityKey = key, entityVal = entity2 }
-                Nothing -> Nothing)      
+                (Just entity2) -> (True,  Just key, entity2)
+                Nothing        -> (False, Nothing,  entity ))
 
-  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
+  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
   createWithoutHooks entity = do
     
     -- need to check failed(exception thrown) here
@@ -149,27 +193,15 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     key <- PS.liftPersist $ PS.insert entity
     mEntity <- PS.liftPersist $ PS.get key
     return $ (case mEntity of
-                Just entity2 -> Just Entity {entityKey = key, entityVal = entity2 }
-                Nothing      -> Nothing )
+                (Just entity2) -> (True,  Just key, entity2)
+                Nothing        -> (False, Nothing,  entity ))
 
---  before self (beforeValidation saveType) afterValidation afterValidationFailed (beforeSave saveType)
-before :: (Monad m) => a -- self m = ReaderT SqlBackend IO
-       -> (a -> m (Bool, a)) -- validator
-       -> ((a -> m (Bool, a)) -- ok
-          ,(a -> m a)) -- failed
-       -> (a -> m (Bool, a)) -- after ok
-       -> m (Bool, a) -- return
-before self validator (ok, failed) afterOk = do
-  (res1, r1) <- validator self
-  (res2, r2) <- if res1 then ok r1 else failed r1 >>= (\r' -> return (False,r'))
-  if res2 then afterOk r2 else return (res2, r2)
-      
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordSaver entity) record where
 
   -- need to implement createWithoutHooks or modifyWithoutHooks
-  saveWithoutHooks :: record -> ReaderT SqlBackend IO (Maybe (Entity entity))
+  saveWithoutHooks :: record -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
 
   -- need to implement, select existOnDb or existOnDbBy
   exist :: record -> ReaderT SqlBackend IO Bool
@@ -177,30 +209,40 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   -- need to implement to call saveImpl
   save :: record -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
 
-  {- flow on save
-  save mkey val = do
-    let saveType = exist self ? Modify |:| Create in
-    before self (beforeValidation saveType) afterValidation afterValidationFailed (beforeSave saveType)
-    main
-      (case saveType of
-        MODIFY -> beforeModify =>> modifyWithoutHooks =>> (afterModified <||> afterModifyFailed)
-        CREATE -> beforeCreate =>> createWithoutHooks =>> (afterCreated  <||> afterCreateFailed)
-      )
-    after
-      (afterSaved <||> afterSaveFailed) =>> (afterCommit <||> afterRollback)
-  -}
-
   -- first argument is not used but it is required for determine type
   saveImpl :: record -> Maybe (PS.Key entity) -> entity -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
   saveImpl self mkey val = do
-    (res, val2) <-
-      before
-        val
-        (beforeValidation saveType')
-        (afterValidation, afterValidationFailed)
-        (beforeSave saveType')
-    return (res, mkey, val2)
+    return (True, mkey, val)
     where
+      key' = fromJust mkey
+
+      -- beforeCommon :: (Monad m) => a -> m (Bool, a)
+      beforeActionCommon' =
+        beforeValidation saveType' .>>|| (afterValidation <||> afterValidationFailed) .>>= beforeSave saveType'
+
+      beforeActionCreateOrUpdate =
+        case saveType' of
+          Modify -> beforeModify
+          Create -> beforeCreate
+        
+      beforeActionAll' =
+        beforeActionCommon' .>>= beforeActionCreateOrUpdate
+
+      main' =
+        case saveType' of
+          Modify -> modifyWithoutHooks key'
+          Create -> createWithoutHooks
+
+      afterActionCreatedOrUpdated' =
+        case saveType' of
+          Modify -> beforeModify
+          Create -> beforeCreate
+
+      afterActionCommon' = (\a -> return (True,a)) .>>|| (afterSaved saveType' <||> afterSaveFailed saveType') .>>|| (afterCommit <||> afterRollback)
+      afterActionAll'    = afterActionCreatedOrUpdated' .>>= afterActionCommon'
+
+      dummyFunc1' = beforeActionAll' val -- def for clearifing type of toBeforeAll'
+      dummyFunc2' = afterActionAll' val
       saveType' = if isJust mkey then Modify else Create
         
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordDestroyer entity) record where
