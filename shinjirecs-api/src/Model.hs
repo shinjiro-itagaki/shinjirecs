@@ -128,7 +128,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   existOnDbBy :: entity -> ReaderT SqlBackend IO Bool
   existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
-  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity)), entity)
+  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   modifyWithoutHooks key entity = do
     PS.replace key entity
     mEntity <- PS.liftPersist $ PS.get key
@@ -136,10 +136,10 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     -- need to check updated here
     
     return $ (case mEntity of
-                (Just entity2) -> (True,  Just key, entity2)
-                Nothing        -> (False, Nothing,  entity ))
+                (Just entity2) -> (True,  (Just key, entity2))
+                Nothing        -> (False, (Nothing,  entity )))
 
-  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
+  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   createWithoutHooks entity = do
     
     -- need to check failed(exception thrown) here
@@ -147,8 +147,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     key <- PS.liftPersist $ PS.insert entity
     mEntity <- PS.liftPersist $ PS.get key
     return $ (case mEntity of
-                (Just entity2) -> (True,  Just key, entity2)
-                Nothing        -> (False, Nothing,  entity ))
+                (Just entity2) -> (True,  (Just key, entity2))
+                Nothing        -> (False, (Nothing,  entity )))
 
   destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
   destroyWithoutHook entity = do
@@ -169,12 +169,12 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
   exist :: record -> ReaderT SqlBackend IO Bool
 
   -- need to implement to call saveImpl
-  save :: record -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
+  save :: record -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
 
   -- first argument is not used but it is required for determine type
-  saveImpl :: record -> Maybe (PS.Key entity) -> entity -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
+  saveImpl :: record -> Maybe (PS.Key entity) -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   saveImpl self mkey val = do
-    return (True, mkey, val)
+    return (True, (mkey, val))
     where
       key' = fromJust mkey
 
