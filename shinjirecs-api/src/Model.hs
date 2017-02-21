@@ -90,7 +90,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterCreated = return . toSuccess
 
   -- please override if you need
-  afterCreateFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterCreateFailed :: entity -> ReaderT SqlBackend IO entity
   afterCreateFailed = return
 
   -- please override if you need
@@ -106,15 +106,15 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterModifyFailed = return
 
   -- please override if you need
-  beforeDestroy :: Entity entity -> ReaderT SqlBackend IO Bool
-  beforeDestroy _ = return True
+  beforeDestroy :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
+  beforeDestroy = return . toSuccess
 
   -- please override if you need
-  afterDestroyed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
   afterDestroyed = return . toSuccess
 
   -- please override if you need
-  afterDestroyFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterDestroyFailed :: Entity entity -> ReaderT SqlBackend IO (Entity entity)
   afterDestroyFailed = return
 
   -- please override if you need
@@ -153,12 +153,20 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
                 (Just entity2) -> (True,  Just key, entity2)
                 Nothing        -> (False, Nothing,  entity ))
 
+  destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
+  destroyWithoutHook entity = do
+    PS.delete $ entityKey entity
+    -- need to check failed(exception thrown) here
+    return (True, entity)
+
+  destroyImpl :: record -> Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
+  destroyImpl r e = impl' e
+    where
+      impl' = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
+
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
-class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordSaver entity) record where
-
-  -- need to implement createWithoutHooks or modifyWithoutHooks
-  saveWithoutHooks :: record -> ReaderT SqlBackend IO (Bool, Maybe (PS.Key entity), entity)
+class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
 
   -- need to implement, select existOnDb or existOnDbBy
   exist :: record -> ReaderT SqlBackend IO Bool
@@ -173,7 +181,6 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     where
       key' = fromJust mkey
 
-      -- beforeCommon :: (Monad m) => a -> m (Bool, a)
       beforeActionCommon' =
         beforeValidation .&&>>= validate .||>>= (afterValidation <||> afterValidationFailed) .&&>>= beforeSave
 
@@ -201,16 +208,13 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
       dummyFunc1' = beforeActionAll' (mkey,val) -- def for clearifing type of toBeforeAll'
       dummyFunc2' = afterActionAll'  (mkey,val)
       saveType' = if isJust mkey then Modify else Create
-        
-class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => (ActiveRecordDestroyer entity) record where
-  destroyWithoutHook :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))
 
-  {-
-  beforeDestroy
-  afterDestroy
-  -}
-  destroy :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))
 
+class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
+
+  -- need to implement to call destroyImpl
+  destroy :: record -> ReaderT SqlBackend IO (Bool, record)
+  
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
 findByKey key = impl' =<< PS.get key
   where
@@ -224,30 +228,22 @@ instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.Persist
 
 instance (ActiveRecord entity) => (ActiveRecordSaver entity) entity where
   exist = existOnDbBy
-  saveWithoutHooks = createWithoutHooks
   save self = saveImpl self Nothing self
 
-instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
-  -- destroyWithoutHook :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))
-  destroyWithoutHook record = do
-    let key = entityKey record
-    PS.delete key
+instance (ActiveRecord entity) => ActiveRecordSaver entity (Entity entity) where
+  exist = existOnDb . entityKey
+  save self = saveImpl self (Just $ entityKey self) (entityVal self)
 
-    -- check destroyed here
-    -- if destroy failed then
-    --  return Nothing
-    -- else
-    --  return Just key
-      
-    return $ Just key
-    
-  -- destroy :: record -> ReaderT SqlBackend IO (Maybe (PS.Key entity))    
-  destroy record@(Entity key val) = do
-    res <- beforeDestroy record
-    if res then
-      destroyWithoutHook record -- ReaderT SqlBackend IO (Maybe (PS.Key entity))
-    else
-      return Nothing
+instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
+  destroy self = destroyImpl self self
+
+-- send key directly
+instance (ActiveRecord entity) => ActiveRecordDestroyer entity (PS.Key entity) where
+  destroy key = do
+    me <- findByKey key
+    case me of
+      Just e -> destroyImpl key e >>= (\(b, e2) -> return (b, key))
+      Nothing -> return (False, key)
 
 class (PS.PersistEntity record, PS.DeleteCascade record SqlBackend) => CascadeDeletable record where
   deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()
