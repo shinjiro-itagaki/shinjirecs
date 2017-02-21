@@ -52,6 +52,11 @@ instance (PS.PersistEntity e) => ResultClass (Entity e) (Bool, Entity e) where
   isSuccess r dummy = fst r
   returnValue = snd
 
+--instance (PS.PersistEntity e) => ResultClass e (Bool, e) where
+--  toResult b r = (b,r)
+--  isSuccess r dummy = fst r
+--  returnValue = snd
+
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
 
   -- please override if you need
@@ -87,8 +92,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterSaveFailed = return
   
   -- please override if you need
-  beforeCreate :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  beforeCreate = return . toSuccess
+  beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
+  beforeCreate val = return (True, val)
 
   -- please override if you need
   afterCreated :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
@@ -185,7 +190,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
       beforeActionCreateOrUpdate' =
         case saveType' of
           Modify -> beforeModify
-          Create -> beforeCreate
+          Create -> \(mkey, entity) -> beforeCreate entity >>= \(b, entity2) -> return (b, (Nothing, entity2))
         
       beforeActionAll' =
         beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
@@ -197,8 +202,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
       afterActionCreatedOrUpdated' =
         case saveType' of
-          Modify -> beforeModify
-          Create -> beforeCreate
+          Modify -> afterModified
+          Create -> afterCreated
 
       afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved <||> afterSaveFailed) .||>>= (afterCommit <||> afterRollback)
       afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
