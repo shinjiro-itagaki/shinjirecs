@@ -172,9 +172,8 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
   save :: record -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
 
   -- first argument is not used but it is required for determine type
-  saveImpl :: record -> Maybe (PS.Key entity) -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  saveImpl self mkey val = do
-    return (True, (mkey, val))
+  saveImpl :: record -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  saveImpl self arg@(mkey, v) = beforeActionAll' .&&>>= (main' . snd) .&&>>= afterActionAll' $ arg
     where
       key' = fromJust mkey
 
@@ -193,7 +192,7 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
         case saveType' of
           Modify -> modifyWithoutHooks key'
           Create -> createWithoutHooks
-
+          
       afterActionCreatedOrUpdated' =
         case saveType' of
           Modify -> afterModified
@@ -202,10 +201,7 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
       afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved <||> afterSaveFailed) .||>>= (afterCommit <||> afterRollback)
       afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
 
-      dummyFunc1' = beforeActionAll' (mkey,val) -- def for clearifing type of toBeforeAll'
-      dummyFunc2' = afterActionAll'  (mkey,val)
       saveType' = if isJust mkey then Modify else Create
-
 
 class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
 
@@ -225,11 +221,11 @@ instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.Persist
 
 instance (ActiveRecord entity) => (ActiveRecordSaver entity) entity where
   exist = existOnDbBy
-  save self = saveImpl self Nothing self
+  save self = saveImpl self (Nothing, self)
 
 instance (ActiveRecord entity) => ActiveRecordSaver entity (Entity entity) where
   exist = existOnDb . entityKey
-  save self = saveImpl self (Just $ entityKey self) (entityVal self)
+  save self = saveImpl self (Just $ entityKey self, entityVal self)
 
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
   destroy self = destroyImpl self self
