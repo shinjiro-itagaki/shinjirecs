@@ -58,11 +58,10 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   beforeValidation = return . toSuccess
   
   -- please override if you need
-  validate :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  validate, afterValidation, beforeSave, afterSaved :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))  
   validate = return . toSuccess
   
   -- please override if you need
-  afterValidation :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterValidation = return . toSuccess
 
   -- please override if you need
@@ -70,23 +69,23 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterValidationFailed = return
   
   -- please override if you need
-  beforeSave :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   beforeSave = return . toSuccess
 
   -- please override if you need
-  afterSaved :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterSaved = return . toSuccess
 
-  -- please override if you need
-  afterSaveFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterSaveFailed, afterModifyFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  
+  -- please override if you need  
   afterSaveFailed = return
   
   -- please override if you need
   beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
   beforeCreate = return . toSuccess
 
-  -- please override if you need
-  afterCreated :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterCreated, beforeModify, afterModified :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+
+  -- please override if you need  
   afterCreated = return . toSuccess
 
   -- please override if you need
@@ -94,23 +93,21 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterCreateFailed = return
 
   -- please override if you need
-  beforeModify :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   beforeModify = return . toSuccess
 
   -- please override if you need
-  afterModified :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+
   afterModified = return . toSuccess
 
   -- please override if you need
-  afterModifyFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
   afterModifyFailed = return
 
-  -- please override if you need
-  beforeDestroy :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
+  beforeDestroy, afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
+  
+  -- please override if you need  
   beforeDestroy = return . toSuccess
 
   -- please override if you need
-  afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
   afterDestroyed = return . toSuccess
 
   -- please override if you need
