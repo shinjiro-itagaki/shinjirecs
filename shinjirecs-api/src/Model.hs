@@ -130,26 +130,16 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
   modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  modifyWithoutHooks key entity = do
-    PS.replace key entity
-    mEntity <- PS.liftPersist $ PS.get key
-    
+  modifyWithoutHooks key entity =
+    let ifNothing' = (False, (Nothing, entity)) in
     -- need to check updated here
+    PS.replace key entity >> findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
     
-    return $ (case mEntity of
-                (Just entity2) -> (True,  (Just key, entity2))
-                Nothing        -> (False, (Nothing,  entity )))
-
   createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  createWithoutHooks entity = do
-    
-    -- need to check failed(exception thrown) here
-    
-    key <- PS.liftPersist $ PS.insert entity
-    mEntity <- PS.liftPersist $ PS.get key
-    return $ (case mEntity of
-                (Just entity2) -> (True,  (Just key, entity2))
-                Nothing        -> (False, (Nothing,  entity )))
+  createWithoutHooks entity =
+    let ifNothing' = (False, (Nothing, entity)) in
+    -- need to check failed(exception thrown) here      
+    PS.insert entity >>= findByKey >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
 
   destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
   destroyWithoutHook entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
@@ -207,6 +197,7 @@ class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
   
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
 findByKey key = impl' =<< PS.get key
+--key = maybe (return Nothing) (\x -> afterFind x >>= return $ Just . Entity key) =<< PS.get key
   where
     impl' (Just x) = (\val' -> return $ Just $ Entity key val') =<< afterFind x
     impl' _        = return Nothing
