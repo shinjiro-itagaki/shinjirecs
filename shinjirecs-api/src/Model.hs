@@ -216,11 +216,7 @@ instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) w
 
 -- send key directly
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (PS.Key entity) where
-  destroy key = do
-    me <- findByKey key
-    case me of
-      Just e -> destroyImpl key e >>= (\(b, e2) -> return (b, key))
-      Nothing -> return (False, key)
+  destroy key = findByKey key >>= maybe (return (False, key)) (\e -> destroyImpl key e >>= (\(b, e2) -> return (b, key)))
 
 class (PS.PersistEntity record, PS.DeleteCascade record SqlBackend) => CascadeDeletable record where
   deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()
