@@ -42,20 +42,10 @@ res <- save conn reservation [RerservationStart_time +=. ]
 
 data SaveType = Modify | Create
 
-instance (PS.PersistEntity e) => ResultClass (Maybe (PS.Key e), e) (Bool, (Maybe (PS.Key e), e)) where
+instance ResultClass a (Bool, a) where
   toResult b r = (b,r)
   isSuccess r dummy = fst r
   returnValue = snd
-
-instance (PS.PersistEntity e) => ResultClass (Entity e) (Bool, Entity e) where
-  toResult b r = (b,r)
-  isSuccess r dummy = fst r
-  returnValue = snd
-
---instance (PS.PersistEntity e) => ResultClass e (Bool, e) where
---  toResult b r = (b,r)
---  isSuccess r dummy = fst r
---  returnValue = snd
 
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
 
@@ -93,7 +83,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   
   -- please override if you need
   beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeCreate val = return (True, val)
+  beforeCreate = return . toSuccess
 
   -- please override if you need
   afterCreated :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
