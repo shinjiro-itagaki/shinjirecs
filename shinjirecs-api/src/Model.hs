@@ -196,11 +196,7 @@ class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
   destroy :: record -> ReaderT SqlBackend IO (Bool, record)
   
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
-findByKey key = impl' =<< PS.get key
---key = maybe (return Nothing) (\x -> afterFind x >>= return $ Just . Entity key) =<< PS.get key
-  where
-    impl' (Just x) = (\val' -> return $ Just $ Entity key val') =<< afterFind x
-    impl' _        = return Nothing
+findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind x >>= return . Just . Entity key)
     
 find :: (Read id, Show id, ActiveRecord entity) => id -> ReaderT SqlBackend IO (Maybe (Entity entity))
 find = let ifNothing' = -1 in findByKey . toSqlKey . fromMaybe ifNothing' . readMaybe . show
