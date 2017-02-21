@@ -24,7 +24,7 @@ import Control.Monad.Reader.Class(MonadReader) -- mtl
 import Data.Acquire(Acquire) -- resourcet
 import Data.Conduit(Source) --- conduit
 import Data.Int(Int64) -- base
-import Lib(ResultClass(..), (=<<.),(.>>=),(<||>),(.>>||),(||<<.))
+import Lib(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
 
 runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
@@ -52,7 +52,6 @@ instance (PS.PersistEntity e) => ResultClass (Entity e) (Bool, Entity e) where
   isSuccess r dummy = fst r
   returnValue = snd
 
-
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
 
   -- please override if you need
@@ -60,8 +59,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterFind = return
   
   -- please override if you need
-  beforeValidation :: SaveType -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  beforeValidation type' = return . toSuccess
+  beforeValidation :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  beforeValidation = return . toSuccess
   
   -- please override if you need
   validate :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
@@ -76,16 +75,16 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterValidationFailed = return
   
   -- please override if you need
-  beforeSave :: SaveType -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  beforeSave _ = return . toSuccess
+  beforeSave :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  beforeSave = return . toSuccess
 
   -- please override if you need
-  afterSaved :: SaveType -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  afterSaved _ = return . toSuccess
+  afterSaved :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterSaved = return . toSuccess
 
   -- please override if you need
-  afterSaveFailed :: SaveType -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
-  afterSaveFailed _ = return
+  afterSaveFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterSaveFailed = return
   
   -- please override if you need
   beforeCreate :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
@@ -181,7 +180,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
       -- beforeCommon :: (Monad m) => a -> m (Bool, a)
       beforeActionCommon' =
-        beforeValidation saveType' .>>|| (afterValidation <||> afterValidationFailed) .>>= beforeSave saveType'
+        beforeValidation .&&>>= validate .||>>= (afterValidation <||> afterValidationFailed) .&&>>= beforeSave
 
       beforeActionCreateOrUpdate' =
         case saveType' of
@@ -189,7 +188,7 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
           Create -> beforeCreate
         
       beforeActionAll' =
-        beforeActionCommon' .>>= beforeActionCreateOrUpdate'
+        beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
 
       main' =
         case saveType' of
@@ -201,8 +200,8 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
           Modify -> beforeModify
           Create -> beforeCreate
 
-      afterActionCommon' = (\a -> return (True,a)) .>>|| (afterSaved saveType' <||> afterSaveFailed saveType') .>>|| (afterCommit <||> afterRollback)
-      afterActionAll'    = afterActionCreatedOrUpdated' .>>= afterActionCommon'
+      afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved <||> afterSaveFailed) .||>>= (afterCommit <||> afterRollback)
+      afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
 
       dummyFunc1' = beforeActionAll' (mkey,val) -- def for clearifing type of toBeforeAll'
       dummyFunc2' = afterActionAll'  (mkey,val)
