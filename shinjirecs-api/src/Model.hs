@@ -10,7 +10,8 @@
 
 module Model where
 import Text.Read(readMaybe) -- !!!
-import Data.Maybe(fromMaybe, isJust, fromJust) -- !!!
+import Data.Maybe(fromMaybe, isJust, isNothing, fromJust) -- !!!
+import Data.Tuple(swap)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
@@ -151,16 +152,11 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
                 Nothing        -> (False, (Nothing,  entity )))
 
   destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
-  destroyWithoutHook entity = do
-    PS.delete $ entityKey entity
-    -- need to check failed(exception thrown) here
-    return (True, entity)
+  destroyWithoutHook entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
 
   destroyImpl :: record -> Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
-  destroyImpl r e = impl' e
-    where
-      impl' = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
-
+  destroyImpl _ = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
+  
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
 class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
