@@ -173,7 +173,7 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
 
   -- first argument is not used but it is required for determine type
   saveImpl :: record -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  saveImpl self arg@(mkey, v) = beforeActionAll' .&&>>= (main' . snd) .&&>>= afterActionAll' $ arg
+  saveImpl self arg@(mkey, v) = beforeActionAll' .&&>>= main' .&&>>= afterActionAll' $ arg
     where
       key' = fromJust mkey
 
@@ -189,9 +189,10 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
         beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
 
       main' =
-        case saveType' of
+        (case saveType' of
           Modify -> modifyWithoutHooks key'
           Create -> createWithoutHooks
+        ) . snd
           
       afterActionCreatedOrUpdated' =
         case saveType' of
