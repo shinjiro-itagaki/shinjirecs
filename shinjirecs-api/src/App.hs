@@ -25,7 +25,7 @@ import Control.Monad.Trans.Resource (ResourceT) -- resourcet
 import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
 
-import Controller(ControllerAction(..), Controller(..))
+import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
 import Controllers.Channels(ChannelsController, list)
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
@@ -91,27 +91,27 @@ _PATCH  = _COMMON patch
 _POST   = _COMMON post
 _DELETE = _COMMON delete
 
-_COMMON2 :: (Controller c) =>
+_COMMON2 :: (Controller sym c, ActionSymbol sym) =>
   (RoutePattern -> ActionM () -> ScottyM ())
   -> Sql.ConnectionPool
   -> RoutePattern
-  -> ControllerAction c
+  -> ControllerAction c sym
   -> ScottyM ()
 _COMMON2 func conn pat act = do
   routeOPTIONS pat
   func pat $ do
     impl' act
   where
-    impl' :: (Controller c) => ControllerAction c -> ActionM ()
+    impl' :: (Controller sym c, ActionSymbol sym) => ControllerAction c sym -> ActionM ()
     impl' (sym, main) = do
-      (res, c) <- beforeAction sym $ new conn -- $ DBTables { channels = db }
+      (res, c) <- beforeAction sym $ new sym conn -- $ DBTables { channels = db }
       case res of
         True -> do
           afterAction sym =<< main c
         False -> do
           return () -- do nothing
 -- MonadIO m => Sql.SqlPersistT IO a -> m a
-_GET2 :: (Controller c) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c -> ScottyM ()
+_GET2 :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
 _GET2 conn =  _COMMON2 get conn
 
 -- _PATCH2  :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()

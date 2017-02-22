@@ -20,26 +20,25 @@ runDB p action = liftIO $ runSqlPool action p
 
 -- class (Controller c) => (ControllerAction c) ca
 
+class (Enum sym) => ActionSymbol sym
 data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Enum
 
-class Controller a where
-  new :: ConnectionPool -> a
-  conn :: a -> ConnectionPool
-  db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
-  db = runDB . conn
-  beforeAction :: DefaultActionSymbol -> a -> ActionM (Bool, a)
+instance ActionSymbol DefaultActionSymbol
+
+class (ActionSymbol sym) => Controller sym a where
+  new :: sym -> ConnectionPool -> a
+  conn :: sym -> a -> ConnectionPool
+  db :: (MonadIO m) => sym -> a -> (SqlPersistT IO b -> m b)
+  db sym a = runDB $ conn sym a
+  beforeAction :: (ActionSymbol sym) => sym -> a -> ActionM (Bool, a)
   beforeAction sym c = return (True, c)
-  afterAction  :: DefaultActionSymbol -> a -> ActionM ()
+  afterAction  :: (ActionSymbol sym) => sym -> a -> ActionM ()
   afterAction  sym c = return ()
   
--- class (Controller DefaultActionSymbol a) => DefaultController a where
-
 -- instance (Controller c) => (ControllerAction c) (DefaultActionSymbol, (c -> ActionM c))
 
--- data (Controller c) => ControllerAction c = (DefaultActionSymbol, (c -> ActionM c)
+type ControllerAction c sym = (sym, (c -> ActionM c))
 
-type ControllerAction c = (DefaultActionSymbol, (c -> ActionM c))
-                                            
-def :: (Controller c) => DefaultActionSymbol -> (c -> ActionM c) -> ControllerAction c
+def :: (Controller sym c, ActionSymbol sym) => sym -> (c -> ActionM c) -> (sym, (c -> ActionM c))
 def sym impl = (sym, impl)
 

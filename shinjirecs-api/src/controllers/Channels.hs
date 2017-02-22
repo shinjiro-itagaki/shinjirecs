@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Controllers.Channels where
 --import Data.Eq (Eq)
 -- import Data.Aeson(json)
 import Web.Scotty(json)
-import Controller(Controller(..), ControllerAction(..), DefaultActionSymbol(..), def)
+import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..))
 
 import Web.Scotty (ActionM)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
@@ -19,9 +21,9 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 -- before :: Channels -> DefaultActionSymbol -> (Bool, Channels)
 
-instance Controller ChannelsController where
-  new conn' = ChannelsController { conn_ = conn' }
-  conn                = conn_ 
+instance (Controller DefaultActionSymbol) ChannelsController where
+  new  _              = ChannelsController
+  conn _              = conn_ 
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
 
@@ -31,4 +33,4 @@ list = def List list'
     filter = [] :: [P.Filter DB.Channel]
     opt    = [] :: [P.SelectOpt DB.Channel]
     list' :: ChannelsController -> ActionM ChannelsController
-    list' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
+    list' c = (db List c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
