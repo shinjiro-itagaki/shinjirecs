@@ -26,7 +26,7 @@ import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
 
 import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
-import Controllers.Channels(ChannelsController, list)
+import qualified Controllers.Channels as ChannelsC
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
 -- import Database.Persist.Types (PersistValue(PersistInt64)) 
@@ -135,20 +135,10 @@ appImpl port pool = do
     middleware logStdoutDev
 --    _GET2 "/" $ Direct $ do
 --      return ()
-    _GET2 pool "/channels/list" Controllers.Channels.list
-    _GET "/channels/list" $ do
-      -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
-      let filter = [] :: [P.Filter DB.Channel]
-          opt = [] :: [P.SelectOpt DB.Channel]
-      records <- db $ map P.entityVal <$> P.selectList filter opt
-      json records
-      status status200
-    _GET "/channels/:id" $ do
-      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Channel))
-      status status200
-      case m_record of
-        Just record -> json record
-        _           -> status status404
+    _GET2 pool "/channels/list" ChannelsC.list
+    _GET2 pool "/channels/:id"  ChannelsC.get
+
+
     _PATCH "/channels/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
