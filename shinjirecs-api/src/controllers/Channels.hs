@@ -4,8 +4,7 @@ module Controllers.Channels where
 --import Data.Eq (Eq)
 -- import Data.Aeson(json)
 import Web.Scotty(json)
-import Controller(Controller(..), ControllerAction(..), def)
-import Controller(ActionSymbol(List), toActionSym)
+import Controller(Controller(..), ControllerAction(..), DefaultActionSymbol(..), def)
 
 import Web.Scotty (ActionM)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
@@ -26,7 +25,7 @@ instance Controller ChannelsController where
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
 
-list :: ControllerAction ChannelsController
+list :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 list = def List list'
   where
     filter = [] :: [P.Filter DB.Channel]

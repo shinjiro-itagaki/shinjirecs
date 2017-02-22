@@ -103,7 +103,7 @@ _COMMON2 func conn pat act = do
     impl' act
   where
     impl' :: (Controller c) => ControllerAction c -> ActionM ()
-    impl' (ControllerAction sym main) = do
+    impl' (sym, main) = do
       (res, c) <- beforeAction sym $ new conn -- $ DBTables { channels = db }
       case res of
         True -> do
