@@ -12,6 +12,7 @@ module Model where
 import Text.Read(readMaybe) -- !!!
 import Data.Maybe(fromMaybe, isJust, isNothing, fromJust) -- !!!
 import Data.Tuple(swap)
+import Control.Exception(catch) -- base
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
@@ -130,16 +131,15 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
   modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  modifyWithoutHooks key entity =
-    let ifNothing' = (False, (Nothing, entity)) in
-    -- need to check updated here
-    PS.replace key entity >> findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
+  modifyWithoutHooks key entity = PS.replace key entity >> afterSaveWithoutHooks entity key
     
   createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  createWithoutHooks entity =
-    let ifNothing' = (False, (Nothing, entity)) in
-    -- need to check failed(exception thrown) here      
-    PS.insert entity >>= findByKey >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
+  createWithoutHooks entity = PS.insert entity >>= afterSaveWithoutHooks entity
+
+  afterSaveWithoutHooks :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterSaveWithoutHooks old_entity key =
+    let ifNothing' = (False, (Nothing, old_entity)) in
+    findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
 
   destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
   destroyWithoutHook entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing

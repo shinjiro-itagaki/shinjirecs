@@ -26,7 +26,7 @@ import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
 
 import Controller(ControllerAction(..), Controller(..))
-import Controllers.Channels(Channels, list)
+import Controllers.Channels(ChannelsController, list)
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
 -- import Database.Persist.Types (PersistValue(PersistInt64)) 

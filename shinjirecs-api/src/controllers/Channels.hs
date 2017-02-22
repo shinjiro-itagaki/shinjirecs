@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts  #-}
 module Controllers.Channels where
--- import Data.Eq (Eq)
-import Controller(Controller(..), ControllerAction(..))
+--import Data.Eq (Eq)
+-- import Data.Aeson(json)
+import Web.Scotty(json)
+import Controller(Controller(..), ControllerAction(..), def)
 import Controller(ActionSymbol(List), toActionSym)
 
 import Web.Scotty (ActionM)
@@ -15,24 +17,19 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 -- import Model (Model, Models, getModel, getModels)
 
 -- data Channels = Channels { conn :: ConnectionPool, models :: Models }
-data Channels = Channels
+data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 -- before :: Channels -> DefaultActionSymbol -> (Bool, Channels)
-before :: Channels -> ActionSymbol -> (Bool, Channels)
-before c List = (True, c)
-before c _    = (True, c)
 
-instance Controller Channels where
---  new conn' = Channels { conn = conn', models = getModels conn' }
-  new conn' = Channels
-  beforeAction i c = do
-    return $ before c $ toActionSym i
-    
-list = ControllerAction (fromEnum List) (
-  \c -> do
-    let filter = [] :: [P.Filter DB.Channel]
-        opt    = [] :: [P.SelectOpt DB.Channel]
---    records <- db $ map P.entityVal <$> P.selectList filter opt
---    json records
-    return (c :: Channels)
-  )
+instance Controller ChannelsController where
+  new conn' = ChannelsController { conn_ = conn' }
+  conn                = conn_ 
+  beforeAction List c = return (True, c)
+  beforeAction _    c = return (True, c)
 
+list :: ControllerAction ChannelsController
+list = def List list'
+  where
+    filter = [] :: [P.Filter DB.Channel]
+    opt    = [] :: [P.SelectOpt DB.Channel]
+    list' :: ChannelsController -> ActionM ChannelsController
+    list' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c

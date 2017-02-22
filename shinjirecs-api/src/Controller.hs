@@ -21,12 +21,16 @@ runDB p action = liftIO $ runSqlPool action p
 
 class Controller a where
   new :: ConnectionPool -> a
-  beforeAction :: Int -> a -> ActionM (Bool, a)
-  beforeAction sym c = do
-    return (True, c)
-  afterAction :: Int -> a -> ActionM ()
-  afterAction sym c = do
-    return ()
+  conn :: a -> ConnectionPool
+  db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
+  db = runDB . conn
+  beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
+  beforeAction sym c = return (True, c)
+  afterAction :: ActionSymbol -> a -> ActionM ()
+  afterAction sym c = return ()
 
-data (Controller c) => ControllerAction c = ControllerAction Int (c -> ActionM c)
+data (Controller c) => ControllerAction c = ControllerAction ActionSymbol (c -> ActionM c)
+
+def :: (Controller c) => ActionSymbol -> (c -> ActionM c) -> ControllerAction c
+def sym impl = ControllerAction sym impl
 
