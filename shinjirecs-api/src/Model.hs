@@ -146,6 +146,18 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   destroyImpl :: record -> Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
   destroyImpl _ = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
+
+
+class (PS.PersistEntity entity) => ToMaybeEntity entity a where
+  toMaybeEntity :: (PS.PersistEntity entity) => a -> Maybe (Entity entity)
+
+instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Maybe (PS.Key entity), entity) where
+  toMaybeEntity (Just key, e) = Just $ Entity {entityKey = key, entityVal = e}
+  toMaybeEntity _             = Nothing
+
+instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Bool, (Maybe (PS.Key entity), entity)) where
+  toMaybeEntity (True, a) = toMaybeEntity a
+  toMaybeEntity _         = Nothing
   
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
@@ -207,9 +219,15 @@ instance (ActiveRecord entity) => (ActiveRecordSaver entity) entity where
   exist = existOnDbBy
   save self = saveImpl self (Nothing, self)
 
-instance (ActiveRecord entity) => ActiveRecordSaver entity (Entity entity) where
+instance (ActiveRecord entity) => (ActiveRecordSaver entity) (Entity entity) where
   exist = existOnDb . entityKey
-  save self = saveImpl self (Just $ entityKey self, entityVal self)
+  save self@(Entity k v) = saveImpl self (Just k, v)
+
+saveE :: (ActiveRecord entity) => Entity entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+saveE x = save x
+
+saveR :: (ActiveRecord entity) => entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+saveR x = save x
 
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
   destroy self = destroyImpl self self
