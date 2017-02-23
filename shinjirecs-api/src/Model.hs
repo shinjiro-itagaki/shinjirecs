@@ -149,15 +149,15 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
 
 class (PS.PersistEntity entity) => ToMaybeEntity entity a where
-  toMaybeEntity :: (PS.PersistEntity entity) => a -> Maybe (Entity entity)
+  toMaybeEntity :: a -> Maybe (Entity entity)
 
 instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Maybe (PS.Key entity), entity) where
   toMaybeEntity (Just key, e) = Just $ Entity {entityKey = key, entityVal = e}
   toMaybeEntity _             = Nothing
 
 instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Bool, (Maybe (PS.Key entity), entity)) where
-  toMaybeEntity (True, a) = toMaybeEntity a
-  toMaybeEntity _         = Nothing
+  toMaybeEntity (True,  a) = toMaybeEntity a
+  toMaybeEntity (False, a) = Nothing
   
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
@@ -245,3 +245,4 @@ class (PS.PersistEntity record, PS.DeleteCascade record SqlBackend) => CascadeDe
 class (PS.PersistEntity record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceable record where
   replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
 --  replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
+

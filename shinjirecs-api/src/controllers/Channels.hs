@@ -6,11 +6,9 @@ module Controllers.Channels where
 --import Data.Eq (Eq)
 -- import Data.Aeson(json)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
-import Web.Scotty(json,param,jsonData)
+import Web.Scotty(json,param,jsonData, ActionM, status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
-import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..))
-
-import Web.Scotty (ActionM, status)
+import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), toJsonResponseME, ResponseType(..))
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist as P --persistent
 import Database.Persist.Types (Entity(entityVal))
@@ -47,15 +45,16 @@ get = def Get impl'
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
-      responseFind mEntity >> return c
+      toJsonResponseME FindR mEntity >> return c
 
 modify :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 modify = def Modify impl'
   where
+    toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
       newrec <- (jsonData :: ActionM DB.Channel)
       case mEntity of
-        Just e -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity >>= responseFind >> return c
+        Just e  -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
         Nothing -> return c
