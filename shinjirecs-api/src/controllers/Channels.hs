@@ -6,7 +6,7 @@ module Controllers.Channels where
 --import Data.Eq (Eq)
 -- import Data.Aeson(json)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
-import Web.Scotty(json,param)
+import Web.Scotty(json,param,jsonData)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
 import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..))
 
@@ -19,15 +19,17 @@ import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
-import Model (find)
+import Model (find, saveE, ToMaybeEntity(..))
+
+import Models.Channel
 
 -- data Channels = Channels { conn :: ConnectionPool, models :: Models }
-data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
+data ChannelsController = ChannelsController { conn_ :: ConnectionPool } --, record :: Maybe DB.Channel }
 -- before :: Channels -> DefaultActionSymbol -> (Bool, Channels)
 
 instance (Controller DefaultActionSymbol) ChannelsController where
   new  _              = ChannelsController
-  conn _              = conn_ 
+  conn _              = conn_
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
 
@@ -42,10 +44,18 @@ list = def List list'
 get :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 get = def Get impl'
   where
-    res :: Maybe (Entity DB.Channel) -> ActionM ()
-    res (Just e) = json $ entityVal e
-    res Nothing  = status status404
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
-      res mEntity >> return c
+      responseFind mEntity >> return c
+
+modify :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
+modify = def Modify impl'
+  where
+    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' c = do
+      mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
+      newrec <- (jsonData :: ActionM DB.Channel)
+      case mEntity of
+        Just e -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity >>= responseFind >> return c
+        Nothing -> return c

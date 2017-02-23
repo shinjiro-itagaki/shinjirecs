@@ -42,3 +42,10 @@ type ControllerAction c sym = (sym, (c -> ActionM c))
 def :: (Controller sym c, ActionSymbol sym) => sym -> (c -> ActionM c) -> (sym, (c -> ActionM c))
 def sym impl = (sym, impl)
 
+responseFind :: Maybe (Entity DB.Channel) -> ActionM ()
+responseFind (Just e) = json $ entityVal e
+responseFind Nothing  = status status404
+
+responseSave :: Maybe (Entity DB.Channel) -> ActionM ()
+responseSave (Just e) = json $ entityVal e
+responseSave Nothing  = status status400

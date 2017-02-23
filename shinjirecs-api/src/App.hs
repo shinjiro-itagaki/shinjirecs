@@ -111,11 +111,11 @@ _COMMON2 func conn pat act = do
         False -> do
           return () -- do nothing
 -- MonadIO m => Sql.SqlPersistT IO a -> m a
-_GET2 :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
+_GET2      :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
 _GET2 conn =  _COMMON2 get conn
 
--- _PATCH2  :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
--- _PATCH2  = _COMMON2 patch
+_PATCH2    :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
+_PATCH2 conn = _COMMON2 patch conn
 -- _POST2   :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
 -- _POST2   = _COMMON2 post
 -- _DELETE2 :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
@@ -135,21 +135,10 @@ appImpl port pool = do
     middleware logStdoutDev
 --    _GET2 "/" $ Direct $ do
 --      return ()
-    _GET2 pool "/channels/list" ChannelsC.list
-    _GET2 pool "/channels/:id"  ChannelsC.get
-
-
-    _PATCH "/channels/:id" $ do
-      key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
-      newrec <- (jsonData :: ActionM DB.Channel)
-      case m_record of
-        Just record -> do
-          res <- db $ P.replace key newrec
-          json =<< DB.findRecord db key
-          status status201
-        _            -> status status404
-    _POST "/channels" $ do
+    _GET2   pool "/channels/list" ChannelsC.list
+    _GET2   pool "/channels/:id"  ChannelsC.get
+    _PATCH2  pool "/channels/:id"  ChannelsC.modify
+    _POST  "/channels" $ do
       newrec <- jsonData :: ActionM DB.Channel 
       key    <- db $ P.insert newrec
       json =<< DB.findRecord db key
