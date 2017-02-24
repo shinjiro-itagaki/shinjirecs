@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Controllers.Channels where
+module Controllers.Programs where
 import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), toJsonResponseME, ResponseType(..), findRecord)
 
 import Data.Bool(bool)
@@ -18,59 +18,59 @@ import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persiste
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Model (find, saveE,saveR ,ToMaybeEntity(..))
 import qualified Model as M
-import Models.Channel
+import Models.Program
 import Control.Monad.Reader(ReaderT) -- mtl
 
-data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
+data ProgramsController = ProgramsController { conn_ :: ConnectionPool }
 
-instance (Controller DefaultActionSymbol) ChannelsController where
-  new  _              = ChannelsController
+instance (Controller DefaultActionSymbol) ProgramsController where
+  new  _              = ProgramsController
   conn _              = conn_
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
 
 -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
-toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
+toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Program)
 
-list, get, modify, create, destroy :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
+list, get, modify, create, destroy :: (DefaultActionSymbol, (ProgramsController -> ActionM ProgramsController))
 
 list = def List list'
   where
-    filter = [] :: [P.Filter DB.Channel]
-    opt    = [] :: [P.SelectOpt DB.Channel]
-    list' :: ChannelsController -> ActionM ChannelsController
+    filter = [] :: [P.Filter DB.Program]
+    opt    = [] :: [P.SelectOpt DB.Program]
+    list' :: ProgramsController -> ActionM ProgramsController
     list' c = (db List c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
 
 get = def Get impl'
   where
-    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
-      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
+      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Program))
       toJsonResponseME FindR mEntity >> return c
 
 modify = def Modify impl'
   where
-    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
-      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
-      newrec <- (jsonData :: ActionM DB.Channel)
+      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Program))
+      newrec <- (jsonData :: ActionM DB.Program)
       case mEntity of
         Just e  -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
         Nothing -> return c
 
 create = def Create impl'
   where
-    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
-      newrec <- (jsonData :: ActionM DB.Channel)
+      newrec <- (jsonData :: ActionM DB.Program)
       (db Create c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
 
 destroy = def Destroy impl'
   where
-    destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel)
+    destroy' :: Entity DB.Program -> ReaderT SqlBackend IO (Bool, (Entity DB.Program), PS.Key DB.Program)
     destroy' e = M.destroy e
-    findRecord' c = findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Channel))
-    impl' :: ChannelsController -> ActionM ChannelsController
+    findRecord' c = findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Program))
+    impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
       findRecord' c >>= maybe
         (status status404 >> return c)
@@ -79,3 +79,4 @@ destroy = def Destroy impl'
             status $ bool status201 status400 b
             return c
         )
+

@@ -23,8 +23,12 @@ library
                      , Model
                      , Models.Channel
                      , Models.Reservation
+                     , Models.Program
                      , Controller
                      , Controllers.Channels
+                     , Controllers.Install
+                     , Controllers.Programs
+                     , Controllers.Reservations
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring

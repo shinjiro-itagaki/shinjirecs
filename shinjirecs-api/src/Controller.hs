@@ -43,7 +43,7 @@ class (ActionSymbol sym) => Controller sym a where
 
   findRecord :: (Show keyname, ActiveRecord e) => keyname -> sym -> a -> ActionM (Maybe (Entity e))
   findRecord keyname sym a = (param $ LText.pack $ show keyname :: ActionM String) >>= db sym a . find
-  
+
 -- instance (Controller c) => (ControllerAction c) (DefaultActionSymbol, (c -> ActionM c))
 
 type ControllerAction c sym = (sym, (c -> ActionM c))
@@ -78,3 +78,6 @@ toJsonResponseME x (Just e) = toJsonResponseM x (Just $ entityVal e)
 toJsonResponseME x Nothing  = status status400 -- ?? [toJsonResponseM x Nothing] is bad
 
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
+
+
+

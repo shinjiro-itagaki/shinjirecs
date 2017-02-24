@@ -24,21 +24,20 @@ import qualified Control.Monad.Trans.Class as Trans -- transformers
 import Control.Monad.Trans.Resource (ResourceT) -- resourcet
 import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
-
-import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
-import qualified Controllers.Channels as ChannelsC
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
--- import Database.Persist.Types (PersistValue(PersistInt64)) 
+import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
+
+import qualified Controllers.Channels     as ChannelsC
+import qualified Controllers.Install      as InstallC
+import qualified Controllers.Programs     as ProgramsC
+import qualified Controllers.Reservations as ReservationsC
 
 server = scotty
 
--- toSqlKey :: ToBackendKey SqlBackend record => Int64 -> Key record
 toKey :: PS.ToBackendKey Sql.SqlBackend record => L.Text -> ActionM (PS.Key record)
 toKey keyname = Sql.toSqlKey <$> (param keyname) -- :: ActionM (PS.Key record)
 
--- MonadIO m => Sql.ConnectionPool -> Sql.SqlPersistT IO a -> m a
--- Sql.SqlPersistT IO a -> m a
 findRecord :: PS.ToBackendKey Sql.SqlBackend record => (Sql.SqlPersistT IO (Maybe record) -> ActionM (Maybe record)) -> L.Text -> ActionM (Maybe record)
 findRecord db keyname = do
   key <- toKey keyname -- :: ActionM (PS.Key record)  
@@ -130,122 +129,29 @@ appImpl port pool = do
   server port $ do
     middleware setCommonHeaders
     middleware logStdoutDev
---    _GET2 "/" $ Direct $ do
---      return ()
     _GET2    pool "/channels/list" ChannelsC.list
     _GET2    pool "/channels/:id"  ChannelsC.get
     _PATCH2  pool "/channels/:id"  ChannelsC.modify
     _POST2   pool "/channels"      ChannelsC.create
     _DELETE2 pool "/channels/:id"  ChannelsC.destroy
-    {-
-      key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
-      case m_record of
-        Just record -> do
-          db $ P.delete key
-          m_record2 <- DB.findRecord db key
-          case m_record2 of
-            Just d_record -> status status201
-            _             -> status status400
-        _            -> status status404      
--}
-    _GET "/install/index" $ do
-      beforeStep
-    _GET "/install/result_detect_channels" $ do
-      beforeStep
-    _GET "/install/step/1" $ do
-      beforeStep
-    _GET "/install/step/2" $ do
-      beforeStep
-    _GET "/install/step/3" $ do
-      beforeStep
-      
-    _GET "/programs/list" $ do
-      -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
-      let filter = [] :: [P.Filter DB.Program]
-          opt = [] :: [P.SelectOpt DB.Program]
-      records <- db $ map P.entityVal <$> P.selectList filter opt
-      json records
-      status status200
-      {-
-    _GET "/programs/:id" $ do
-      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Program))
-      status status200
-      case m_record of
-        Just record -> json record
-        _           -> status status404
--}
-    _PATCH "/programs/:id" $ do
-      key <- (toKey "id" :: ActionM (PS.Key DB.Program))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
-      newrec <- (jsonData :: ActionM DB.Program)
-      case m_record of
-        Just record -> do
-          res <- db $ P.replace key newrec
-          json =<< DB.findRecord db key
-          status status201
-        _            -> status status404
-    _POST "/programs" $ do
-      newrec <- jsonData :: ActionM DB.Program
-      key    <- db $ P.insert newrec
-      json =<< DB.findRecord db key
-      status status201
-      
-    _DELETE "/programs/:id" $ do
-      key <- (toKey "id" :: ActionM (PS.Key DB.Program))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
-      case m_record of
-        Just record -> do
-          db $ P.delete key
-          m_record2 <- DB.findRecord db key
-          case m_record2 of
-            Just d_program -> status status201
-            _              -> status status400
-        _            -> status status404      
-      
-    _GET "/reservations/list" $ do
-      -- selectList :: (MonadIO m, PersistQueryRead backend, PersistRecordBackend record backend) => [Filter record] -> [SelectOpt record] -> ReaderT backend m [Entity record]
-      let filter = [] :: [P.Filter DB.Reservation]
-          opt = [] :: [P.SelectOpt DB.Reservation]
-      records <- db $ map P.entityVal <$> P.selectList filter opt
-      json records
-      status status200
-      {-
-    _GET "/reservations/:id" $ do
-      m_record <- (findRecord db "id" :: ActionM (Maybe DB.Reservation))
-      status status200
-      case m_record of
-        Just record -> json record
-        _           -> status status404
--}
-    _PATCH "/reservations/:id" $ do
-      key <- (toKey "id" :: ActionM (PS.Key DB.Reservation))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Reservation))
-      newrec <- (jsonData :: ActionM DB.Reservation)
-      case m_record of
-        Just record -> do
-          res <- db $ P.replace key newrec
-          json =<< DB.findRecord db key
-          status status201
-        _            -> status status404
-    _POST "/reservations" $ do
-      newrec <- jsonData :: ActionM DB.Reservation
-      key    <- db $ P.insert newrec
-      json =<< DB.findRecord db key
-      status status201
-      
-    _DELETE "/reservations/:id" $ do
-      key <- (toKey "id" :: ActionM (PS.Key DB.Reservation))
-      m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Reservation))
-      case m_record of
-        Just record -> do
-          db $ P.delete key
-          m_record2 <- DB.findRecord db key
-          case m_record2 of
-            Just d_program -> status status201
-            _              -> status status400
-        _            -> status status404      
-
+    
+    _GET2    pool "/install/index" InstallC.index
+    _GET2    pool "/install/result_detect_channels" InstallC.resultDetectChannels
+    _GET2    pool "/install/step1" InstallC.step1
+    _GET2    pool "/install/step2" InstallC.step2
+    _GET2    pool "/install/step3" InstallC.step3
+    
+    _GET2    pool "/programs/list" ProgramsC.list
+    _GET2    pool "/programs/:id"  ProgramsC.get
+    _PATCH2  pool "/programs/:id"  ProgramsC.modify
+    _POST2   pool "/programs"      ProgramsC.create
+    _DELETE2 pool "/programs/:id"  ProgramsC.destroy
+    
+    _GET2    pool "/reservations/list" ReservationsC.list
+    _GET2    pool "/reservations/:id"  ReservationsC.get
+    _PATCH2  pool "/reservations/:id"  ReservationsC.modify
+    _POST2   pool "/reservations"      ReservationsC.create
+    _DELETE2 pool "/reservations/:id"  ReservationsC.destroy    
 
 -- arg1 : port number
 app :: Int -> IO ()
