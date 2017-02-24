@@ -26,7 +26,9 @@ runDB p action = liftIO $ runSqlPool action p
 
 -- class (Controller c) => (ControllerAction c) ca
 
-data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy | S String | I Int | SI String Int deriving Eq
+data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy
+                  | IndexN Int | ListN Int | GetN Int | ReadN Int | ModifyN Int | EditN Int | CreateN Int | NewN Int | DeleteN Int | DestroyN Int
+                  | S String | I Int | SI String Int deriving Eq
 
 -- data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Eq
 {-
