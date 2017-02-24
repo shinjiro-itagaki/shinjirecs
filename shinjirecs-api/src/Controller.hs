@@ -26,29 +26,42 @@ runDB p action = liftIO $ runSqlPool action p
 
 -- class (Controller c) => (ControllerAction c) ca
 
-class (Eq sym) => ActionSymbol sym
-data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Eq
+-- class (Eq sym) => ActionSymbol sym
+data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy | Custom Int deriving Eq
 
-instance ActionSymbol DefaultActionSymbol
+-- data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Eq
+{-
+newtype Index   = ActionSymbol 0
+newtype List    = ActionSymbol 1
+newtype Get     = ActionSymbol 2
+newtype Read    = ActionSymbol 3
+newtype Modify  = ActionSymbol 4
+newtype Edit    = ActionSymbol 5
+newtype Create  = ActionSymbol 6
+newtype New     = ActionSymbol 7
+newtype Delete  = ActionSymbol 8
+newtype Destroy = ActionSymbol 9
+-}
+-- instance ActionSymbol DefaultActionSymbol
 
-class (ActionSymbol sym) => Controller sym a where
-  new :: sym -> ConnectionPool -> a
-  conn :: sym -> a -> ConnectionPool
-  db :: (MonadIO m) => sym -> a -> (SqlPersistT IO b -> m b)
-  db sym a = runDB $ conn sym a
-  beforeAction :: (Controller sym a) => sym -> a -> ActionM (Bool, a)
+class Controller a where
+  new :: ConnectionPool -> a
+  conn :: a -> ConnectionPool
+  db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
+  db a = runDB $ conn a
+  beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
   beforeAction sym c = return (True, c)
-  afterAction  :: (Controller sym a) => sym -> a -> ActionM ()
+  afterAction  :: ActionSymbol -> a -> ActionM ()
   afterAction  sym c = return ()
 
-  findRecord :: (Show keyname, ActiveRecord e) => keyname -> sym -> a -> ActionM (Maybe (Entity e))
-  findRecord keyname sym a = (param $ LText.pack $ show keyname :: ActionM String) >>= db sym a . find
+  findRecord :: (Show keyname, ActiveRecord e) => keyname -> a -> ActionM (Maybe (Entity e))
+  findRecord keyname a = (param $ LText.pack $ show keyname :: ActionM String) >>= db a . find
 
 -- instance (Controller c) => (ControllerAction c) (DefaultActionSymbol, (c -> ActionM c))
 
-type ControllerAction c sym = (sym, (c -> ActionM c))
+type ControllerAction c = (ActionSymbol, (c -> ActionM c))
 
-def :: (Controller sym c, ActionSymbol sym) => sym -> (c -> ActionM c) -> (sym, (c -> ActionM c))
+def :: (Controller c) => ActionSymbol -> (c -> ActionM c) -> (ActionSymbol, (c -> ActionM c))
 def sym impl = (sym, impl)
 
 data ResponseType = FindR | SaveR | DeleteR
@@ -67,3 +80,4 @@ class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
   toJsonResponseMaybeEntity _     Nothing  = status status400
 
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
+

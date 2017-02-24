@@ -41,19 +41,19 @@ setCommonHeaders = addHeaders [
   ("Access-Control-Allow-Origin","*")
   ]
 
-_COMMON :: (Controller sym c, ActionSymbol sym) =>
+_COMMON :: (Controller c) =>
   (RoutePattern -> ActionM () -> ScottyM ())
   -> Sql.ConnectionPool
   -> RoutePattern
-  -> ControllerAction c sym
+  -> ControllerAction c
   -> ScottyM ()
 _COMMON func conn pat act = do
   options pat (status status200)
   func pat (impl' act)
   where
-    impl' :: (Controller sym c, ActionSymbol sym) => ControllerAction c sym -> ActionM ()
+    impl' :: (Controller c) => ControllerAction c -> ActionM ()
     impl' (sym, main) = do
-      (res, c) <- beforeAction sym $ new sym conn
+      (res, c) <- beforeAction sym $ new conn
       case res of
         True -> do
           afterAction sym =<< main c
@@ -90,7 +90,7 @@ appImpl port pool = do
     _POST   "/reservations"      ReservationsC.create
     _DELETE "/reservations/:id"  ReservationsC.destroy
   where
-    _GET, _PATCH, _POST, _DELETE :: (ActionSymbol sym, Controller sym c) => RoutePattern -> ControllerAction c sym -> ScottyM ()
+    _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
     _GET    = _COMMON get    pool
     _PATCH  = _COMMON patch  pool
     _POST   = _COMMON post   pool
