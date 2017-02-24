@@ -16,11 +16,11 @@ data InstallController = InstallController { conn_ :: ConnectionPool }
 data Sym x y = X x | Y y | N
 
 instance Controller InstallController where
-  new                  = InstallController
-  conn                 = conn_
-  beforeAction Index c = return (True, c)
-  beforeAction (SI "step" 1) c = return (True, c)
-  beforeAction _     c = return (True, c)
+  new                        = InstallController
+  conn                       = conn_
+  beforeAction Index         = return . (,) True
+  beforeAction (SI "step" 1) = return . (,) True
+  beforeAction _             = return . (,) True
 
 -- toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
 
