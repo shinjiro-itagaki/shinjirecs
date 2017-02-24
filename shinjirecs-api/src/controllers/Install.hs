@@ -10,7 +10,7 @@ import Web.Scotty(json,param,jsonData, ActionM, status)
 
 data InstallController = InstallController { conn_ :: ConnectionPool }
 
-data InstallActionSymbol = Index | ResultDetectChannels | Step1 | Step2 | Step3 deriving Enum
+data InstallActionSymbol = Index | ResultDetectChannels | Step Int deriving Eq
 
 instance ActionSymbol InstallActionSymbol
 
@@ -18,11 +18,12 @@ instance (Controller InstallActionSymbol) InstallController where
   new  _              = InstallController
   conn _              = conn_
   beforeAction Index c = return (True, c)
+  beforeAction (Step _) c = return (True, c)
   beforeAction _     c = return (True, c)
 
 -- toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
 
-index, resultDetectChannels, step1, step2, step3 :: (InstallActionSymbol, (InstallController -> ActionM InstallController))
+index, resultDetectChannels :: (InstallActionSymbol, (InstallController -> ActionM InstallController))
 
 index = def Index impl'
   where
@@ -32,14 +33,7 @@ resultDetectChannels = def ResultDetectChannels impl'
   where
     impl' c = return c
 
-step1 = def Step1 impl'
-  where
-    impl' c = return c
-    
-step2 = def Step2 impl'
-  where
-    impl' c = return c    
-
-step3 = def Step3 impl'
+step :: Int -> (InstallActionSymbol, (InstallController -> ActionM InstallController))
+step n = def (Step n) impl'
   where
     impl' c = return c

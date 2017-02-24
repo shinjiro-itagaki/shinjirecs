@@ -26,8 +26,8 @@ runDB p action = liftIO $ runSqlPool action p
 
 -- class (Controller c) => (ControllerAction c) ca
 
-class (Enum sym) => ActionSymbol sym
-data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Enum
+class (Eq sym) => ActionSymbol sym
+data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Eq
 
 instance ActionSymbol DefaultActionSymbol
 

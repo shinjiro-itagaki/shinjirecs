@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module App where
+import Data.Maybe(maybe)
 import Control.Applicative((<$>))
 import Control.Exception.Base(bracket_)
 import Web.Scotty (ScottyM, scotty, status, json, get, patch, delete , post, options, ActionM, param, jsonData, addroute, setHeader,middleware, RoutePattern)
@@ -35,71 +36,20 @@ import qualified Controllers.Reservations as ReservationsC
 
 server = scotty
 
-toKey :: PS.ToBackendKey Sql.SqlBackend record => L.Text -> ActionM (PS.Key record)
-toKey keyname = Sql.toSqlKey <$> (param keyname) -- :: ActionM (PS.Key record)
-
-findRecord :: PS.ToBackendKey Sql.SqlBackend record => (Sql.SqlPersistT IO (Maybe record) -> ActionM (Maybe record)) -> L.Text -> ActionM (Maybe record)
-findRecord db keyname = do
-  key <- toKey keyname -- :: ActionM (PS.Key record)  
-  DB.findRecord db key
-
 setCommonHeaders :: Middleware
 setCommonHeaders = addHeaders [
   ("Access-Control-Allow-Origin","*")
   ]
 
---setDefaultStatus :: Middleware
---setDefaultStatus = 
-
-routeOPTIONS :: RoutePattern -> ScottyM ()
-routeOPTIONS pat = do
-  options pat $ do
-    status status200
-
--- data BeforeAction = ScottyM ()
-
-beforeActions :: RoutePattern -> ActionM Bool
-beforeActions pat = do
-  status status200
-  return True
-
-afterActions :: RoutePattern -> ActionM ()
-afterActions pat = do
-  return ();
-
-_COMMON :: (RoutePattern -> ActionM () -> ScottyM ())
-  -> RoutePattern
---  -> ControllerAction c
-  -> ActionM ()
-  -> ScottyM ()
-_COMMON  func pat act = do
-  routeOPTIONS pat
-  func pat $ do
-    res <- beforeActions pat
-    impl' res
-  where
---    impl' True (ControllerAction sym f) = do
-    impl' True = do
-      -- f new
-      afterActions pat
-    impl' False = do
-      json False
-  
-_GET    = _COMMON get
-_PATCH  = _COMMON patch
-_POST   = _COMMON post
-_DELETE = _COMMON delete
-
-_COMMON2 :: (Controller sym c, ActionSymbol sym) =>
+_COMMON :: (Controller sym c, ActionSymbol sym) =>
   (RoutePattern -> ActionM () -> ScottyM ())
   -> Sql.ConnectionPool
   -> RoutePattern
   -> ControllerAction c sym
   -> ScottyM ()
-_COMMON2 func conn pat act = do
-  routeOPTIONS pat
-  func pat $ do
-    impl' act
+_COMMON func conn pat act = do
+  options pat (status status200)
+  func pat (impl' act)
   where
     impl' :: (Controller sym c, ActionSymbol sym) => ControllerAction c sym -> ActionM ()
     impl' (sym, main) = do
@@ -109,77 +59,57 @@ _COMMON2 func conn pat act = do
           afterAction sym =<< main c
         False -> do
           return () -- do nothing
--- MonadIO m => Sql.SqlPersistT IO a -> m a
-
-_GET2, _PATCH2, _POST2, _DELETE2 :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
-_GET2    = _COMMON2 get
-_PATCH2  = _COMMON2 patch
-_POST2   = _COMMON2 post
-_DELETE2 = _COMMON2 delete
-
-beforeStep :: ActionM ()
-beforeStep = do
-  json True
-  status status201
 
 -- runDB :: MonadIO m => Sql.ConnectionPool -> Sql.SqlPersistT IO a -> m a
 appImpl :: Int -> Sql.ConnectionPool -> IO ()
 appImpl port pool = do
-  let db = runDB pool -- MonadIO m => Sql.SqlPersistT IO a -> m a
   server port $ do
     middleware setCommonHeaders
     middleware logStdoutDev
-    _GET2    pool "/channels/list" ChannelsC.list
-    _GET2    pool "/channels/:id"  ChannelsC.get
-    _PATCH2  pool "/channels/:id"  ChannelsC.modify
-    _POST2   pool "/channels"      ChannelsC.create
-    _DELETE2 pool "/channels/:id"  ChannelsC.destroy
+    _GET    "/channels/list" ChannelsC.list
+    _GET    "/channels/:id"  ChannelsC.get
+    _PATCH  "/channels/:id"  ChannelsC.modify
+    _POST   "/channels"      ChannelsC.create
+    _DELETE "/channels/:id"  ChannelsC.destroy
     
-    _GET2    pool "/install/index" InstallC.index
-    _GET2    pool "/install/result_detect_channels" InstallC.resultDetectChannels
-    _GET2    pool "/install/step1" InstallC.step1
-    _GET2    pool "/install/step2" InstallC.step2
-    _GET2    pool "/install/step3" InstallC.step3
+    _GET    "/install/index" InstallC.index
+    _GET    "/install/result_detect_channels" InstallC.resultDetectChannels
+    _GET    "/install/step1" (InstallC.step 1)
+    _GET    "/install/step2" (InstallC.step 2)
+    _GET    "/install/step3" (InstallC.step 3)
     
-    _GET2    pool "/programs/list" ProgramsC.list
-    _GET2    pool "/programs/:id"  ProgramsC.get
-    _PATCH2  pool "/programs/:id"  ProgramsC.modify
-    _POST2   pool "/programs"      ProgramsC.create
-    _DELETE2 pool "/programs/:id"  ProgramsC.destroy
+    _GET    "/programs/list" ProgramsC.list
+    _GET    "/programs/:id"  ProgramsC.get
+    _PATCH  "/programs/:id"  ProgramsC.modify
+    _POST   "/programs"      ProgramsC.create
+    _DELETE "/programs/:id"  ProgramsC.destroy
     
-    _GET2    pool "/reservations/list" ReservationsC.list
-    _GET2    pool "/reservations/:id"  ReservationsC.get
-    _PATCH2  pool "/reservations/:id"  ReservationsC.modify
-    _POST2   pool "/reservations"      ReservationsC.create
-    _DELETE2 pool "/reservations/:id"  ReservationsC.destroy    
+    _GET    "/reservations/list" ReservationsC.list
+    _GET    "/reservations/:id"  ReservationsC.get
+    _PATCH  "/reservations/:id"  ReservationsC.modify
+    _POST   "/reservations"      ReservationsC.create
+    _DELETE "/reservations/:id"  ReservationsC.destroy
+  where
+    _GET, _PATCH, _POST, _DELETE :: (ActionSymbol sym, Controller sym c) => RoutePattern -> ControllerAction c sym -> ScottyM ()
+    _GET    = _COMMON get    pool
+    _PATCH  = _COMMON patch  pool
+    _POST   = _COMMON post   pool
+    _DELETE = _COMMON delete pool
 
 -- arg1 : port number
 app :: Int -> IO ()
 app = act . appImpl
 
 act :: (Sql.ConnectionPool -> IO ()) -> IO ()
-act func = do
-  maybe_config <- config
-  case maybe_config of
-    Just config -> do
-      pool <- runNoLoggingT $ DB.createPool (Config.db config)
-      func pool
-    _           -> fail "read config error"  
-  
-config :: IO (Maybe Config.Config)
-config = Config.load Config.ConfigFilePaths {
-  Config.dbpath = "config/database.yml"
-} Config.Development
+act func = config >>= maybe
+  (fail "read config error") -- if Nothing
+  (\config' -> (runNoLoggingT $ DB.createPool $ Config.db config') >>= func)
 
--- class (PS.ToBackendKey SqlBackend record) => Table record where
---   db   :: (Monad m) => (Sql.SqlPersistT IO record -> m record)
---   find :: (Monad m) => PS.Key record -> m (Maybe a)
-  
+config :: IO (Maybe Config.Config)
+config = Config.load (Config.ConfigFilePaths { Config.dbpath = "config/database.yml" }) Config.Development
+
 runDB :: MonadIO m => Sql.ConnectionPool -> Sql.SqlPersistT IO a -> m a
 runDB p action = liftIO $ Sql.runSqlPool action p
 
 migrate :: IO ()
-migrate = act migrate'
-  where
-    migrate' :: Sql.ConnectionPool -> IO ()
-    migrate' pool = runDB pool $ Sql.runMigration DB.migrateAll
+migrate = act (\pool -> runDB pool $ Sql.runMigration DB.migrateAll)
