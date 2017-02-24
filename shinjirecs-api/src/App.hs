@@ -54,13 +54,10 @@ _COMMON func conn pat act = do
     impl' :: (Controller c) => ControllerAction c -> ActionM ()
     impl' (sym, main) = do
       (res, c) <- beforeAction sym $ new conn
-      case res of
-        True -> do
-          afterAction sym =<< main c
-        False -> do
-          return () -- do nothing
+      if res
+        then afterAction sym =<< main c
+        else return () -- do nothing
 
--- runDB :: MonadIO m => Sql.ConnectionPool -> Sql.SqlPersistT IO a -> m a
 appImpl :: Int -> Sql.ConnectionPool -> IO ()
 appImpl port pool = do
   server port $ do
