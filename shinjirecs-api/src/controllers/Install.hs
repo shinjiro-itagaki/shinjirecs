@@ -6,14 +6,7 @@ import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), Res
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Web.Scotty(json,param,jsonData, ActionM, status)
 
--- data Step = Custom Int
-
 data InstallController = InstallController { conn_ :: ConnectionPool }
-
--- data InstallActionSymbol = Index | ResultDetectChannels | Step Int deriving Eq
--- newtype Step = Custom Int
-
-data Sym x y = X x | Y y | N
 
 instance Controller InstallController where
   new                        = InstallController
@@ -29,7 +22,7 @@ index, resultDetectChannels :: (ActionSymbol, (InstallController -> ActionM Inst
 index = def Index impl'
   where
     impl' c = return c
---ResultDetectChannels
+
 resultDetectChannels = def (S "resultDetectChannels") impl'
   where
     impl' c = return c
