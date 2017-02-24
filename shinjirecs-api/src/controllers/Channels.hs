@@ -5,6 +5,7 @@
 module Controllers.Channels where
 --import Data.Eq (Eq)
 -- import Data.Aeson(json)
+import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
 import Web.Scotty(json,param,jsonData, ActionM, status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
@@ -79,4 +80,11 @@ destroy = def Destroy impl'
     destroy' e = M.destroy e
     findRecord' c = findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Channel))
     impl' :: ChannelsController -> ActionM ChannelsController
-    impl' c = findRecord' c >>= maybe (return c) (\e -> db Destroy c $ destroy' e >> return c)
+    impl' c = do
+      findRecord' c >>= maybe
+        (status status404 >> return c)
+        (\e -> do
+            (b, e2, k) <- db Destroy c $ destroy' e
+            status $ bool status201 status400 b
+            return c
+        )
