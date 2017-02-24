@@ -72,17 +72,11 @@ create = def Create impl'
       newrec <- (jsonData :: ActionM DB.Channel)
       (db Create c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
 
-
 destroy :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 destroy = def Destroy impl'
   where
---    destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool,Entity DB.Channel)
---    destroy' e = M.destroy e
+    destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel)
+    destroy' e = M.destroy e
+    findRecord' c = findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Channel))
     impl' :: ChannelsController -> ActionM ChannelsController
-    impl' c = do
-      mEntity <- findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Channel))
-      case mEntity of
-        Just e -> do
-          res <- db Destroy c $ (M.destroy e :: ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel))
-          return c
-        Nothing -> return c      
+    impl' c = findRecord' c >>= maybe (return c) (\e -> db Destroy c $ destroy' e >> return c)

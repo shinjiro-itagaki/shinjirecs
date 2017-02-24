@@ -64,7 +64,7 @@ class (ToJSON a) => ToJsonResponse a where
   toJsonResponseDelete = toJsonResponse DeleteR
 
   toJsonResponseM :: ResponseType -> Maybe a -> ActionM ()
-  toJsonResponseM t    (Just x)  = toJsonResponse t x    
+  toJsonResponseM t    (Just x)  = toJsonResponse t x
   toJsonResponseM FindR Nothing  = status status404
   toJsonResponseM _     Nothing  = status status400
 

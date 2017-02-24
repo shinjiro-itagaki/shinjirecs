@@ -136,7 +136,8 @@ appImpl port pool = do
     _GET2    pool "/channels/:id"  ChannelsC.get
     _PATCH2  pool "/channels/:id"  ChannelsC.modify
     _POST2   pool "/channels"      ChannelsC.create
-    _DELETE "/channels/:id" $ do
+    _DELETE2 pool "/channels/:id"  ChannelsC.destroy
+    {-
       key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
       case m_record of
@@ -147,7 +148,7 @@ appImpl port pool = do
             Just d_record -> status status201
             _             -> status status400
         _            -> status status404      
-
+-}
     _GET "/install/index" $ do
       beforeStep
     _GET "/install/result_detect_channels" $ do
