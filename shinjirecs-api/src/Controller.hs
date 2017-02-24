@@ -53,31 +53,17 @@ def sym impl = (sym, impl)
 
 data ResponseType = FindR | SaveR | DeleteR
 
-class (ToJSON a) => ToJsonResponse a where
+class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
   toJsonResponse :: ResponseType -> a -> ActionM ()
   toJsonResponse FindR x = status status200 >> json x
   toJsonResponse _     x = status status201 >> json x
 
-  toJsonResponseFind, toJsonResponseSave, toJsonResponseDelete :: a -> ActionM ()
-  toJsonResponseFind   = toJsonResponse FindR
-  toJsonResponseSave   = toJsonResponse SaveR
-  toJsonResponseDelete = toJsonResponse DeleteR
+  toJsonResponseEntity :: ResponseType -> Entity a -> ActionM ()
+  toJsonResponseEntity t (Entity k v) = toJsonResponse t v
 
-  toJsonResponseM :: ResponseType -> Maybe a -> ActionM ()
-  toJsonResponseM t    (Just x)  = toJsonResponse t x
-  toJsonResponseM FindR Nothing  = status status404
-  toJsonResponseM _     Nothing  = status status400
-
-  toJsonResponseFindM, toJsonResponseSaveM, toJsonResponseDeleteM :: Maybe a -> ActionM ()
-  toJsonResponseFindM   = toJsonResponseM FindR
-  toJsonResponseSaveM   = toJsonResponseM SaveR
-  toJsonResponseDeleteM = toJsonResponseM DeleteR
-
-toJsonResponseME :: (PS.PersistEntity a, ToJSON a) => ResponseType -> Maybe (Entity a) -> ActionM ()
-toJsonResponseME x (Just e) = toJsonResponseM x (Just $ entityVal e)
-toJsonResponseME x Nothing  = status status400 -- ?? [toJsonResponseM x Nothing] is bad
+  toJsonResponseMaybeEntity :: ResponseType -> Maybe (Entity a) -> ActionM ()
+  toJsonResponseMaybeEntity t    (Just (Entity k v)) = toJsonResponse t v
+  toJsonResponseMaybeEntity FindR Nothing  = status status404
+  toJsonResponseMaybeEntity _     Nothing  = status status400
 
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
-
-
-

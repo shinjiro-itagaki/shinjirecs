@@ -3,7 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Controllers.Channels where
-import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), toJsonResponseME, ResponseType(..), findRecord)
+import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
 
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
@@ -46,7 +46,7 @@ get = def Get impl'
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
-      toJsonResponseME FindR mEntity >> return c
+      toJsonResponseMaybeEntity FindR mEntity >> return c
 
 modify = def Modify impl'
   where
@@ -55,7 +55,7 @@ modify = def Modify impl'
       mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
       newrec <- (jsonData :: ActionM DB.Channel)
       case mEntity of
-        Just e  -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
+        Just e  -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
         Nothing -> return c
 
 create = def Create impl'
@@ -63,7 +63,7 @@ create = def Create impl'
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       newrec <- (jsonData :: ActionM DB.Channel)
-      (db Create c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
+      (db Create c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
 
 destroy = def Destroy impl'
   where
