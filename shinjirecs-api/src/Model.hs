@@ -202,11 +202,6 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
 
       saveType' = if isJust mkey then Modify else Create
 
-class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
-
-  -- need to implement to call destroyImpl
-  destroy :: record -> ReaderT SqlBackend IO (Bool, record)
-  
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
 findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind x >>= return . Just . Entity key)
     
@@ -228,6 +223,10 @@ saveE x = save x
 
 saveR :: (ActiveRecord entity) => entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
 saveR x = save x
+
+class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
+  -- need to implement to call destroyImpl
+  destroy :: record -> ReaderT SqlBackend IO (Bool, record)
 
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
   destroy self = destroyImpl self self
