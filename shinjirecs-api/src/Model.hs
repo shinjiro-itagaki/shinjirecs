@@ -226,14 +226,14 @@ saveR x = save x
 
 class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
   -- need to implement to call destroyImpl
-  destroy :: record -> ReaderT SqlBackend IO (Bool, record)
+  destroy :: record -> ReaderT SqlBackend IO (Bool, record, PS.Key entity)
 
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
-  destroy self = destroyImpl self self
+  destroy self@(Entity k v) = destroyImpl self self >>= (\(b, self') -> return (b, self', k))
 
 -- send key directly
 instance (ActiveRecord entity) => ActiveRecordDestroyer entity (PS.Key entity) where
-  destroy key = findByKey key >>= maybe (return (False, key)) (\e -> destroyImpl key e >>= (\(b, e2) -> return (b, key)))
+  destroy key = findByKey key >>= maybe (return (False, key, key)) (\e -> destroyImpl key e >>= (\(b, e2) -> return (b, key, key)))
 
 class (PS.PersistEntity record, PS.DeleteCascade record SqlBackend) => CascadeDeletable record where
   deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()

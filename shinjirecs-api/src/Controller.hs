@@ -36,15 +36,13 @@ class (ActionSymbol sym) => Controller sym a where
   conn :: sym -> a -> ConnectionPool
   db :: (MonadIO m) => sym -> a -> (SqlPersistT IO b -> m b)
   db sym a = runDB $ conn sym a
-  beforeAction :: (ActionSymbol sym) => sym -> a -> ActionM (Bool, a)
+  beforeAction :: (Controller sym a) => sym -> a -> ActionM (Bool, a)
   beforeAction sym c = return (True, c)
-  afterAction  :: (ActionSymbol sym) => sym -> a -> ActionM ()
+  afterAction  :: (Controller sym a) => sym -> a -> ActionM ()
   afterAction  sym c = return ()
 
---  findRecord :: (Show keyname, ActiveRecord e) => keyname -> c -> ActionM (Maybe (Entity e))
---  findRecord keyname a = (param $ LText.pack $ show keyname :: ActionM String) >>= db sym c . find
-
-
+  findRecord :: (Show keyname, ActiveRecord e) => keyname -> sym -> a -> ActionM (Maybe (Entity e))
+  findRecord keyname sym a = (param $ LText.pack $ show keyname :: ActionM String) >>= db sym a . find
   
 -- instance (Controller c) => (ControllerAction c) (DefaultActionSymbol, (c -> ActionM c))
 

@@ -104,22 +104,19 @@ _COMMON2 func conn pat act = do
   where
     impl' :: (Controller sym c, ActionSymbol sym) => ControllerAction c sym -> ActionM ()
     impl' (sym, main) = do
-      (res, c) <- beforeAction sym $ new sym conn -- $ DBTables { channels = db }
+      (res, c) <- beforeAction sym $ new sym conn
       case res of
         True -> do
           afterAction sym =<< main c
         False -> do
           return () -- do nothing
 -- MonadIO m => Sql.SqlPersistT IO a -> m a
-_GET2      :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
-_GET2 conn =  _COMMON2 get conn
 
-_PATCH2    :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
-_PATCH2 conn = _COMMON2 patch conn
--- _POST2   :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
--- _POST2   = _COMMON2 post
--- _DELETE2 :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
--- _DELETE2 = _COMMON2 delete
+_GET2, _PATCH2, _POST2, _DELETE2 :: (Controller sym c, ActionSymbol sym) => Sql.ConnectionPool -> RoutePattern -> ControllerAction c sym -> ScottyM ()
+_GET2    = _COMMON2 get
+_PATCH2  = _COMMON2 patch
+_POST2   = _COMMON2 post
+_DELETE2 = _COMMON2 delete
 
 beforeStep :: ActionM ()
 beforeStep = do
@@ -135,14 +132,10 @@ appImpl port pool = do
     middleware logStdoutDev
 --    _GET2 "/" $ Direct $ do
 --      return ()
-    _GET2   pool "/channels/list" ChannelsC.list
-    _GET2   pool "/channels/:id"  ChannelsC.get
+    _GET2    pool "/channels/list" ChannelsC.list
+    _GET2    pool "/channels/:id"  ChannelsC.get
     _PATCH2  pool "/channels/:id"  ChannelsC.modify
-    _POST  "/channels" $ do
-      newrec <- jsonData :: ActionM DB.Channel 
-      key    <- db $ P.insert newrec
-      json =<< DB.findRecord db key
-      status status201
+    _POST2   pool "/channels"      ChannelsC.create
     _DELETE "/channels/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Channel))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Channel))
@@ -173,12 +166,14 @@ appImpl port pool = do
       records <- db $ map P.entityVal <$> P.selectList filter opt
       json records
       status status200
+      {-
     _GET "/programs/:id" $ do
       m_record <- (findRecord db "id" :: ActionM (Maybe DB.Program))
       status status200
       case m_record of
         Just record -> json record
         _           -> status status404
+-}
     _PATCH "/programs/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Program))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Program))
@@ -213,13 +208,15 @@ appImpl port pool = do
           opt = [] :: [P.SelectOpt DB.Reservation]
       records <- db $ map P.entityVal <$> P.selectList filter opt
       json records
-      status status200      
+      status status200
+      {-
     _GET "/reservations/:id" $ do
       m_record <- (findRecord db "id" :: ActionM (Maybe DB.Reservation))
       status status200
       case m_record of
         Just record -> json record
         _           -> status status404
+-}
     _PATCH "/reservations/:id" $ do
       key <- (toKey "id" :: ActionM (PS.Key DB.Reservation))
       m_record <- (DB.findRecord db key :: ActionM (Maybe DB.Reservation))

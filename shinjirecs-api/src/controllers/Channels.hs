@@ -8,7 +8,7 @@ module Controllers.Channels where
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
 import Web.Scotty(json,param,jsonData, ActionM, status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
-import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), toJsonResponseME, ResponseType(..))
+import Controller(Controller(..), DefaultActionSymbol(..), def, ActionSymbol(..), ToJsonResponse(..), toJsonResponseME, ResponseType(..), findRecord)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist as P --persistent
 import Database.Persist.Types (Entity(entityVal))
@@ -17,9 +17,12 @@ import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
-import Model (find, saveE, ToMaybeEntity(..))
+import Model (find, saveE,saveR ,ToMaybeEntity(..))
+import qualified Model as M
 
 import Models.Channel
+import Control.Monad.Reader(ReaderT) -- mtl
+
 
 -- data Channels = Channels { conn :: ConnectionPool, models :: Models }
 data ChannelsController = ChannelsController { conn_ :: ConnectionPool } --, record :: Maybe DB.Channel }
@@ -30,6 +33,9 @@ instance (Controller DefaultActionSymbol) ChannelsController where
   conn _              = conn_
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
+
+-- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
+toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
 
 list :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 list = def List list'
@@ -44,17 +50,39 @@ get = def Get impl'
   where
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
+      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
       toJsonResponseME FindR mEntity >> return c
 
 modify :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
 modify = def Modify impl'
   where
-    toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- ((param "id" :: ActionM Integer) >>= db Get c . find) :: ActionM (Maybe (Entity DB.Channel))
+      mEntity <- findRecord "id" Get c :: ActionM (Maybe (Entity DB.Channel))
       newrec <- (jsonData :: ActionM DB.Channel)
       case mEntity of
         Just e  -> (db Get c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
         Nothing -> return c
+
+create :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
+create = def Create impl'
+  where
+    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' c = do
+      newrec <- (jsonData :: ActionM DB.Channel)
+      (db Create c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseME SaveR >> return c
+
+
+destroy :: (DefaultActionSymbol, (ChannelsController -> ActionM ChannelsController))
+destroy = def Destroy impl'
+  where
+--    destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool,Entity DB.Channel)
+--    destroy' e = M.destroy e
+    impl' :: ChannelsController -> ActionM ChannelsController
+    impl' c = do
+      mEntity <- findRecord "id" Destroy c :: ActionM (Maybe (Entity DB.Channel))
+      case mEntity of
+        Just e -> do
+          res <- db Destroy c $ (M.destroy e :: ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel))
+          return c
+        Nothing -> return c      
