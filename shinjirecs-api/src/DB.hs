@@ -46,12 +46,6 @@ type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
   $(persistFileWith lowerCaseSettings "config/models")
 
--- derivePersistField "ReservationState"
-
-findRecord :: (Monad m, PS.ToBackendKey SqlBackend record) => (SqlPersistT IO (Maybe record) -> m (Maybe record)) -> PS.Key record -> m (Maybe record)
-findRecord db key = do
-  db $ PS.get key -- Sql.SqlPersistT IO (Maybe record)
-
 data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
 data Config = Config {
   host     :: Maybe String,
