@@ -29,6 +29,7 @@ library
                      , Controllers.Programs
                      , Controllers.Reservations
                      , Helper
+                     , Routing
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
