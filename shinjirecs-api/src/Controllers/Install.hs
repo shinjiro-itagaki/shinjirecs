@@ -4,7 +4,7 @@
 module Controllers.Install where
 import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
-import Web.Scotty(json,param,jsonData, ActionM, status)
+import Server(json,param,jsonData,ActionM,status)
 
 data InstallController = InstallController { conn_ :: ConnectionPool }
 

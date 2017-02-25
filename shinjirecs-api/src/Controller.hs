@@ -9,7 +9,7 @@
 module Controller where
 import DB
 import Data.Aeson(ToJSON(..))
-import Web.Scotty (ActionM)
+import Server(json,param,jsonData,ActionM,status)
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Database.Persist.Sql(ConnectionPool,SqlPersistT, runSqlPool)  --persistent
 import Database.Persist (PersistEntity (..)) --persistent
@@ -18,7 +18,7 @@ import Data.Enumerator (Enumerator) -- enumerator
 import qualified Data.Text.Lazy as LText
 import Model(ActiveRecord(..), find, saveR, saveE, ToMaybeEntity(..))
 import Database.Persist.Types (Entity(..))
-import Web.Scotty(json,param,jsonData,ActionM,status)
+
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
 
 import qualified Database.Persist as P --persistent
