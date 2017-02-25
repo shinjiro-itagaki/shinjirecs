@@ -9,14 +9,14 @@ import qualified Controllers.Channels     as ChannelsC
 import qualified Controllers.Install      as InstallC
 import qualified Controllers.Programs     as ProgramsC
 import qualified Controllers.Reservations as ReservationsC
-import Web.Scotty (ScottyM, scotty, status, json, get, patch, delete , post, options, ActionM, param, jsonData, addroute, setHeader,middleware, RoutePattern)
-import qualified Database.Persist.Sql as Sql --persistent
+import Web.Scotty (ScottyM, status, get, patch, delete, post, options, ActionM, RoutePattern)
+import Database.Persist.Sql(ConnectionPool) --persistent
 
-import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
+import Network.HTTP.Types (status200, status201, status400, status404)
 
 defRoute :: (Controller c) =>
   (RoutePattern -> ActionM () -> ScottyM ())
-  -> Sql.ConnectionPool
+  -> ConnectionPool
   -> RoutePattern
   -> ControllerAction c
   -> ScottyM ()
@@ -24,7 +24,7 @@ defRoute func conn pat act = do
   options pat (status status200) -- add OPTIONS
   func pat $ Controller.run conn act
 
-run :: Sql.ConnectionPool -> ScottyM ()
+run :: ConnectionPool -> ScottyM ()
 run conn = do
   _GET    "/channels/list" ChannelsC.list
   _GET    "/channels/:id"  ChannelsC.get
