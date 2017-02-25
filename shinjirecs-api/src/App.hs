@@ -3,7 +3,6 @@
 
 module App where
 import Data.Maybe(maybe)
-import Web.Scotty (scotty, middleware)
 import Network.Wai (Application,Request,Response,ResponseReceived,responseLBS,Middleware)
 import Network.Wai.Middleware.RequestLogger(logStdoutDev) -- wai-extra
 import Network.Wai.Middleware.AddHeaders(addHeaders) -- wai-extra
@@ -12,8 +11,7 @@ import qualified DB
 import Database.Persist.Sql(ConnectionPool, runMigration) --persistent
 import Control.Monad.Logger(MonadLogger, monadLoggerLog, NoLoggingT, runNoLoggingT) -- monad-logger
 import Routing
-
-server = scotty
+import Server(server, middleware)
 
 setCommonHeaders :: Middleware
 setCommonHeaders = addHeaders [

@@ -1,30 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Routing where
+import Server (ServerM, status, get, patch, delete, post, options, ActionM, RoutePattern)
 
 import qualified Controller
 import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
-
 import qualified Controllers.Channels     as ChannelsC
 import qualified Controllers.Install      as InstallC
 import qualified Controllers.Programs     as ProgramsC
 import qualified Controllers.Reservations as ReservationsC
-import Web.Scotty (ScottyM, status, get, patch, delete, post, options, ActionM, RoutePattern)
+
 import Database.Persist.Sql(ConnectionPool) --persistent
 
 import Network.HTTP.Types (status200, status201, status400, status404)
 
 defRoute :: (Controller c) =>
-  (RoutePattern -> ActionM () -> ScottyM ())
+  (RoutePattern -> ActionM () -> ServerM ())
   -> ConnectionPool
   -> RoutePattern
   -> ControllerAction c
-  -> ScottyM ()
+  -> ServerM ()
 defRoute func conn pat act = do
   options pat (status status200) -- add OPTIONS
   func pat $ Controller.run conn act
 
-run :: ConnectionPool -> ScottyM ()
+run :: ConnectionPool -> ServerM ()
 run conn = do
   _GET    "/channels/list" ChannelsC.list
   _GET    "/channels/:id"  ChannelsC.get
@@ -50,7 +50,7 @@ run conn = do
   _POST   "/reservations"      ReservationsC.create
   _DELETE "/reservations/:id"  ReservationsC.destroy
   where
-    _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
+    _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ServerM ()
     _GET    = defRoute get    conn
     _PATCH  = defRoute patch  conn
     _POST   = defRoute post   conn
