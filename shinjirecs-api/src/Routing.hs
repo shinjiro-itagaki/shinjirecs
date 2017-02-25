@@ -14,13 +14,13 @@ import qualified Database.Persist.Sql as Sql --persistent
 
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
 
-def :: (Controller c) =>
+defRoute :: (Controller c) =>
   (RoutePattern -> ActionM () -> ScottyM ())
   -> Sql.ConnectionPool
   -> RoutePattern
   -> ControllerAction c
   -> ScottyM ()
-def func conn pat act = do
+defRoute func conn pat act = do
   options pat (status status200) -- add OPTIONS
   func pat $ Controller.run conn act
 
@@ -51,10 +51,10 @@ run conn = do
   _DELETE "/reservations/:id"  ReservationsC.destroy
   where
     _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-    _GET    = def get    conn
-    _PATCH  = def patch  conn
-    _POST   = def post   conn
-    _DELETE = def delete conn
+    _GET    = defRoute get    conn
+    _PATCH  = defRoute patch  conn
+    _POST   = defRoute post   conn
+    _DELETE = defRoute delete conn
 
     
     
