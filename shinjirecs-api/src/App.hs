@@ -27,6 +27,7 @@ import qualified Database.Persist.Class as PS
 import Control.Monad.Reader (ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 
+import qualified Controller
 import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
 
 import qualified Controllers.Channels     as ChannelsC
@@ -48,15 +49,8 @@ _COMMON :: (Controller c) =>
   -> ControllerAction c
   -> ScottyM ()
 _COMMON func conn pat act = do
-  options pat (status status200)
-  func pat (impl' act)
-  where
-    impl' :: (Controller c) => ControllerAction c -> ActionM ()
-    impl' (sym, main) = do
-      (res, c) <- beforeAction sym $ new conn
-      if res
-        then afterAction sym =<< main c
-        else return () -- do nothing
+  options pat (status status200) -- add OPTIONS
+  func pat $ Controller.run conn act
 
 appImpl :: Int -> Sql.ConnectionPool -> IO ()
 appImpl port pool = do

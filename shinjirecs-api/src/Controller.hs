@@ -36,21 +36,6 @@ data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | D
                   | IndexN Int | ListN Int | GetN Int | ReadN Int | ModifyN Int | EditN Int | CreateN Int | NewN Int | DeleteN Int | DestroyN Int
                   | S String | I Int | SI String Int deriving Eq
 
--- data DefaultActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy deriving Eq
-{-
-newtype Index   = ActionSymbol 0
-newtype List    = ActionSymbol 1
-newtype Get     = ActionSymbol 2
-newtype Read    = ActionSymbol 3
-newtype Modify  = ActionSymbol 4
-newtype Edit    = ActionSymbol 5
-newtype Create  = ActionSymbol 6
-newtype New     = ActionSymbol 7
-newtype Delete  = ActionSymbol 8
-newtype Destroy = ActionSymbol 9
--}
--- instance ActionSymbol DefaultActionSymbol
-
 class Controller a where
   new :: ConnectionPool -> a
   conn :: a -> ConnectionPool
@@ -89,58 +74,10 @@ class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
 
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
 
---      filter = [] :: [P.Filter e]
---      opt    = [] :: [P.SelectOpt e]
-{- 
-class (PS.PersistEntity e, PS.ToBackendKey SqlBackend e, PS.PersistRecordBackend e SqlBackend, Controller c) => Resources e c where
-  list, get, modify, create, destroy :: Maybe e -> (ActionSymbol, (c -> ActionM c))
 
-  list me = def List impl'
-    where
-      filter = [] :: [P.Filter e]
-      opt    = [] :: [P.SelectOpt e]
-      impl' :: c -> ActionM c
-      impl' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
-
-  get me = def Get impl'
-    where
-      impl' :: c -> ActionM c
-      impl' c = do
-        mEntity <- findRecord "id" c :: ActionM (Maybe (Entity e))
-        toJsonResponseMaybeEntity FindR mEntity >> return c
-
-  modify me = def Modify impl'
-    where
-      -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
-      toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity e)
-      impl' :: c -> ActionM c
-      impl' c = do
-        mEntity <- findRecord "id" c :: ActionM (Maybe (Entity e))
-        newrec <- (jsonData :: ActionM e)
-        case mEntity of
-          Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
-          Nothing -> return c
-
-  create me = def Create impl'
-    where
-      toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity e)
-      impl' :: c -> ActionM c
-      impl' c = do
-        newrec <- (jsonData :: ActionM e)
-        (db c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
-  
-  destroy me = def Destroy impl'
-    where
-      destroy' :: Entity e -> ReaderT SqlBackend IO (Bool, (Entity e), PS.Key e)
-      destroy' e = M.destroy e
-      findRecord' c = findRecord "id" c :: ActionM (Maybe (Entity e))
-      impl' :: c -> ActionM c
-      impl' c = do
-        findRecord' c >>= maybe
-          (status status404 >> return c)
-          (\e -> do
-              (b, e2, k) <- db c $ destroy' e
-              status $ bool status201 status400 b
-              return c
-          )
--}
+run :: (Controller c) => ConnectionPool -> ControllerAction c -> ActionM ()
+run conn (sym, main) = do
+  (res, c) <- beforeAction sym $ new conn
+  if res
+  then afterAction sym =<< main c
+  else return () -- do nothing
