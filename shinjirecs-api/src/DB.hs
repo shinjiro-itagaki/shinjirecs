@@ -128,5 +128,5 @@ connect config =
     pool'    = pool     config :: Int
     adapter' = adapter  config :: AdapterType
     
-
--- find = get
+run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
+run p action = liftIO $ runSqlPool action p

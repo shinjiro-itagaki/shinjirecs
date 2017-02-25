@@ -99,8 +99,5 @@ act func = config >>= maybe
 config :: IO (Maybe Config.Config)
 config = Config.load (Config.ConfigFilePaths { Config.dbpath = "config/database.yml" }) Config.Development
 
-runDB :: MonadIO m => Sql.ConnectionPool -> Sql.SqlPersistT IO a -> m a
-runDB p action = liftIO $ Sql.runSqlPool action p
-
 migrate :: IO ()
-migrate = act (\pool -> runDB pool $ Sql.runMigration DB.migrateAll)
+migrate = act (\pool -> DB.run pool $ Sql.runMigration DB.migrateAll)

@@ -27,8 +27,6 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 import qualified Model as M
 import Data.Bool(bool)
 
-runDB :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
-runDB p action = liftIO $ runSqlPool action p
 
 -- class (Controller c) => (ControllerAction c) ca
 
@@ -40,7 +38,7 @@ class Controller a where
   new :: ConnectionPool -> a
   conn :: a -> ConnectionPool
   db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
-  db a = runDB $ conn a
+  db a = DB.run $ conn a
   beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
   beforeAction sym c = return (True, c)
   afterAction  :: ActionSymbol -> a -> ActionM ()
