@@ -1,0 +1,92 @@
+name:                shinjirecs-api
+version:             0.1.0.0
+synopsis:            Initial project template from stack
+description:         Please see README.md
+homepage:            https://github.com/https://github.com/shinjiro-itagaki/shinjirecs/shinjirecs-api
+license:             GPL-3
+license-file:        LICENSE
+author:              Shinjiro Itagaki
+maintainer:          ishinjiroster@gmail.com
+copyright:           GPL-3
+category:            web
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     App
+                     , Config
+                     , DB
+                     , DB.Status
+                     , Model
+                     , Models.Channel
+                     , Models.Reservation
+                     , Models.Program
+                     , Controller
+                     , Controllers.Channels
+                     , Controllers.Install
+                     , Controllers.Programs
+                     , Controllers.Reservations
+                     , Helper
+  build-depends:       base >= 4.7 && < 5
+                     , aeson
+                     , bytestring
+                     , conduit
+                     , enumerator
+                     , extra
+                     , scotty
+                     , http-types
+                     , mtl
+                     , mysql-simple
+                     , monad-logger
+                     , regex-posix
+                     , resource-pool
+                     , resourcet
+                     , persistent
+                     , persistent-template
+                     , persistent-mysql
+                     , persistent-postgresql
+                     , persistent-sqlite
+                     , postgresql-simple
+                     , resourcet
+                     , scientific
+                     , text
+                     , time
+                     , transformers
+                     , unordered-containers
+                     , wai
+                     , wai-extra
+                     , yaml
+  default-language:    Haskell2010
+
+executable shinjirecs-api-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , shinjirecs-api
+  default-language:    Haskell2010
+
+executable shinjirecs-api-migrate
+  hs-source-dirs:      app
+  main-is:             Migrate.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , shinjirecs-api
+  default-language:    Haskell2010
+  
+test-suite shinjirecs-api-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , shinjirecs-api
+                     , hspec
+                     , QuickCheck
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/shinjiro-itagaki/shinjirecs.git
