@@ -26,7 +26,7 @@ import Control.Monad.Reader.Class(MonadReader) -- mtl
 import Data.Acquire(Acquire) -- resourcet
 import Data.Conduit(Source) --- conduit
 import Data.Int(Int64) -- base
-import Lib(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
+import Helper(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
 
 import qualified Database.Persist as P --persistent
 

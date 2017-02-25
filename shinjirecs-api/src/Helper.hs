@@ -2,7 +2,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Lib where
+module Helper where
 import Data.Bool(not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
