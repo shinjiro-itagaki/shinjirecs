@@ -45,14 +45,14 @@ get = def Get impl'
   where
     impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Program))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
       toJsonResponseMaybeEntity FindR mEntity >> return c
 
 modify = def Modify impl'
   where
     impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Program))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
       newrec <- (jsonData :: ActionM DB.Program)
       case mEntity of
         Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
@@ -69,7 +69,7 @@ destroy = def Destroy impl'
   where
     destroy' :: Entity DB.Program -> ReaderT SqlBackend IO (Bool, (Entity DB.Program), PS.Key DB.Program)
     destroy' e = M.destroy e
-    findRecord' c = findRecord "id" c :: ActionM (Maybe (Entity DB.Program))
+    findRecord' c = findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
     impl' :: ProgramsController -> ActionM ProgramsController
     impl' c = do
       findRecord' c >>= maybe
@@ -79,4 +79,3 @@ destroy = def Destroy impl'
             status $ bool status201 status400 b
             return c
         )
-

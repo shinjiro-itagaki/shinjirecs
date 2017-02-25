@@ -16,10 +16,16 @@ import Database.Persist (PersistEntity (..)) --persistent
 import qualified Database.Persist.Class as PS
 import Data.Enumerator (Enumerator) -- enumerator
 import qualified Data.Text.Lazy as LText
-import Model(ActiveRecord(..), find, saveE, ToMaybeEntity(..))
+import Model(ActiveRecord(..), find, saveR, saveE, ToMaybeEntity(..))
 import Database.Persist.Types (Entity(..))
 import Web.Scotty(json,param,jsonData,ActionM,status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
+
+import qualified Database.Persist as P --persistent
+import Control.Monad.Reader(ReaderT) -- mtl
+import Database.Persist.Sql.Types.Internal (SqlBackend)
+import qualified Model as M
+import Data.Bool(bool)
 
 runDB :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
@@ -55,10 +61,11 @@ class Controller a where
   afterAction  :: ActionSymbol -> a -> ActionM ()
   afterAction  sym c = return ()
 
-  findRecord :: (Show keyname, ActiveRecord e) => keyname -> a -> ActionM (Maybe (Entity e))
-  findRecord keyname a = (param $ LText.pack $ show keyname :: ActionM String) >>= db a . find
+  findRecord :: (Show keyname, ActiveRecord e) => a -> keyname -> ActionM (Maybe (Entity e))
+  findRecord a keyname = (param $ LText.pack $ show keyname :: ActionM String) >>= db a . find
 
--- instance (Controller c) => (ControllerAction c) (DefaultActionSymbol, (c -> ActionM c))
+  findRecords :: (ActiveRecord e) => a -> [P.Filter e] -> [P.SelectOpt e] -> ActionM [Entity e]
+  findRecords a filters opts = db a $ M.selectBy filters opts
 
 type ControllerAction c = (ActionSymbol, (c -> ActionM c))
 
@@ -82,3 +89,58 @@ class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
 
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
 
+--      filter = [] :: [P.Filter e]
+--      opt    = [] :: [P.SelectOpt e]
+{- 
+class (PS.PersistEntity e, PS.ToBackendKey SqlBackend e, PS.PersistRecordBackend e SqlBackend, Controller c) => Resources e c where
+  list, get, modify, create, destroy :: Maybe e -> (ActionSymbol, (c -> ActionM c))
+
+  list me = def List impl'
+    where
+      filter = [] :: [P.Filter e]
+      opt    = [] :: [P.SelectOpt e]
+      impl' :: c -> ActionM c
+      impl' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
+
+  get me = def Get impl'
+    where
+      impl' :: c -> ActionM c
+      impl' c = do
+        mEntity <- findRecord "id" c :: ActionM (Maybe (Entity e))
+        toJsonResponseMaybeEntity FindR mEntity >> return c
+
+  modify me = def Modify impl'
+    where
+      -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
+      toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity e)
+      impl' :: c -> ActionM c
+      impl' c = do
+        mEntity <- findRecord "id" c :: ActionM (Maybe (Entity e))
+        newrec <- (jsonData :: ActionM e)
+        case mEntity of
+          Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
+          Nothing -> return c
+
+  create me = def Create impl'
+    where
+      toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity e)
+      impl' :: c -> ActionM c
+      impl' c = do
+        newrec <- (jsonData :: ActionM e)
+        (db c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
+  
+  destroy me = def Destroy impl'
+    where
+      destroy' :: Entity e -> ReaderT SqlBackend IO (Bool, (Entity e), PS.Key e)
+      destroy' e = M.destroy e
+      findRecord' c = findRecord "id" c :: ActionM (Maybe (Entity e))
+      impl' :: c -> ActionM c
+      impl' c = do
+        findRecord' c >>= maybe
+          (status status404 >> return c)
+          (\e -> do
+              (b, e2, k) <- db c $ destroy' e
+              status $ bool status201 status400 b
+              return c
+          )
+-}

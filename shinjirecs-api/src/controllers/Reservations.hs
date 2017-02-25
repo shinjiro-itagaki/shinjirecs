@@ -45,14 +45,14 @@ get = def Get impl'
   where
     impl' :: ReservationsController -> ActionM ReservationsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Reservation))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Reservation))
       toJsonResponseMaybeEntity FindR mEntity >> return c
 
 modify = def Modify impl'
   where
     impl' :: ReservationsController -> ActionM ReservationsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Reservation))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Reservation))
       newrec <- (jsonData :: ActionM DB.Reservation)
       case mEntity of
         Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
@@ -69,7 +69,7 @@ destroy = def Destroy impl'
   where
     destroy' :: Entity DB.Reservation -> ReaderT SqlBackend IO (Bool, (Entity DB.Reservation), PS.Key DB.Reservation)
     destroy' e = M.destroy e
-    findRecord' c = findRecord "id" c :: ActionM (Maybe (Entity DB.Reservation))
+    findRecord' c = findRecord c "id" :: ActionM (Maybe (Entity DB.Reservation))
     impl' :: ReservationsController -> ActionM ReservationsController
     impl' c = do
       findRecord' c >>= maybe

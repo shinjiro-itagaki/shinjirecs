@@ -45,14 +45,14 @@ get = def Get impl'
   where
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Channel))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
       toJsonResponseMaybeEntity FindR mEntity >> return c
 
 modify = def Modify impl'
   where
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- findRecord "id" c :: ActionM (Maybe (Entity DB.Channel))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
       newrec <- (jsonData :: ActionM DB.Channel)
       case mEntity of
         Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
@@ -69,7 +69,7 @@ destroy = def Destroy impl'
   where
     destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel)
     destroy' e = M.destroy e
-    findRecord' c = findRecord "id" c :: ActionM (Maybe (Entity DB.Channel))
+    findRecord' c = findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       findRecord' c >>= maybe

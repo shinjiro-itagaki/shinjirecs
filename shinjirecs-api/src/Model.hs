@@ -28,6 +28,8 @@ import Data.Conduit(Source) --- conduit
 import Data.Int(Int64) -- base
 import Lib(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
 
+import qualified Database.Persist as P --persistent
+
 runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
 
@@ -207,6 +209,11 @@ findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind x >>= ret
     
 find :: (Read id, Show id, ActiveRecord entity) => id -> ReaderT SqlBackend IO (Maybe (Entity entity))
 find = let ifNothing' = -1 in findByKey . toSqlKey . fromMaybe ifNothing' . readMaybe . show
+
+selectBy :: (ActiveRecord e) => [P.Filter e] -> [P.SelectOpt e] -> ReaderT SqlBackend IO [Entity e]
+selectBy filters opts = do
+  list <- PS.liftPersist $ P.selectList filters opts
+  mapM (\(Entity k v) -> afterFind v >>= return . Entity k) list
           
 instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity
 
