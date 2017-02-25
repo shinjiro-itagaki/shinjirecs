@@ -20,18 +20,18 @@ setCommonHeaders = addHeaders [
   ("Access-Control-Allow-Origin","*")
   ]
 
-appImpl :: Int -> ConnectionPool -> IO ()
-appImpl port conn = do
+startServer :: Int -> ConnectionPool -> IO ()
+startServer port conn = do
   server port $ do
     middleware setCommonHeaders
     middleware logStdoutDev
     Routing.run conn
--- arg1 : port number
-app :: Int -> IO ()
-app = act . appImpl
+    
+listen :: Int -> IO ()
+listen port = runAction $ startServer port
 
-act :: (ConnectionPool -> IO ()) -> IO ()
-act func = config >>= maybe
+runAction :: (ConnectionPool -> IO ()) -> IO ()
+runAction func = config >>= maybe
   (fail "read config error") -- if Nothing
   (\config' -> (runNoLoggingT $ DB.createPool $ Config.db config') >>= func)
 
@@ -39,4 +39,4 @@ config :: IO (Maybe Config.Config)
 config = Config.load (Config.ConfigFilePaths { Config.dbpath = "config/database.yml" }) Config.Development
 
 migrate :: IO ()
-migrate = act (\pool -> DB.run pool $ runMigration DB.migrateAll)
+migrate = runAction (\pool -> DB.run pool $ runMigration DB.migrateAll)

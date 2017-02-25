@@ -4,4 +4,4 @@ import App
 
 main :: IO ()
 main = do
-  App.app 3000
+  App.listen 3000
