@@ -6,6 +6,8 @@ module Helper where
 import Data.Bool(not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
+import Data.Time.Clock(UTCTime,addUTCTime,NominalDiffTime)
+
 
 class ResultClass a r where
   -- please implement
@@ -63,3 +65,7 @@ infixl 8 .||>>=
          -> (a -> m r)
          -> (a -> m r)
 (=<<||.) f2 f1 = f1 .||>>= f2
+
+
+(.++) :: UTCTime -> Integer -> UTCTime
+(.++) t sec = (fromInteger sec :: NominalDiffTime) `addUTCTime` t
