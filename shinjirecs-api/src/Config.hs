@@ -2,6 +2,9 @@
 
 module Config
 where
+import Data.Maybe (maybe)
+import Data.Bool (bool)
+import qualified Data.List as L
 import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, String, Number))
 import Data.Scientific (Scientific(..), coefficient)
 import Data.Text (Text, pack, unpack)
@@ -11,15 +14,27 @@ import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool
 
 data Env = Production | Development | Test deriving Show
 
+data PathsConfig = PathsConfig {
+  privateDir :: FilePath,
+  commandDir :: FilePath
+  } deriving(Show)
+
+defaultPathsConfig :: PathsConfig
+defaultPathsConfig = PathsConfig{
+  privateDir = "private",
+  commandDir = "private/commands"
+  }
+
 data Config = Config {
   env :: Env,
-  db  :: DB.Config
+  db  :: DB.Config,
+  paths :: PathsConfig
   } deriving Show -- (Data, Typeable)
 
 
 data ConfigFilePaths = ConfigFilePaths {
   dbpath :: FilePath
-  ,paths  :: FilePath
+  ,pathsPath  :: FilePath
   } deriving Show
 
 data PreDBConfig = PreDBConfig {
@@ -142,45 +157,37 @@ ifnotfound _        y = y
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
 load paths env = do
-  maybe_allconfigs <- loadDbFile'
-  case maybe_allconfigs of
-    Just allconfigs ->
-      let maybe_config = getObject (Data.Text.pack envstr') allconfigs
-      in
-        case maybe_config of
-          Just config -> return $ Just Config { env = env, db = configsToDBConfig' allconfigs config }
-          _           -> return Nothing
-    _                 -> return Nothing
-    
+  (Y.decodeFile $ dbpath paths)
+    >>= return . maybe
+          Nothing
+          (\allconfigs ->
+              maybe
+                Nothing
+                (\config ->
+                    Just Config { env = env,
+                                  db = configsToDBConfig' allconfigs config,
+                                  paths = defaultPathsConfig })
+                $ getObject (Data.Text.pack $ lower $ show env) allconfigs 
+          )
   where
-    envstr' = lower $ show env
     configsToDBConfig' :: Y.Value -> Y.Object -> DB.Config
     configsToDBConfig' allconfigs config = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config
-    
-    loadDbFile' :: IO (Maybe Y.Value)
-    loadDbFile' = Y.decodeFile $ dbpath paths
-    
     importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig
     importOtherConfig' allconfigs imported config =
-      case include config of
-        Just str ->
-          if' (exists' imported str)
-            (config)
-            (
-              let maybe_conf_obj = getObject (Data.Text.pack str) allconfigs -- :: Maybe (Y.Object)
-              in case maybe_conf_obj of
-                Just conf_obj -> config <<< importOtherConfig' allconfigs (imported ++ [str]) (objectToPreDBConfig conf_obj)
-                _             -> config
-            )
-        _  -> config
-      where
-        exists' :: (Eq e) => [e] -> e -> Bool
-        exists' [] elem = False
-        exists' (e:ex) elem = (e == elem) || exists' ex elem
-        if' :: Bool -> a -> a -> a
-        if' True  x _ = x
-        if' False _ y = y
-        
+      maybe
+        config
+        (\str ->
+           bool
+             config 
+             (
+               maybe
+                 config
+                 (\conf_obj -> config <<< importOtherConfig' allconfigs (imported ++ [str]) (objectToPreDBConfig conf_obj))
+                 (getObject (Data.Text.pack str) allconfigs)
+             )
+             (L.elem str imported)
+        )
+        (include config)
 
     typeInvalid' :: Text -> IO (a)
     typeInvalid' k = fail $ "Invalid type for: " ++ show k

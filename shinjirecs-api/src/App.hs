@@ -36,7 +36,7 @@ runAction func = config >>= maybe
 config :: IO (Maybe Config.Config)
 config = Config.load Config.ConfigFilePaths {
   Config.dbpath = "config/database.yml"
-  ,Config.paths = "config/paths.yml"
+  ,Config.pathsPath = "config/paths.yml"
   }
   Config.Development
 

@@ -1,3 +1,12 @@
-paths:
+default:
   private_dir  : "private"
   commands_dir : "private/commands"
+  
+development:
+  <<: default
+
+test:
+  <<: default
+
+production:
+  <<: default
