@@ -19,6 +19,7 @@ data Config = Config {
 
 data ConfigFilePaths = ConfigFilePaths {
   dbpath :: FilePath
+  ,paths  :: FilePath
   } deriving Show
 
 data PreDBConfig = PreDBConfig {

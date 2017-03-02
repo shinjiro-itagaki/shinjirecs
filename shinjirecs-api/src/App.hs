@@ -34,7 +34,11 @@ runAction func = config >>= maybe
   (\config' -> (runNoLoggingT $ DB.createPool $ Config.db config') >>= func)
 
 config :: IO (Maybe Config.Config)
-config = Config.load (Config.ConfigFilePaths { Config.dbpath = "config/database.yml" }) Config.Development
+config = Config.load Config.ConfigFilePaths {
+  Config.dbpath = "config/database.yml"
+  ,Config.paths = "config/paths.yml"
+  }
+  Config.Development
 
 migrate :: IO ()
 migrate = runAction (\pool -> DB.run pool $ runMigration DB.migrateAll)

@@ -30,6 +30,7 @@ library
                      , Controllers.Reservations
                      , Helper
                      , Job
+                     , Jobs.Recording
                      , Routing
                      , Server
   build-depends:       base >= 4.7 && < 5
@@ -52,6 +53,7 @@ library
                      , persistent-postgresql
                      , persistent-sqlite
                      , postgresql-simple
+                     , process
                      , resourcet
                      , scientific
                      , text

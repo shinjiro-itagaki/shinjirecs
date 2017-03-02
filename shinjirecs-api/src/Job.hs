@@ -12,6 +12,8 @@ import Data.Ord(Ord,Ordering(..))
 import Data.Time.Clock(UTCTime(..),secondsToDiffTime)
 import Data.Time.Calendar(fromGregorian)
 import Helper((.++))
+import Control.Monad.IO.Class(MonadIO)
+import Config(Config)
 
 data EnqueueOption = QueueName String | WaitUntil UTCTime | Wait UTCTime Integer | Priority Integer | NoOption
 
@@ -64,30 +66,60 @@ setOptionsToJob j (x:xs) = setOptionsToJob (setOptionToJob j x) xs
 mkJobFromOptions :: [EnqueueOption] -> Job
 mkJobFromOptions options = setOptionsToJob mkDefaultJob options
 
+data JobCancelCode = Canceled | CancelFailed | FinishedYet | CanceledYet | CancelNotImplemented | BeforeBlocked
+
 class ActiveJob j where
-  perform       :: (Monad m) => j -> m j  -- please implementate
-  new           :: QueueInterface -> j    -- please implementate
-  queue         :: j -> QueueInterface    -- please implementate
-  jobClassId    :: j -> Integer           -- please implementate , return unique value
+  perform       :: (MonadIO m) => j -> m j  -- please implement
+  new           :: Config -> QueueInterface -> j    -- please implement
+  queue         :: j -> QueueInterface    -- please implement
+  jobClassId    :: j -> Integer           -- please implement , return unique value
 
-  beforeEnqueue,afterEnqueue,beforePerform :: (Monad m) => j -> m (Bool,j)
+  beforeEnqueue,afterEnqueue,beforePerform,beforeEnqueueCancel,beforePerformCancel :: (MonadIO m) => j -> m (Bool,j)
+  
+  -- please override if you need
   beforeEnqueue = return . (,) True
+  
+  -- please override if you need
   afterEnqueue  = return . (,) True
+  
+  -- please override if you need
   beforePerform = return . (,) True
-  afterPerform  :: (Monad m) => j -> m j
-  afterPerform  = return
 
-  beforeEnqueueCancel  :: (Monad m) => j -> m (Bool,j)
-  afterEnqueueCanceled :: (Monad m) => j -> m j
+  afterPerformed, afterPerformFailed, afterEnqueueCanceled,afterEnqueueCancelFailed :: (MonadIO m) => j -> m j
+  afterPerformCanceled, afterPerformCancelFailed :: (MonadIO m) => JobCancelCode -> j -> m j
+  -- please override if you need
+  afterPerformed  = return
 
-  performNow :: (Monad m) => j -> m j
+  -- please override if you need
+  afterPerformFailed = return  
+ 
+  -- please override if you need
+  beforeEnqueueCancel = return . (,) True
+  
+  -- please override if you need
+  afterEnqueueCanceled = return
+
+  -- please override if you need
+  beforePerformCancel = return . (,) True
+
+  -- please override if you need
+  afterEnqueueCancelFailed = return
+
+  -- please override if you need
+  afterPerformCanceled code = return
+
+  -- please override if you need
+  afterPerformCancelFailed code = return
+
+
+  performNow :: (MonadIO m) => j -> m j
   performNow self = do
     (b,self2) <- beforePerform self
     if b
-      then perform self2 >>= afterPerform
+      then perform self2 >>= afterPerformed
       else return self2
 
-  performLater :: (Monad m) => j -> [EnqueueOption] -> m j
+  performLater :: (MonadIO m) => j -> [EnqueueOption] -> m j
   performLater self options = do
     (b,self2) <- beforeEnqueue self
     if b
@@ -114,3 +146,24 @@ class ActiveJob j where
       
   toJob :: j -> Job
   toJob self = mkDefaultJob { performFunction = (\i -> True ), classId = jobClassId self}
+
+  performCancel, performCancelWithoutHooks :: (MonadIO m) => j -> m (JobCancelCode,j)
+
+  performCancel self = do
+    -- check performing(enqueued)
+    -- if enqueued then remove from queue
+    (b,self2) <- beforePerformCancel self
+    if b -- if performing now then 
+      then performCancelWithoutHooks self2 >>= after'
+      else return (BeforeBlocked,self2)
+    where
+      -- doAfterHook' :: (MonadIO m) => JobCancelCode -> j -> (JobCancelCode -> j -> m j) -> m j
+      doAfterHook' code self func = func code self >>= return . (,) code
+      -- after' :: (MonadIO m) => (JobCancelCode,j) -> m j
+      after' (Canceled,   self) = doAfterHook' Canceled    self afterPerformCanceled     
+      after' (CanceledYet,self) = doAfterHook' CanceledYet self afterPerformCanceled     
+      after' (code       ,self) = doAfterHook' code        self afterPerformCancelFailed 
+
+  -- please implement if you need
+  performCancelWithoutHooks self = return (CancelNotImplemented, self)
+
