@@ -101,29 +101,24 @@ getSQLActionRunner' func = runNoLoggingT . runResourceT . func . runSqlConn
 
 createPool :: (MonadIO m, MonadBaseControl IO m, MonadLogger m) => Config -> m ConnectionPool
 createPool config = 
-  case adapter' of
-    MySQL      -> createMySQLPool      (configToMySQLConnectInfo config)      pool'
+  case adapter config of
+    MySQL      -> createMySQLPool      (configToMySQLConnectInfo      config) pool'
     PostgreSQL -> createPostgresqlPool (configToPgSQLConnectionString config) pool'
-    SQLite3    -> createSqlitePool     (path')                                pool'
+    SQLite3    -> createSqlitePool     (Data.Text.pack $ database     config) pool'
   where
-    path'    = Data.Text.pack $ database config :: Text
-    pool'    = pool     config :: Int
-    adapter' = adapter  config :: AdapterType
+    pool' = pool config :: Int
 
 connect :: Config -> IO (Sql a -> IO a)
 connect config = 
   return $ getSQLActionRunner' $
-  case adapter' of
+  case adapter config of
     MySQL      -> mysql'
     PostgreSQL -> pgsql'
     SQLite3    -> sqlit'
   where
-    mysql' = withMySQLConn $ configToMySQLConnectInfo config
+    mysql' = withMySQLConn      $ configToMySQLConnectInfo      config
     pgsql' = withPostgresqlConn $ configToPgSQLConnectionString config
-    sqlit' = withSqliteConn path'
-    path'    = Data.Text.pack $ database config :: Text
-    pool'    = pool     config :: Int
-    adapter' = adapter  config :: AdapterType
+    sqlit' = withSqliteConn     $ Data.Text.pack $ database     config
     
 run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 run p action = liftIO $ runSqlPool action p
