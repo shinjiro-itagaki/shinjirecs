@@ -77,32 +77,28 @@ objectToPreDBConfig configs =
     readAdapter' key config =
       let k' = Data.Text.pack key
       in case M.lookup k' config of
-        Just (Y.String t) -> -- 型がstringの場合
-          DB.stringToAdapterType $ Data.Text.unpack t
-          {-
-          let adapter = DB.stringToAdapterType $ Data.Text.unpack t
-          in case adapter of
-            DB.Unsupported -> Nothing
-            _         -> Just adapter
--}
-        _             -> Nothing
+        Just (Y.String t) -> DB.stringToAdapterType $ Data.Text.unpack t
+        Nothing           -> Nothing
+        _                 -> fail "Invalid type (not string) for: adapter"
 
     lookupInt' :: String -> Y.Object -> Maybe (Int)
     lookupInt' key config = lookupInteger' (Data.Text.pack key) config >>= return . fromInteger
 
-    lookupInteger' :: Text -> Y.Object -> Maybe (Integer)
+    lookupInteger' :: Text -> Y.Object -> Maybe Integer
     lookupInteger' k config =
       case M.lookup k config of
         Just (Y.Number t) -> Just (coefficient t)
-        _                 -> Nothing
+        Nothing           -> Nothing
+        _                 -> fail $ "Invalid type (not integer) for: " ++ (Data.Text.unpack k)
 
-    lookupText' :: Text -> Y.Object -> Maybe (Text)
+    lookupText' :: Text -> Y.Object -> Maybe Text
     lookupText' k config =
       case M.lookup k config of
         Just (Y.String t) -> Just t
-        _                 -> Nothing
+        Nothing           -> Nothing
+        _                 -> fail $ "Invalid type (not string) for: " ++ (Data.Text.unpack k)
 
-    lookupString' :: Text -> Y.Object -> Maybe (String)
+    lookupString' :: Text -> Y.Object -> Maybe String
     lookupString' k config = lookupText' k config >>= return . Data.Text.unpack
     
 
