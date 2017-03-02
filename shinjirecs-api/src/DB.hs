@@ -112,13 +112,9 @@ connect :: Config -> IO (Sql a -> IO a)
 connect config = 
   return $ getSQLActionRunner' $
   case adapter config of
-    MySQL      -> mysql'
-    PostgreSQL -> pgsql'
-    SQLite3    -> sqlit'
-  where
-    mysql' = withMySQLConn      $ configToMySQLConnectInfo      config
-    pgsql' = withPostgresqlConn $ configToPgSQLConnectionString config
-    sqlit' = withSqliteConn     $ Data.Text.pack $ database     config
+    MySQL      -> withMySQLConn      $ configToMySQLConnectInfo      config
+    PostgreSQL -> withPostgresqlConn $ configToPgSQLConnectionString config
+    SQLite3    -> withSqliteConn     $ Data.Text.pack $ database     config
     
 run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 run p action = liftIO $ runSqlPool action p
