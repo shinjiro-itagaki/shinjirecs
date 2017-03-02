@@ -46,7 +46,7 @@ type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 share [mkPersist sqlSettings, mkMigrate "migrateAll"]
   $(persistFileWith lowerCaseSettings "config/models")
 
-data AdapterType = MySQL | PostgreSQL | SQLite3 | Unsupported deriving Show
+data AdapterType = MySQL | PostgreSQL | SQLite3 deriving Show
 data Config = Config {
   host     :: Maybe String,
   socket   :: Maybe String,
@@ -65,38 +65,33 @@ Nothing  .||. y = y
 
 configToMySQLConnectInfo :: Config -> MySQL.ConnectInfo
 configToMySQLConnectInfo config = MySQL.defaultConnectInfo
-                                  { MySQL.connectHost     = (host config) .||. "localhost"
+                                  { MySQL.connectHost     = (host config)               .||. "localhost"
                                   , MySQL.connectPort     = fromInteger $ (port config) .||. 5432
-                                  , MySQL.connectUser     = (user config) .||. "root" 
-                                  , MySQL.connectPassword = (password config) .||. ""
+                                  , MySQL.connectUser     = (user config)               .||. "root" 
+                                  , MySQL.connectPassword = (password config)           .||. ""
+                                  , MySQL.connectPath     = (socket config)             .||. ""
                                   , MySQL.connectDatabase = database config
-                                  , MySQL.connectPath     = (socket config) .||. ""
                                   }
 
 configToPgSQLConnectInfo :: Config -> PgSQL.ConnectInfo
 configToPgSQLConnectInfo config =  PgSQL.ConnectInfo
-                                  { PgSQL.connectHost     = (host config) .||. "localhost"
+                                  { PgSQL.connectHost     = (host config)               .||. "localhost"
                                   , PgSQL.connectPort     = fromInteger $ (port config) .||. 5432
-                                  , PgSQL.connectUser     = (user config) .||. "root" 
-                                  , PgSQL.connectPassword = (password config) .||. ""
+                                  , PgSQL.connectUser     = (user config)               .||. "root" 
+                                  , PgSQL.connectPassword = (password config)           .||. ""
                                   , PgSQL.connectDatabase = database config
                                   }
 
 configToPgSQLConnectionString :: Config -> ByteString
 configToPgSQLConnectionString = PgSQL.postgreSQLConnectionString . configToPgSQLConnectInfo 
 
-stringToAdapterType :: String -> AdapterType
+stringToAdapterType :: String -> Maybe AdapterType
 stringToAdapterType str =
   case str of
-    "mysql"      -> MySQL
-    "postgresql" -> PostgreSQL
-    "sqlite3"    -> SQLite3
-    _            -> Unsupported
-
--- run pool = runSqlPersistMPool' pool
---   where
---    runSqlPersistMPool' pool' action' = runSqlPersistMPool action' pool'
-
+    "mysql"      -> return MySQL
+    "postgresql" -> return PostgreSQL
+    "sqlite3"    -> return SQLite3
+    _            -> Nothing
 
 getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backend, MonadBaseControl IO m1, MonadBaseControl IO m) =>
   ((backend -> m1 a1) -> ResourceT (NoLoggingT m) a)
@@ -110,7 +105,6 @@ createPool config =
     MySQL      -> createMySQLPool      (configToMySQLConnectInfo config)      pool'
     PostgreSQL -> createPostgresqlPool (configToPgSQLConnectionString config) pool'
     SQLite3    -> createSqlitePool     (path')                                pool'
-    _          -> fail $ "invalid db adapter: " ++ (show 'adapter)
   where
     path'    = Data.Text.pack $ database config :: Text
     pool'    = pool     config :: Int
@@ -118,12 +112,15 @@ createPool config =
 
 connect :: Config -> IO (Sql a -> IO a)
 connect config = 
+  return $ getSQLActionRunner' $
   case adapter' of
-    MySQL      -> return $ getSQLActionRunner' (withMySQLConn      (configToMySQLConnectInfo config))
-    PostgreSQL -> return $ getSQLActionRunner' (withPostgresqlConn (configToPgSQLConnectionString config))
-    SQLite3    -> return $ getSQLActionRunner' (withSqliteConn     path')
-    _          -> fail $ "invalid db adapter: " ++ (show 'adapter)
+    MySQL      -> mysql'
+    PostgreSQL -> pgsql'
+    SQLite3    -> sqlit'
   where
+    mysql' = withMySQLConn $ configToMySQLConnectInfo config
+    pgsql' = withPostgresqlConn $ configToPgSQLConnectionString config
+    sqlit' = withSqliteConn path'
     path'    = Data.Text.pack $ database config :: Text
     pool'    = pool     config :: Int
     adapter' = adapter  config :: AdapterType

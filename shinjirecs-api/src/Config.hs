@@ -78,10 +78,13 @@ objectToPreDBConfig configs =
       let k' = Data.Text.pack key
       in case M.lookup k' config of
         Just (Y.String t) -> -- 型がstringの場合
+          DB.stringToAdapterType $ Data.Text.unpack t
+          {-
           let adapter = DB.stringToAdapterType $ Data.Text.unpack t
           in case adapter of
             DB.Unsupported -> Nothing
             _         -> Just adapter
+-}
         _             -> Nothing
 
     lookupInt' :: String -> Y.Object -> Maybe (Int)
