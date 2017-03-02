@@ -85,10 +85,7 @@ objectToPreDBConfig configs =
         _             -> Nothing
 
     lookupInt' :: String -> Y.Object -> Maybe (Int)
-    lookupInt' key config = do
-      case lookupInteger' (Data.Text.pack key) config of
-        Just v -> Just (fromIntegral v)
-        _      -> Nothing
+    lookupInt' key config = lookupInteger' (Data.Text.pack key) config >>= return . fromInteger
 
     lookupInteger' :: Text -> Y.Object -> Maybe (Integer)
     lookupInteger' k config =
@@ -103,14 +100,11 @@ objectToPreDBConfig configs =
         _                 -> Nothing
 
     lookupString' :: Text -> Y.Object -> Maybe (String)
-    lookupString' k config =
-      case lookupText' k config of
-        Just t -> Just (Data.Text.unpack t)
-        _      -> Nothing
+    lookupString' k config = lookupText' k config >>= return . Data.Text.unpack
     
 
 (<||>) :: Maybe a -> Maybe a -> Maybe a
-x@(Just _) <||> y = x
+x@(Just _) <||> _ = x
 Nothing    <||> y = y
 
 (<<<) :: PreDBConfig -> PreDBConfig -> PreDBConfig
@@ -134,10 +128,10 @@ preDBConfig2DBConfig :: Env -> PreDBConfig -> DB.Config
 preDBConfig2DBConfig env_ pre =
   DB.Config
   {
-    DB.adapter  = (adapter  pre) `ifnotfound` DB.SQLite3,
-    DB.database = (database pre) `ifnotfound` ("db/" ++ envstr' ++ ".sqlite3"),
-    DB.pool     = (pool     pre) `ifnotfound` (5 :: Int),
-    DB.timeout  = (timeout  pre) `ifnotfound` (3000 :: Int),
+    DB.adapter  = (adapter  pre) ||| DB.SQLite3,
+    DB.database = (database pre) ||| ("db/" ++ envstr' ++ ".sqlite3"),
+    DB.pool     = (pool     pre) ||| (5 :: Int),
+    DB.timeout  = (timeout  pre) ||| (3000 :: Int),
     DB.host     = (host     pre),
     DB.port     = (port     pre),
     DB.user     = (user     pre),
@@ -150,10 +144,10 @@ preDBConfig2DBConfig env_ pre =
 envToText :: Env -> Data.Text.Text
 envToText = Data.Text.pack . lower . show
 
-ifnotfound :: Maybe a -> a -> a
-ifnotfound (Just x) y = x
-ifnotfound _        y = y
-
+(|||) :: Maybe a -> a -> a
+(|||) (Just x) _ = x
+(|||) Nothing  x = x
+infixl 1 |||
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
 load paths env =
@@ -162,37 +156,16 @@ load paths env =
                         getObject (Data.Text.pack $ lower $ show env) allconfigs
                         >>= (\config ->
                                 Just Config { env = env,
-                                              db = configsToDBConfig' allconfigs config,
+                                              db = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config,
                                               paths = defaultPathsConfig })))
   where
-    configsToDBConfig' :: Y.Value -> Y.Object -> DB.Config
-    configsToDBConfig' allconfigs config = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config
     importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig
     importOtherConfig' allconfigs imported config =
-      maybe
-        config
-        (\str ->
-           bool
-             config 
-             (
-               maybe
-                 config
-                 (\conf_obj -> config <<< importOtherConfig' allconfigs (imported ++ [str]) (objectToPreDBConfig conf_obj))
-                 (getObject (Data.Text.pack str) allconfigs)
-             )
-             (L.elem str imported)
-        )
-        (include config)
-
-    typeInvalid' :: Text -> IO (a)
-    typeInvalid' k = fail $ "Invalid type for: " ++ show k
-
-    valueInvalid' :: Text -> Text -> IO (a)
-    valueInvalid' k t = fail $ (show t) ++ " is invalid value for: " ++ (show k)
-
-    notFound' :: Text -> IO (a)
-    notFound' k = fail $ "Not found: " ++ show k
-
+      (include config
+       >>= (\str -> bool (Just str) Nothing (L.elem str imported))
+       >>= (\str ->
+             getObject (Data.Text.pack str) allconfigs
+             >>= return . (config <<<) . importOtherConfig' allconfigs (imported ++ [str]) . objectToPreDBConfig)) ||| config
 
     -- 引数で指定したキーを持つオブジェクトを返す
     getObject :: Text -> Y.Value -> Maybe (Y.Object)
