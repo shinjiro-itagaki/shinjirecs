@@ -156,19 +156,14 @@ ifnotfound _        y = y
 
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
-load paths env = do
+load paths env =
   (Y.decodeFile $ dbpath paths)
-    >>= return . maybe
-          Nothing
-          (\allconfigs ->
-              maybe
-                Nothing
-                (\config ->
-                    Just Config { env = env,
-                                  db = configsToDBConfig' allconfigs config,
-                                  paths = defaultPathsConfig })
-                $ getObject (Data.Text.pack $ lower $ show env) allconfigs 
-          )
+  >>= return . (>>= (\allconfigs ->
+                        getObject (Data.Text.pack $ lower $ show env) allconfigs
+                        >>= (\config ->
+                                Just Config { env = env,
+                                              db = configsToDBConfig' allconfigs config,
+                                              paths = defaultPathsConfig })))
   where
     configsToDBConfig' :: Y.Value -> Y.Object -> DB.Config
     configsToDBConfig' allconfigs config = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config
