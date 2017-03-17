@@ -2,6 +2,7 @@
 
 module Config
 where
+import Control.Applicative((<|>))
 import Data.Maybe (maybe)
 import Data.Bool (bool)
 import qualified Data.List as L
@@ -101,25 +102,22 @@ objectToPreDBConfig configs =
     lookupString' :: Text -> Y.Object -> Maybe String
     lookupString' k config = lookupText' k config >>= return . Data.Text.unpack
     
-
-(<||>) :: Maybe a -> Maybe a -> Maybe a
-x@(Just _) <||> _ = x
-Nothing    <||> y = y
-
 (<<<) :: PreDBConfig -> PreDBConfig -> PreDBConfig
 (>>>) :: PreDBConfig -> PreDBConfig -> PreDBConfig
 (<<<) l r = PreDBConfig {
-  include  = (include  l) <||> (include  r),
-  host     = (host     l) <||> (host     r),
-  socket   = (socket   l) <||> (socket   r),
-  port     = (port     l) <||> (port     r),
-  user     = (user     l) <||> (user     r),
-  password = (password l) <||> (password r),
-  adapter  = (adapter  l) <||> (adapter  r),
-  database = (database l) <||> (database r),
-  pool     = (pool     l) <||> (pool     r),
-  timeout  = (timeout  l) <||> (timeout  r)
+  include  = or' include,
+  host     = or' host,
+  socket   = or' socket,
+  port     = or' port,
+  user     = or' user,
+  password = or' password,
+  adapter  = or' adapter,
+  database = or' database,
+  pool     = or' pool,
+  timeout  = or' timeout
   }
+  where
+    or' f = (f l) <|> (f r)
 
 (>>>) l r = r <<< l
 
