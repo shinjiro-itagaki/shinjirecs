@@ -5,9 +5,13 @@ import DB.Status(ReservationState(..))
 import Model(ActiveRecord(..))
 -- import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(toSqlKey)  --persistent
+import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
+import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval)
+
+import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
 
 instance ActiveRecord Reservation
-  
+
   -- delete
   -- deleteWhere
 
@@ -31,6 +35,7 @@ isWaiting   = isSameState Waiting
 isRecording = isSameState Recording
 isSuccess   = isSameState Success
 isFailed    = isSameState Failed
+
 -- recorded?
 -- destroy()
 -- videofile_deletable?
@@ -40,3 +45,51 @@ isFailed    = isSameState Failed
 
 -- filepath()
 -- filename
+
+reservationFinishTime :: Reservation -> UTCTime
+reservationFinishTime r = finishTime (reservationStartTime r) (reservationDuration r)
+
+reservationInTime :: Reservation -> UTCTime -> Bool
+reservationInTime r t = inTime (reservationStartTime r) (reservationDuration r) t
+
+reservationInTimeNow :: Reservation -> IO Bool
+reservationInTimeNow r = inTimeNow (reservationStartTime r) (reservationDuration r)
+
+inTimeReservations :: [Reservation] -> UTCTime -> [Reservation]
+inTimeReservations rs t = filter (\r -> reservationInTime r t) rs
+
+inTimeNowReservations :: [Reservation] -> IO [Reservation]
+inTimeNowReservations rs = getCurrentTime >>= return . inTimeReservations rs
+
+createNextReservations :: Reservation -> Maybe Reservation
+createNextReservations r@Reservation {reservationNext = 0} = Nothing
+createNextReservations r@Reservation {reservationNext = x} =
+  Just $ r { reservationStartTime = (reservationStartTime r) .++ (toInteger x),
+             reservationNext = calcNext r }
+
+reservationWeekDay :: Reservation -> WeekDay
+reservationWeekDay = dateWeekDay . dayToDateTime . utctDay . reservationStartTime
+
+reservationWeekDays :: Reservation -> [WeekDay]
+reservationWeekDays Reservation { reservationXwday = xwday } = weekDayFlagsToWeekDays xwday
+
+calcNext :: Reservation
+         -> Word -- second
+calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
+  where
+    rWeekDay'  = reservationWeekDay  r
+    rWeekDays' = reservationWeekDays r
+
+{-
+  startTime UTCTime
+  duration Int default=0
+  title String
+  description Text
+  next Word
+  name Text
+  counter Word
+  keta Word
+  videoFileNameFormat FilePath
+  xwday Word
+  state ReservationState
+-}

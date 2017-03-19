@@ -3,11 +3,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Helper where
-import Data.Bool(not)
+import Data.Bits(shiftL,(.&.),(.|.))
+import Data.Bool(Bool,not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
-import Data.Time.Clock(UTCTime,addUTCTime,NominalDiffTime)
+import Data.Time.Clock(UTCTime,addUTCTime,NominalDiffTime,getCurrentTime)
+import Data.Word(Word)
+import Data.Dates(WeekDay(..),weekdayNumber,intToWeekday) -- dates
 
+type UInt = Word
 
 class ResultClass a r where
   -- please implement
@@ -69,3 +73,59 @@ infixl 8 .||>>=
 
 (.++) :: UTCTime -> Integer -> UTCTime
 (.++) t sec = (fromInteger sec :: NominalDiffTime) `addUTCTime` t
+
+
+finishTime :: UTCTime -> UInt -> UTCTime
+finishTime t d = t .++ (toInteger d)
+
+inTime :: UTCTime -- start time
+       -> UInt    -- duration
+       -> UTCTime -- object time
+       -> Bool
+inTime st d t = st <= t && t <= (finishTime st d)
+
+inTimeNow :: UTCTime -> UInt -> IO Bool
+inTimeNow st d = getCurrentTime >>= return . (inTime st d)
+
+
+-- interval between same weekday means 1 week later
+weekdayInterval :: WeekDay -> WeekDay -> UInt
+weekdayInterval from to =
+  let interval' = (weekdayNumber to) - (weekdayNumber from)
+      max' = weekdayNumber (maxBound ::  WeekDay)
+  in
+    fromInteger $ toInteger (if interval' > 0 
+                             then interval'
+                             else max' + interval')
+
+-- 2nd argument is empty means next week
+nearestWeekDay :: WeekDay -> [WeekDay] -> WeekDay
+nearestWeekDay from []  = from
+nearestWeekDay from wds = intToWeekday $ fromInteger $ toInteger $ minimum $ map (weekdayInterval from) wds
+
+nearestWeekDayInterval :: WeekDay -> [WeekDay] -> UInt
+nearestWeekDayInterval from [] = 0
+nearestWeekDayInterval from xs = weekdayInterval from $ nearestWeekDay from xs
+
+allWeekDays ::[WeekDay]
+allWeekDays = [minBound .. maxBound]
+
+-- Monday    => 0b0000001
+-- Tuesday   => 0b0000010
+-- Wednesday => 0b0000100
+-- Thursday  => 0b0001000
+-- Friday    => 0b0010000
+-- Saturday  => 0b0100000
+-- Sunday    => 0b1000000
+weekDayToMask :: WeekDay -> UInt
+weekDayToMask wd = 1 `shiftL` (weekdayNumber wd)
+
+weekDaysToFlags :: [WeekDay] -> UInt
+weekDaysToFlags = foldl (.|.) 0 . map weekDayToMask
+  
+weekDayFlagsToWeekDays :: UInt -> [WeekDay]
+weekDayFlagsToWeekDays 0     = []
+weekDayFlagsToWeekDays flags = filter (weekDayFlagIsOn flags) allWeekDays
+
+weekDayFlagIsOn :: UInt -> WeekDay -> Bool
+weekDayFlagIsOn flags wd = not $ (flags .&. (weekDayToMask wd)) == 0

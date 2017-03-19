@@ -7,6 +7,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 module Job where
+import Control.Monad.IO.Class(liftIO)
+import Control.Exception.Base(SomeException)
 import Data.Eq(Eq(..))
 import Data.Ord(Ord,Ordering(..))
 import Data.Time.Clock(UTCTime(..),secondsToDiffTime)
@@ -14,6 +16,8 @@ import Data.Time.Calendar(fromGregorian)
 import Helper((.++))
 import Control.Monad.IO.Class(MonadIO)
 import Config(Config)
+import Control.Concurrent(forkFinally,killThread,threadDelay,ThreadId)
+-- import Control.Concurrent.MVar(MVar,newMVar,takeMVar,putMVar)
 
 data EnqueueOption = QueueName String | WaitUntil UTCTime | Wait UTCTime Integer | Priority Integer | NoOption
 
@@ -111,13 +115,18 @@ class ActiveJob j where
   -- please override if you need
   afterPerformCancelFailed code = return
 
-
-  performNow :: (MonadIO m) => j -> m j
-  performNow self = do
-    (b,self2) <- beforePerform self
-    if b
-      then perform self2 >>= afterPerformed
-      else return self2
+  performNow :: (MonadIO m) => j -> m ThreadId
+  performNow self = liftIO $ forkFinally impl' onError'
+    where
+      -- impl' :: IO j
+      impl' = do
+        (b,self2) <- beforePerform self
+        if b
+          then perform self2 >>= afterPerformed
+          else return self2
+      onError' :: Either SomeException j -> IO ()
+      onError' (Left ex) = return ()
+      onError' (Right _) = return ()
 
   performLater :: (MonadIO m) => j -> [EnqueueOption] -> m j
   performLater self options = do

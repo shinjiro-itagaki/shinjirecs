@@ -12,6 +12,7 @@ import Data.Text (Text, pack, unpack)
 import Data.List.Extra (lower) -- extra
 import Data.HashMap.Strict as M
 import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
+import Data.Word (Word)
 
 data Env = Production | Development | Test deriving Show
 
@@ -26,10 +27,20 @@ defaultPathsConfig = PathsConfig{
   commandDir = "private/commands"
   }
 
+data ReservationConfig = ReservationConfig {
+  marginStart :: Word
+  } deriving (Show)
+
+defaultReservationConfig :: ReservationConfig
+defaultReservationConfig = ReservationConfig {
+    marginStart = 3
+    }
+
 data Config = Config {
   env :: Env,
   db  :: DB.Config,
-  paths :: PathsConfig
+  paths :: PathsConfig,
+  reservation :: ReservationConfig
   } deriving Show -- (Data, Typeable)
 
 
@@ -154,7 +165,8 @@ load paths env =
                         >>= (\config ->
                                 Just Config { env = env,
                                               db = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config,
-                                              paths = defaultPathsConfig })))
+                                              paths = defaultPathsConfig,
+                                              reservation = defaultReservationConfig})))
   where
     importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig
     importOtherConfig' allconfigs imported config =

@@ -37,6 +37,7 @@ library
                      , aeson
                      , bytestring
                      , conduit
+                     , dates
                      , enumerator
                      , extra
                      , scotty
