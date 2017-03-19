@@ -71,8 +71,8 @@ infixl 8 .||>>=
 (=<<||.) f2 f1 = f1 .||>>= f2
 
 
-(.++) :: UTCTime -> Integer -> UTCTime
-(.++) t sec = (fromInteger sec :: NominalDiffTime) `addUTCTime` t
+(.++) :: Integral a => UTCTime -> a -> UTCTime
+(.++) t sec = ((fromInteger $ toInteger sec) :: NominalDiffTime) `addUTCTime` t
 
 
 finishTime :: UTCTime -> UInt -> UTCTime

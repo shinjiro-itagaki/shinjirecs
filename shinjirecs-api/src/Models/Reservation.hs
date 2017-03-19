@@ -64,7 +64,7 @@ inTimeNowReservations rs = getCurrentTime >>= return . inTimeReservations rs
 createNextReservations :: Reservation -> Maybe Reservation
 createNextReservations r@Reservation {reservationNext = 0} = Nothing
 createNextReservations r@Reservation {reservationNext = x} =
-  Just $ r { reservationStartTime = (reservationStartTime r) .++ (toInteger x),
+  Just $ r { reservationStartTime = (reservationStartTime r) .++ x,
              reservationNext = calcNext r }
 
 reservationWeekDay :: Reservation -> WeekDay
