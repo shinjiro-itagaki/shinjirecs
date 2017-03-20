@@ -18,13 +18,15 @@ data Env = Production | Development | Test deriving Show
 
 data PathsConfig = PathsConfig {
   privateDir :: FilePath,
-  commandDir :: FilePath
+  commandDir :: FilePath,
+  videoFilesDir :: FilePath
   } deriving(Show)
 
 defaultPathsConfig :: PathsConfig
 defaultPathsConfig = PathsConfig{
   privateDir = "private",
-  commandDir = "private/commands"
+  commandDir = "private/commands",
+  videoFilesDir = "private/videofiles"
   }
 
 data ReservationConfig = ReservationConfig {

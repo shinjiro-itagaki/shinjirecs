@@ -7,9 +7,12 @@ import Data.Bits(shiftL,(.&.),(.|.))
 import Data.Bool(Bool,not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
-import Data.Time.Clock(UTCTime,addUTCTime,NominalDiffTime,getCurrentTime)
+import Data.Text(replace,pack,unpack)
+import Data.Time.Clock(UTCTime(..),addUTCTime,NominalDiffTime,getCurrentTime)
+import Data.Time.Calendar(toGregorian)
 import Data.Word(Word)
 import Data.Dates(WeekDay(..),weekdayNumber,intToWeekday) -- dates
+import Text.Printf(printf,PrintfType)
 
 type UInt = Word
 
@@ -74,7 +77,6 @@ infixl 8 .||>>=
 (.++) :: Integral a => UTCTime -> a -> UTCTime
 (.++) t sec = ((fromInteger $ toInteger sec) :: NominalDiffTime) `addUTCTime` t
 
-
 finishTime :: UTCTime -> UInt -> UTCTime
 finishTime t d = t .++ (toInteger d)
 
@@ -129,3 +131,40 @@ weekDayFlagsToWeekDays flags = filter (weekDayFlagIsOn flags) allWeekDays
 
 weekDayFlagIsOn :: UInt -> WeekDay -> Bool
 weekDayFlagIsOn flags wd = not $ (flags .&. (weekDayToMask wd)) == 0
+
+class DateTime a where
+  toYMD :: a -> (Integer, (UInt, UInt))
+  toHMS :: a -> (UInt   , (UInt, UInt))
+  year :: a -> Integer
+  mon,month,day,hour,min,minute,sec,second :: a -> UInt
+  year   = fst . toYMD
+  month  = fst . snd . toYMD
+  mon = month  
+  day    = snd . snd . toYMD
+  hour   = fst . toHMS
+  minute = fst . snd . toHMS
+  min = minute  
+  second = snd . snd . toHMS
+  sec = second
+  
+instance DateTime UTCTime where
+  toYMD = toYMD' . toGregorian . utctDay
+    where
+      toYMD' (y,m,d) = (y, (fromIntegral m, fromIntegral d))
+   
+  toHMS t = (h',(m',s'))
+    where
+      hsec' = fromIntegral 3600
+      msec' = fromIntegral 60
+      hmin' = fromIntegral 60
+      sec' = floor $ toRational $ utctDayTime t
+      h' = fromIntegral $ floor $ (fromIntegral sec') / hsec'
+      m' = fromIntegral $ (floor $ ((fromIntegral sec') / msec')) `mod` hmin'
+      s' = fromIntegral $ (fromIntegral sec') `mod` (fromIntegral 60)
+      
+
+pNum0xd :: UInt -> UInt -> String
+pNum0xd keta x = printf ("%0" ++ (show keta) ++ "d") x
+
+replaceString :: String -> String -> String -> String
+replaceString old new obj = unpack $ replace (pack old) (pack new) (pack obj)

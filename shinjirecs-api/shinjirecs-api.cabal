@@ -40,6 +40,7 @@ library
                      , dates
                      , enumerator
                      , extra
+                     , filepath
                      , scotty
                      , http-types
                      , mtl
