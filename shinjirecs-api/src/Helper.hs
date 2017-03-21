@@ -9,7 +9,7 @@ import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
 import Data.Text(replace,pack,unpack)
 import Data.Time.Clock(UTCTime(..),addUTCTime,NominalDiffTime,getCurrentTime)
-import Data.Time.Calendar(toGregorian)
+import Data.Time.Calendar(fromGregorian,toGregorian)
 import Data.Word(Word)
 import Data.Dates(WeekDay(..),weekdayNumber,intToWeekday) -- dates
 import Text.Printf(printf,PrintfType)
@@ -164,7 +164,53 @@ instance DateTime UTCTime where
       
 
 pNum0xd :: UInt -> UInt -> String
+pNum0xd 0    x = pNum0xd 1 x
 pNum0xd keta x = printf ("%0" ++ (show keta) ++ "d") x
 
 replaceString :: String -> String -> String -> String
 replaceString old new obj = unpack $ replace (pack old) (pack new) (pack obj)
+
+-- time = from (2017,3,21)
+-- (y,m,d) = cast time
+class Castable b a where
+  cast :: a -> b
+  from :: b -> a
+
+instance (Integral y, Integral m, Integral d, Integral hh, Integral mm, Integral ss) => Castable (y,m,d,hh,mm,ss) UTCTime where
+  cast t = (fromIntegral $ year t,
+            fromIntegral $ month t,
+            fromIntegral $ day t,
+            fromIntegral $ hour t,
+            fromIntegral $ minute t,
+            fromIntegral $ second t)
+  from (y,m,d,hh,mm,ss) = addUTCTime hms' $ UTCTime day' $ fromInteger 0
+    where
+      day' = fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)
+      hms' = fromInteger $ (3600 * toInteger hh) + (60 * toInteger mm) + (toInteger ss)
+
+instance (Integral y, Integral m, Integral d, Integral hh, Integral mm) => Castable (y,m,d,hh,mm) UTCTime where
+  cast t = (fromIntegral $ year t,
+            fromIntegral $ month t,
+            fromIntegral $ day t,
+            fromIntegral $ hour t,
+            fromIntegral $ minute t)
+  from (y,m,d,hh,mm) = from (y,m,d,hh,mm,0)
+
+instance (Integral y, Integral m, Integral d, Integral hh) => Castable (y,m,d,hh) UTCTime where
+  cast t = (fromIntegral $ year t,
+            fromIntegral $ month t,
+            fromIntegral $ day t,
+            fromIntegral $ hour t)
+  from (y,m,d,hh) = from (y,m,d,hh,0)
+
+instance (Integral y, Integral m, Integral d) => Castable (y,m,d) UTCTime where
+  cast t = (fromIntegral $ year t,
+            fromIntegral $ month t,
+            fromIntegral $ day t)
+  from (y,m,d) = from (y,m,d,0)  
+
+
+instance (Integral y, Integral m) => Castable (y,m) UTCTime where
+  cast t = (fromIntegral $ year t,
+            fromIntegral $ month t)
+  from (y,m) = from (y,m,1 :: Word)

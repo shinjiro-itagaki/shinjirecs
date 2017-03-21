@@ -6,6 +6,6 @@ start:
 	stack exec shinjirecs-api-exe
 migrate:
 	stack exec shinjirecs-api-migrate
-t: # test
+tests:
 	stack test
 

@@ -5,6 +5,7 @@ import DB.Status(ReservationState(..))
 import Model(ActiveRecord(..))
 -- import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(toSqlKey)  --persistent
+import Data.Char
 import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
 import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
 
@@ -50,30 +51,48 @@ isFailed    = isSameState Failed
 
 -- videoFileNameFormat FilePath
 
-data FormatSymbolDateType = Year | Month | Day | Hour | Minute | Second deriving (Show,Enum,Bounded)
+data FormatSymbolDateType = Year | YYYY | Month | Mon | Day | DD | Hour | Hours | HH | Minute | Minutes | Min | MM | Second | Seconds | Sec | SS deriving (Show,Enum,Bounded)
 data FormatSymbol = Counter | StartTime FormatSymbolDateType
 
 symbolKeyStr :: FormatSymbol -> String
-symbolKeyStr sym = "%{" ++ (show sym) ++ "}"
+symbolKeyStr sym = "%{" ++ (map toLower $ show sym) ++ "}"
 
 symbolValue :: Reservation -> FormatSymbol -> String
 symbolValue r Counter = reservationCounterStr r
-symbolValue r (StartTime tipe) = case tipe of
-  Year   -> show    $ fst ymd'
-  Month  -> printf' $ fst $ snd ymd'
-  Day    -> printf' $ snd $ snd ymd'
-  Hour   -> printf' $ fst hms'
-  Minute -> printf' $ fst $ snd hms'
-  Second -> printf' $ snd $ snd hms'
+symbolValue r (StartTime tipe) = impl' tipe
   where
     printf' :: (Integral a) => a -> String
     printf' = pNum0xd 2 . fromIntegral
     ymd' = toYMD $ reservationStartTime r
     hms' = toHMS $ reservationStartTime r
+    year' = show $ fst ymd'
+    mon'  = printf' $ fst $ snd ymd'
+    day'  = printf' $ snd $ snd ymd'
+    hour' = printf' $ fst hms'
+    min'  = printf' $ fst $ snd hms'
+    sec'  = printf' $ snd $ snd hms'
+    impl' :: FormatSymbolDateType -> String
+    impl' Year    = year'
+    impl' YYYY    = year'
+    impl' Month   = mon'
+    impl' Mon     = mon' 
+    impl' Day     = day'
+    impl' DD      = day'
+    impl' Hour    = hour'
+    impl' Hours   = hour'    
+    impl' HH      = hour'
+    impl' Minute  = min'
+    impl' Minutes = min'
+    impl' Min     = min'
+    impl' MM      = min'
+    impl' Second  = sec'
+    impl' Seconds = sec'
+    impl' Sec     = sec'
+    impl' SS      = sec'
 
 instance Show FormatSymbol where
   show Counter = "counter"
-  show (StartTime tipe) = "start" ++ (show tipe)
+  show (StartTime tipe) = "st." ++ (show tipe)
 
 allFormatSymbols :: [FormatSymbol]
 allFormatSymbols = [Counter] ++ (map StartTime [minBound .. maxBound])
@@ -113,7 +132,8 @@ createNextReservations :: Reservation -> Maybe Reservation
 createNextReservations r@Reservation {reservationNext = 0} = Nothing
 createNextReservations r@Reservation {reservationNext = x} =
   Just $ r { reservationStartTime = (reservationStartTime r) .++ x,
-             reservationNext = calcNext r }
+             reservationNext = calcNext r,
+             reservationCounter = 1 + reservationCounter r}
 
 reservationWeekDay :: Reservation -> WeekDay
 reservationWeekDay = dateWeekDay . dayToDateTime . utctDay . reservationStartTime

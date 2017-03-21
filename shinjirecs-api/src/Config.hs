@@ -23,7 +23,7 @@ data PathsConfig = PathsConfig {
   } deriving(Show)
 
 defaultPathsConfig :: PathsConfig
-defaultPathsConfig = PathsConfig{
+defaultPathsConfig = PathsConfig {
   privateDir = "private",
   commandDir = "private/commands",
   videoFilesDir = "private/videofiles"
