@@ -128,12 +128,18 @@ inTimeReservations rs t = filter (\r -> reservationInTime r t) rs
 inTimeNowReservations :: [Reservation] -> IO [Reservation]
 inTimeNowReservations rs = getCurrentTime >>= return . inTimeReservations rs
 
-createNextReservations :: Reservation -> Maybe Reservation
-createNextReservations r@Reservation {reservationNext = 0} = Nothing
-createNextReservations r@Reservation {reservationNext = x} =
-  Just $ r { reservationStartTime = (reservationStartTime r) .++ x,
-             reservationNext = calcNext r,
-             reservationCounter = 1 + reservationCounter r}
+increaseCounter :: Reservation -> Reservation
+increaseCounter r = r { reservationCounter = 1 + reservationCounter r}
+
+createNextReservation :: Reservation -> Maybe Reservation
+createNextReservation r@Reservation {reservationNext = 0} = case calcNext r of
+  0 -> Nothing
+  n -> Just $ increaseCounter
+       $ r { reservationStartTime = (reservationStartTime r) .++ n }
+
+createNextReservation r@Reservation {reservationNext = x} = Just $ increaseCounter
+  $ r { reservationStartTime = (reservationStartTime r) .++ x,
+        reservationNext = 0}
 
 reservationWeekDay :: Reservation -> WeekDay
 reservationWeekDay = dateWeekDay . dayToDateTime . utctDay . reservationStartTime

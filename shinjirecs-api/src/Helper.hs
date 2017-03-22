@@ -3,7 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Helper where
-import Data.Bits(shiftL,(.&.),(.|.))
+import Data.List(sortBy)
+import Data.Bits(shiftL,(.&.),(.|.),Bits)
 import Data.Bool(Bool,not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
@@ -92,25 +93,34 @@ inTimeNow st d = getCurrentTime >>= return . (inTime st d)
 
 -- interval between same weekday means 1 week later
 weekdayInterval :: WeekDay -> WeekDay -> UInt
-weekdayInterval from to =
-  let interval' = (weekdayNumber to) - (weekdayNumber from)
-      max' = weekdayNumber (maxBound ::  WeekDay)
-  in
-    fromInteger $ toInteger (if interval' > 0 
-                             then interval'
-                             else max' + interval')
+weekdayInterval from to = fromInteger $ toInteger (if interval' > 0 
+                                                   then interval'
+                                                   else 7 + interval')
+  where
+    interval' = (weekdayNumber to) - (weekdayNumber from)
 
 -- 2nd argument is empty means next week
 nearestWeekDay :: WeekDay -> [WeekDay] -> WeekDay
-nearestWeekDay from []  = from
-nearestWeekDay from wds = intToWeekday $ fromInteger $ toInteger $ minimum $ map (weekdayInterval from) wds
+nearestWeekDay x []  = x
+nearestWeekDay x wds = head $ sortBy (\l r -> weekdayInterval' l `compare` weekdayInterval' r) wds
+  where
+    weekdayInterval' = weekdayInterval x
 
 nearestWeekDayInterval :: WeekDay -> [WeekDay] -> UInt
-nearestWeekDayInterval from [] = 0
-nearestWeekDayInterval from xs = weekdayInterval from $ nearestWeekDay from xs
+nearestWeekDayInterval x [] = 0
+nearestWeekDayInterval x xs = weekdayInterval x $ nearestWeekDay x xs
+
+all ::(Enum a, Bounded a) => [a]
+all = [minBound .. maxBound]
 
 allWeekDays ::[WeekDay]
-allWeekDays = [minBound .. maxBound]
+allWeekDays = Helper.all
+
+weekdays = [Monday,Tuesday,Wednesday,Thursday,Friday]
+holidays = [Saturday,Sunday]
+
+enumToMask :: (Enum a, Num b, Bits b) => a -> b
+enumToMask x = fromInteger $ 1 `shiftL` (fromEnum x)
 
 -- Monday    => 0b0000001
 -- Tuesday   => 0b0000010
@@ -120,11 +130,11 @@ allWeekDays = [minBound .. maxBound]
 -- Saturday  => 0b0100000
 -- Sunday    => 0b1000000
 weekDayToMask :: WeekDay -> UInt
-weekDayToMask wd = 1 `shiftL` (weekdayNumber wd)
+weekDayToMask = enumToMask
 
 weekDaysToFlags :: [WeekDay] -> UInt
 weekDaysToFlags = foldl (.|.) 0 . map weekDayToMask
-  
+
 weekDayFlagsToWeekDays :: UInt -> [WeekDay]
 weekDayFlagsToWeekDays 0     = []
 weekDayFlagsToWeekDays flags = filter (weekDayFlagIsOn flags) allWeekDays
@@ -170,47 +180,67 @@ pNum0xd keta x = printf ("%0" ++ (show keta) ++ "d") x
 replaceString :: String -> String -> String -> String
 replaceString old new obj = unpack $ replace (pack old) (pack new) (pack obj)
 
+timeToTuple :: (Integral y, Integral m, Integral d, Integral hh, Integral mm, Integral ss) => UTCTime -> (y,m,d,hh,mm,ss)
+timeToTuple t = (fromIntegral $ year t
+                , fromIntegral $ month t
+                , fromIntegral $ day t
+                , fromIntegral $ hour t
+                , fromIntegral $ minute t
+                , fromIntegral $ second t)
+
 -- time = from (2017,3,21)
--- (y,m,d) = cast time
+-- (y,m,d) = from time
 class Castable b a where
-  cast :: a -> b
   from :: b -> a
 
+-- (y,m,d,hh,mm,ss) = from time
+instance (Integral y, Integral m, Integral d, Integral hh, Integral mm, Integral ss) => Castable UTCTime (y,m,d,hh,mm,ss) where
+  from = timeToTuple
+
+-- (y,m,d,hh,mm) = from time
+instance (Integral y, Integral m, Integral d, Integral hh, Integral mm) => Castable UTCTime (y,m,d,hh,mm) where
+  from = (\(y,m,d,hh,mm,ss) -> (y,m,d,hh,mm)) . timeToTuple
+
+-- (y,m,d,hh) = from time
+instance (Integral y, Integral m, Integral d, Integral hh) => Castable UTCTime (y,m,d,hh) where
+  from = (\(y,m,d,hh,mm,ss) -> (y,m,d,hh)) . timeToTuple
+
+-- (y,m,d) = from time
+instance (Integral y, Integral m, Integral d) => Castable UTCTime (y,m,d) where
+  from = (\(y,m,d,hh,mm,ss) -> (y,m,d)) . timeToTuple
+
+-- (y,m) = from time
+instance (Integral y, Integral m) => Castable UTCTime (y,m) where
+  from = (\(y,m,d,hh,mm,ss) -> (y,m)) . timeToTuple
+
+-- time = from (2017,3,21,22,33,45) :: UTCTime
 instance (Integral y, Integral m, Integral d, Integral hh, Integral mm, Integral ss) => Castable (y,m,d,hh,mm,ss) UTCTime where
-  cast t = (fromIntegral $ year t,
-            fromIntegral $ month t,
-            fromIntegral $ day t,
-            fromIntegral $ hour t,
-            fromIntegral $ minute t,
-            fromIntegral $ second t)
   from (y,m,d,hh,mm,ss) = addUTCTime hms' $ UTCTime day' $ fromInteger 0
     where
       day' = fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)
       hms' = fromInteger $ (3600 * toInteger hh) + (60 * toInteger mm) + (toInteger ss)
 
+-- time = from (2017,3,21,22,33) :: UTCTime
 instance (Integral y, Integral m, Integral d, Integral hh, Integral mm) => Castable (y,m,d,hh,mm) UTCTime where
-  cast t = (fromIntegral $ year t,
-            fromIntegral $ month t,
-            fromIntegral $ day t,
-            fromIntegral $ hour t,
-            fromIntegral $ minute t)
   from (y,m,d,hh,mm) = from (y,m,d,hh,mm,0)
 
+-- time = from (2017,3,21,22) :: UTCTime
 instance (Integral y, Integral m, Integral d, Integral hh) => Castable (y,m,d,hh) UTCTime where
-  cast t = (fromIntegral $ year t,
-            fromIntegral $ month t,
-            fromIntegral $ day t,
-            fromIntegral $ hour t)
   from (y,m,d,hh) = from (y,m,d,hh,0)
 
+-- time = from (2017,3,21) :: UTCTime
 instance (Integral y, Integral m, Integral d) => Castable (y,m,d) UTCTime where
-  cast t = (fromIntegral $ year t,
-            fromIntegral $ month t,
-            fromIntegral $ day t)
   from (y,m,d) = from (y,m,d,0)  
 
-
+-- time = from (2017,3) :: UTCTime
 instance (Integral y, Integral m) => Castable (y,m) UTCTime where
-  cast t = (fromIntegral $ year t,
-            fromIntegral $ month t)
-  from (y,m) = from (y,m,1 :: Word)
+  from (y,m) = from (y,m,1)
+
+instance Castable [WeekDay] UInt where
+  from = weekDaysToFlags
+  
+instance Castable UInt [WeekDay] where
+  from = weekDayFlagsToWeekDays
+
+instance Castable WeekDay UInt where
+  from = weekDayToMask

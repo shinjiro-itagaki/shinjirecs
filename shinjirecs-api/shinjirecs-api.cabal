@@ -89,8 +89,10 @@ test-suite shinjirecs-api-test
   main-is:             Spec.hs
   build-depends:       base
                      , shinjirecs-api
+                     , dates
                      , filepath
                      , hspec
+                     , hspec-expectations
                      , time
                      , text
                      , QuickCheck
