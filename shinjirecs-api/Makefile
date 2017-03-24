@@ -7,5 +7,5 @@ start:
 migrate:
 	stack exec shinjirecs-api-migrate
 tests:
-	stack test
+	stack exec shinjirecs-api-migrate test && stack test
 

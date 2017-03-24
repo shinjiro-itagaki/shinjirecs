@@ -1,7 +1,8 @@
 module HelperSpec where
 import Test.Hspec(Spec,describe,it) -- hspec
 import Test.Hspec.Expectations(shouldBe) -- hspec-expectations
-import Helper(from,(.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
+import Helper((.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
+import Class.Castable(from)
 import Data.Dates(WeekDay(..)) -- dates
 
 spec :: Spec

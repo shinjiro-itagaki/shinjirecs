@@ -8,7 +8,8 @@ import DB
 import Model(save,runDB)
 import Models.Reservation
 import Config(load,Env(Test),defaultConfigFilePaths,Config(..),PathsConfig(..),ReservationConfig(..), defaultPathsConfig)
-import Helper(from,(.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
+import Helper((.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
+import Class.Castable(from)
 import DB.Status(ReservationState(..))
 import DB.Types(ChannelType(..))
 import Data.Text(pack)
