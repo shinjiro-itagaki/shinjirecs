@@ -57,7 +57,8 @@ sampleRec ckey =
   
 spec :: Spec
 spec = do
-  conn <- runIO $ (runNoLoggingT . DB.createPool . Config.db . fromJust =<< Config.load defaultConfigFilePaths Test)
+  mconfig <- runIO $ Config.load defaultConfigFilePaths Test
+  conn <- runIO $ runNoLoggingT $ DB.createPool $ Config.db $ fromJust mconfig
   sampleChKey <- runIO $ sampleChannelKey conn
   dpconf <- runIO defaultPathsConfig
   let now = from (2017,3,21,13,5,11)
@@ -69,7 +70,7 @@ spec = do
         commandDir = "private/test/commands",
         videoFilesDir = vdir
         } -- reservationFilePath
-      sampleRec' = sampleRec $ toSqlKey 1 -- sampleChKey
+      sampleRec' = sampleRec sampleChKey
       sample' = sampleRec'
                 {
                   reservationVideoFileNameFormat = "%{st.year}-%{st.mon}-%{st.dd}-%{st.hh}-%{st.mm}-%{st.ss}-%{counter}",

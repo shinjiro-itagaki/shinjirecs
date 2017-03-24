@@ -17,6 +17,10 @@ library
   hs-source-dirs:      src
   exposed-modules:     App
                      , Config
+                     , Config.Class
+                     , Config.DB
+                     , Config.Paths
+                     , Config.Reservation
                      , DB
                      , DB.Status
                      , DB.Types
