@@ -3,13 +3,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Config.DB where
 import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
-import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, String, Number))
-import Data.HashMap.Strict as M
 import Data.Text (Text, pack, unpack)
-import Config.Class(Env,(|||))
-import Data.Scientific (Scientific(..), coefficient)
+import Config.Class(Env,(|||), readInclude, lookupInt, lookupInteger, lookupText, lookupString)
 import Control.Applicative((<|>))
 import Data.List.Extra (lower) -- extra
+import qualified Data.Yaml as Y (Object, Value(..))
+import Data.HashMap.Strict as M
   
 data PreDBConfig = PreDBConfig {
   include  :: Maybe String,
@@ -40,40 +39,12 @@ objectToPreDBConfig configs =
     socket   = lookupString'  "socket"   configs    
   }
   where
-    readInclude' :: Y.Object -> Maybe String
-    readInclude' config =
-      case M.lookup "<<" configs of
-        Just (Y.String s) -> Just $ Data.Text.unpack s
-        Nothing           -> Nothing
-        _                 -> fail "Invalid type for: <<"
-    
-    readAdapter' :: String -> Y.Object -> Maybe (DB.AdapterType)
-    readAdapter' key config =
-      let k' = Data.Text.pack key
-      in case M.lookup k' config of
-        Just (Y.String t) -> DB.stringToAdapterType $ Data.Text.unpack t
-        Nothing           -> Nothing
-        _                 -> fail "Invalid type (not string) for: adapter"
-
-    lookupInt' :: String -> Y.Object -> Maybe (Int)
-    lookupInt' key config = lookupInteger' (Data.Text.pack key) config >>= return . fromInteger
-
-    lookupInteger' :: Text -> Y.Object -> Maybe Integer
-    lookupInteger' k config =
-      case M.lookup k config of
-        Just (Y.Number t) -> Just (coefficient t)
-        Nothing           -> Nothing
-        _                 -> fail $ "Invalid type (not integer) for: " ++ (Data.Text.unpack k)
-
-    lookupText' :: Text -> Y.Object -> Maybe Text
-    lookupText' k config =
-      case M.lookup k config of
-        Just (Y.String t) -> Just t
-        Nothing           -> Nothing
-        _                 -> fail $ "Invalid type (not string) for: " ++ (Data.Text.unpack k)
-
-    lookupString' :: Text -> Y.Object -> Maybe String
-    lookupString' k config = lookupText' k config >>= return . Data.Text.unpack
+    readInclude'   = readInclude
+    readAdapter'   = readAdapter 
+    lookupInt'     = lookupInt
+    lookupInteger' = lookupInteger
+    lookupText'    = lookupText
+    lookupString'  = lookupString
 
     
 (<<<) :: PreDBConfig -> PreDBConfig -> PreDBConfig
@@ -111,3 +82,11 @@ preDBConfig2DBConfig env_ pre =
   }
   where
     envstr' = lower $ show env_
+
+readAdapter :: String -> Y.Object -> Maybe (DB.AdapterType)
+readAdapter key config =
+  let k' = Data.Text.pack key
+  in case M.lookup k' config of
+    Just (Y.String t) -> DB.stringToAdapterType $ Data.Text.unpack t
+    Nothing           -> Nothing
+    _                 -> fail "Invalid type (not string) for: adapter"
