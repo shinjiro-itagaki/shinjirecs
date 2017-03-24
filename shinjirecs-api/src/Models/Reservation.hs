@@ -12,7 +12,8 @@ import Data.Maybe(isJust,catMaybes)
 import Data.Foldable(all)
 import Data.Char
 import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
-import Helper(from,finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
+import Class.Castable(from)
+import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
 
 import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
 import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..))

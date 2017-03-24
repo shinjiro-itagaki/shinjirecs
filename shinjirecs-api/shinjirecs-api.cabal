@@ -29,6 +29,7 @@ library
                      , Controllers.Install
                      , Controllers.Programs
                      , Controllers.Reservations
+                     , Class.Castable
                      , Helper
                      , Job
                      , Jobs.Recording

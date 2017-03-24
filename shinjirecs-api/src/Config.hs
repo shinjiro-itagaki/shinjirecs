@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Config where
 import Control.Applicative((<|>))
@@ -15,8 +17,14 @@ import Data.Word (Word)
 import System.Directory(getCurrentDirectory)
 import System.Argv0(getArgv0)
 import System.FilePath.Posix((</>),takeDirectory) -- filepath
+import Class.Castable(Castable(from))
 
 data Env = Production | Development | Test deriving Show
+
+instance Castable String Env where
+  from "production" = Production
+  from "test"       = Test
+  from _            = Development
 
 data PathsConfig = PathsConfig {
   baseDir    :: FilePath,
