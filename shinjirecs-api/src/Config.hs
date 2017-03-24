@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config
-where
+module Config where
 import Control.Applicative((<|>))
 import Data.Maybe (maybe)
 import Data.Bool (bool)
@@ -13,29 +12,43 @@ import Data.List.Extra (lower) -- extra
 import Data.HashMap.Strict as M
 import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
 import Data.Word (Word)
+import System.Directory(getCurrentDirectory)
+import System.Argv0(getArgv0)
+import System.FilePath.Posix((</>),takeDirectory) -- filepath
 
 data Env = Production | Development | Test deriving Show
 
 data PathsConfig = PathsConfig {
+  baseDir    :: FilePath,
   privateDir :: FilePath,
   commandDir :: FilePath,
   videoFilesDir :: FilePath
   } deriving(Show)
 
-defaultPathsConfig :: PathsConfig
-defaultPathsConfig = PathsConfig {
-  privateDir = "private",
-  commandDir = "private/commands",
-  videoFilesDir = "private/videofiles"
+defaultPathsConfig :: IO PathsConfig
+defaultPathsConfig = do
+  curr' <- getCurrentDirectory
+  baseDir' <- return . (curr' </>) . takeDirectory . show =<< getArgv0
+  return PathsConfig {
+    baseDir    = baseDir',
+    privateDir = "private",
+    commandDir = "private/commands",
+    videoFilesDir = "private/videofiles"
   }
 
+data ReservationCommandArg = ArgDevice | ArgChannel | ArgDurationSec | ArgDestFilePath deriving (Show)
+
 data ReservationConfig = ReservationConfig {
-  marginStart :: Word
+  marginStart :: Word,
+  script :: String,
+  args :: [ReservationCommandArg]
   } deriving (Show)
 
 defaultReservationConfig :: ReservationConfig
 defaultReservationConfig = ReservationConfig {
-    marginStart = 3
+    marginStart = 3,
+    script = "recpt1.sh",
+    args = [ArgDevice,ArgChannel,ArgDurationSec,ArgDestFilePath]
     }
 
 data Config = Config {
@@ -50,6 +63,13 @@ data ConfigFilePaths = ConfigFilePaths {
   dbpath :: FilePath
   ,pathsPath  :: FilePath
   } deriving Show
+
+defaultConfigFilePaths =
+  ConfigFilePaths
+  {
+    dbpath = "config/database.yml",
+    pathsPath = "config/paths.yml"
+  }
 
 data PreDBConfig = PreDBConfig {
   include  :: Maybe String,
@@ -160,14 +180,14 @@ envToText = Data.Text.pack . lower . show
 infixl 1 |||
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
-load paths env =
+load paths env = do
+  pconf <- defaultPathsConfig
   (Y.decodeFile $ dbpath paths)
-  >>= return . (>>= (\allconfigs ->
-                        getObject (Data.Text.pack $ lower $ show env) allconfigs
+    >>= return . (>>= (\allconfigs -> getObject (Data.Text.pack $ lower $ show env) allconfigs
                         >>= (\config ->
                                 Just Config { env = env,
                                               db = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config,
-                                              paths = defaultPathsConfig,
+                                              paths = pconf ,
                                               reservation = defaultReservationConfig})))
   where
     importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig

@@ -79,4 +79,3 @@ destroy = def Destroy impl'
             status $ bool status201 status400 b
             return c
         )
-

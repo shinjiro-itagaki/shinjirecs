@@ -14,6 +14,8 @@ import Data.Time.Calendar(fromGregorian,toGregorian)
 import Data.Word(Word)
 import Data.Dates(WeekDay(..),weekdayNumber,intToWeekday) -- dates
 import Text.Printf(printf,PrintfType)
+import Control.Monad.IO.Class(MonadIO) -- base
+import System.Process(CreateProcess,createProcess,proc)
 
 type UInt = Word
 
@@ -244,3 +246,13 @@ instance Castable UInt [WeekDay] where
 
 instance Castable WeekDay UInt where
   from = weekDayToMask
+
+instance (MonadIO m) => Castable [m a] (m [a]) where
+  from [] = return []
+  from (mx:mxs) = do
+    x <- mx
+    xs <- from mxs
+    return ([x] ++ xs)
+
+instance Castable (FilePath,[String]) CreateProcess where
+  from (scriptpath,args) = proc scriptpath args

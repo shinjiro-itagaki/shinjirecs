@@ -1,17 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Models.Reservation where
-import DB(Reservation(..))
+import System.Process(CreateProcess,createProcess)
+import Control.Monad.IO.Class(MonadIO,liftIO) -- base
+import DB(Reservation(..),Channel(..))
+import Database.Persist.Sql(ConnectionPool)
 import DB.Status(ReservationState(..))
-import Model(ActiveRecord(..))
+import Model(ActiveRecord(..),runDB,findByKey)
 -- import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(toSqlKey)  --persistent
+import Data.Maybe(isJust,catMaybes)
+import Data.Foldable(all)
 import Data.Char
 import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
-import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
+import Helper(from,finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
 
 import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
-import Config(Config(..),PathsConfig(..),ReservationConfig(..))
+import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..))
 import System.FilePath.Posix((</>),pathSeparators) -- filepath
+import Database.Persist.Types (Entity(..))
 
 instance ActiveRecord Reservation
 
@@ -153,6 +159,26 @@ calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
   where
     rWeekDay'  = reservationWeekDay  r
     rWeekDays' = reservationWeekDays r
+
+reservationCommand :: MonadIO m => Reservation -> ConnectionPool -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
+reservationCommand r conn pconf rconf = liftIO $ do
+  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ args rconf :: IO [Maybe String]
+  return (if all isJust argMStrs'
+          then Just $ from (script',catMaybes argMStrs')
+          else Nothing)
+  where
+    script' = commandDir pconf </> script rconf
+  
+-- MonadIO m => 
+reservationToCommandArg :: Reservation -> ConnectionPool -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)
+reservationToCommandArg r conn pconf ArgDevice       = return $ Just ""
+reservationToCommandArg r conn pconf ArgChannel      = reservationChannel r conn >>= return . (>>= return . channelNumber . entityVal)
+reservationToCommandArg r conn pconf ArgDurationSec  = return $ Just $ show $ reservationDuration r
+reservationToCommandArg r conn pconf ArgDestFilePath = return $ Just $ reservationFilePath pconf r
+
+-- ReaderT SqlBackend IO (Maybe (Entity entity))
+reservationChannel :: MonadIO m => Reservation -> ConnectionPool -> m (Maybe (Entity DB.Channel))
+reservationChannel r conn = runDB conn $ findByKey $ reservationChannelId r
 
 {-
   startTime UTCTime

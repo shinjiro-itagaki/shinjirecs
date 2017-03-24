@@ -35,6 +35,7 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
 import qualified Database.Persist.Class as PS
 import DB.Status(ReservationState(..))
+import DB.Types(ChannelType(..))
 
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 

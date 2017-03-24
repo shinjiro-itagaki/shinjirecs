@@ -20,6 +20,7 @@ setCommonHeaders = addHeaders [
 
 startServer :: Int -> ConnectionPool -> IO ()
 startServer port conn = do
+  runThread conn
   server port $ do
     middleware setCommonHeaders
     middleware logStdoutDev
@@ -34,11 +35,13 @@ runAction func = config >>= maybe
   (\config' -> (runNoLoggingT $ DB.createPool $ Config.db config') >>= func)
 
 config :: IO (Maybe Config.Config)
-config = Config.load Config.ConfigFilePaths {
-  Config.dbpath = "config/database.yml"
-  ,Config.pathsPath = "config/paths.yml"
-  }
-  Config.Development
+config = Config.load Config.defaultConfigFilePaths Config.Development
 
 migrate :: IO ()
 migrate = runAction (\pool -> DB.run pool $ runMigration DB.migrateAll)
+
+runThread :: ConnectionPool -> IO ()
+runThread conn = do
+  putStr ""
+  where
+--    db' = DB.run conn 

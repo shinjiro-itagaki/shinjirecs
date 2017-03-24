@@ -19,6 +19,7 @@ library
                      , Config
                      , DB
                      , DB.Status
+                     , DB.Types
                      , Model
                      , Models.Channel
                      , Models.Reservation
@@ -38,6 +39,7 @@ library
                      , bytestring
                      , conduit
                      , dates
+                     , directory
                      , enumerator
                      , extra
                      , filepath
@@ -58,6 +60,7 @@ library
                      , process
                      , resourcet
                      , scientific
+                     , system-argv0
                      , text
                      , time
                      , transformers
@@ -90,9 +93,14 @@ test-suite shinjirecs-api-test
   build-depends:       base
                      , shinjirecs-api
                      , dates
+                     , directory
                      , filepath
                      , hspec
                      , hspec-expectations
+                     , monad-logger
+                     , mtl
+                     , persistent
+                     , system-argv0
                      , time
                      , text
                      , QuickCheck
