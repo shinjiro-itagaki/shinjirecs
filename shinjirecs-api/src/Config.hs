@@ -15,10 +15,10 @@ import Data.Text (Text, pack, unpack)
 import Data.List.Extra (lower) -- extra
 import Data.HashMap.Strict as M
 import Data.Word (Word)
-import Config.Class(ConfigClass,Env,(|||))
+import Config.Class(ConfigClass(..),Env)
 import qualified DB
 import Config.DB
-import Config.Paths(PathsConfig(..),defaultPathsConfig)
+import Config.Paths(PathsConfig(..))
 import Config.Reservation(ReservationConfig(..),defaultReservationConfig,ReservationCommandArg(..))
 
 data Config = Config {
@@ -42,35 +42,12 @@ defaultConfigFilePaths =
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
 load paths env = do
-  pconf <- defaultPathsConfig
-  (Y.decodeFile $ dbpath paths)
-    >>= return . (>>= (\allconfigs -> getObject (Data.Text.pack $ lower $ show env) allconfigs
-                        >>= (\config ->
-                                Just Config { env = env,
-                                              db = preDBConfig2DBConfig env $ importOtherConfig' allconfigs [] $ objectToPreDBConfig config,
-                                              paths = pconf ,
-                                              reservation = defaultReservationConfig})))
-  where
-    importOtherConfig' :: Y.Value -> [String] -> PreDBConfig -> PreDBConfig
-    importOtherConfig' allconfigs imported config =
-      (include config
-       >>= (\str -> bool (Just str) Nothing (L.elem str imported))
-       >>= (\str ->
-             getObject (Data.Text.pack str) allconfigs
-             >>= return . (config <<<) . importOtherConfig' allconfigs (imported ++ [str]) . objectToPreDBConfig)) ||| config
-
-    -- 引数で指定したキーを持つオブジェクトを返す
-    getObject :: Text -> Y.Value -> Maybe (Y.Object)
-    getObject env v = do
-      envs <- fromObject v
-      case M.lookup env envs of
-        Just (Y.Object o) -> Just o
-        _                 -> Nothing
-
-    fromObject :: Y.Value -> Maybe (Y.Object)
-    fromObject m = do
-      case m of
-        Y.Object o -> Just o
-        _          -> Nothing
-
-    
+  mdbconf <- readYaml (dbpath defaultConfigFilePaths) env
+  pconf <- defaultConfig env :: IO PathsConfig
+  rconf <- defaultConfig env :: IO ReservationConfig
+  return $ mdbconf >>= return . (\dbconf -> Config {
+    env = env,
+    db = dbconf,
+    paths = pconf,
+    reservation = rconf
+    })

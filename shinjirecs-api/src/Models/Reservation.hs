@@ -163,12 +163,12 @@ calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
 
 reservationCommand :: MonadIO m => Reservation -> ConnectionPool -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
 reservationCommand r conn pconf rconf = liftIO $ do
-  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ args rconf :: IO [Maybe String]
+  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ scriptArgs rconf :: IO [Maybe String]
   return (if all isJust argMStrs'
           then Just $ from (script',catMaybes argMStrs')
           else Nothing)
   where
-    script' = commandDir pconf </> script rconf
+    script' = commandDir pconf </> scriptFilePath rconf
   
 -- MonadIO m => 
 reservationToCommandArg :: Reservation -> ConnectionPool -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)

@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Config.Paths where
-import Config.Class(ConfigClass)
+import Config.Class(ConfigClass(..), Env,readInclude, lookupInt, lookupInteger, lookupText, lookupString,lookupWord)
 import System.Directory(getCurrentDirectory)
 import System.FilePath.Posix((</>),takeDirectory) -- filepath
 import System.Argv0(getArgv0)
@@ -24,3 +24,16 @@ defaultPathsConfig = do
     commandDir = "private/commands",
     videoFilesDir = "private/videofiles"
   }
+
+instance ConfigClass PathsConfig where
+  defaultConfig env = defaultPathsConfig
+  objectToConfig obj dflt =  
+    PathsConfig {
+    baseDir       = baseDir       `or'` (lookupString "baseDir"),
+    privateDir    = privateDir    `or'` (lookupString "privateDir"),
+    commandDir    = commandDir    `or'` (lookupString "commandDir"),
+    videoFilesDir = videoFilesDir `or'` (lookupString "videoFilesDir")
+    }
+    where
+      mor' = mor dflt obj
+      or'  = Config.Class.or dflt obj

@@ -219,3 +219,9 @@ instance (Integral y, Integral m, Integral d) => Castable UTCTime (y,m,d) where
 -- (y,m) = from time
 instance (Integral y, Integral m) => Castable UTCTime (y,m) where
   from = (\(y,m,d,hh,mm,ss) -> (y,m)) . timeToTuple
+
+(|||) :: Maybe a -> Maybe a -> Maybe a
+(|||) Nothing  Nothing = Nothing
+(|||) x Nothing = x
+(|||) Nothing y = y
+(|||) x y       = x
