@@ -7,7 +7,7 @@ module Config
     module Config.Paths,
     module Config.Reservation,
   ) where
-import Data.Maybe (maybe)
+import Data.Maybe (maybe,fromJust)
 import Data.Bool (bool)
 import qualified Data.List as L
 import qualified Data.Yaml as Y (decodeFile, FromJSON, Object, Value(Object, String, Number))
@@ -15,7 +15,7 @@ import Data.Text (Text, pack, unpack)
 import Data.List.Extra (lower) -- extra
 import Data.HashMap.Strict as M
 import Data.Word (Word)
-import Config.Class(ConfigClass(..),Env)
+import Config.Class(ConfigClass(..),Env(..))
 import qualified DB
 import Config.DB
 import Config.Paths(PathsConfig(..))
@@ -50,9 +50,15 @@ defaultConfigFilePaths =
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
 load paths env' = do
+  --putStrLn "=1==========="
   mdbconf <- readYaml (dbPath          paths) env'
+  --putStrLn $ show $ fromJust mdbconf
+  --putStrLn "=2==========="
   mpconf  <- readYaml (pathsPath       paths) env'
+  --putStrLn $ show $ fromJust mpconf  
+  --putStrLn "=3==========="
   mrconf  <- readYaml (reservationPath paths) env'
+  --putStrLn $ show $ fromJust mrconf
   return $ from (env',
                  mdbconf :: Maybe DB.Config,
                  mpconf  :: Maybe PathsConfig,

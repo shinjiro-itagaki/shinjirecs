@@ -7,6 +7,7 @@ import Control.Exception (evaluate)
 import DB
 import Model(save,runDB)
 import Models.Reservation
+import Models.Channel
 import Config(load,Env(Test),defaultConfigFilePaths,Config(..),PathsConfig(..),ReservationConfig(..))
 import Helper((.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
 import Class.Castable(from)
@@ -19,6 +20,7 @@ import Database.Persist.Class(Key)
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.Reader(ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
+import Data.Aeson(toJSON)
 --- import Text.Printf(printf)
 
 -- import Data.Time.Clock(UTCTime(..))
@@ -26,16 +28,15 @@ import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
 
-sampleChannelKey :: MonadIO m => ConnectionPool -> m (Key DB.Channel)
-sampleChannelKey conn = do
-  (_, (mkey, _)) <- runDB conn $ save $ DB.Channel {
+sampleChannel :: MonadIO m => ConnectionPool -> m (Bool, (Maybe (Key DB.Channel), DB.Channel))
+sampleChannel conn = do
+  runDB conn $ save $ DB.Channel {
     channelNumber      = "23",
     channelType        = GR,
     channelDisplayName = "NHK総合",
     channelOrder       = 1,
     channelEnable      = True
     }
-  return $ fromJust mkey
 
 sampleRec :: Key DB.Channel -> DB.Reservation
 sampleRec ckey =
@@ -59,13 +60,16 @@ spec :: Spec
 spec = do
   mconfig <- runIO $ Config.load defaultConfigFilePaths Test
   conn <- runIO $ runNoLoggingT $ DB.createPool $ Config.db $ fromJust mconfig
-  sampleChKey <- runIO $ sampleChannelKey conn
+  -- runIO $ putStrLn $ show $ fromJust mconfig
+  -- runIO $ putStrLn $ show $ mconfig
+  res@(b, (mSampleChKey, recd)) <- runIO $ sampleChannel conn
+  runIO $ putStrLn $ show $ toJSON recd
   let now = from (2017,3,21,13,5,11)
       conf = fromJust mconfig
       pconf = paths conf
       count = 37
       keta  = 4
-      sampleRec' = sampleRec sampleChKey
+      sampleRec' = sampleRec $ fromJust mSampleChKey
       sample' = sampleRec'
                 {
                   reservationVideoFileNameFormat = "%{st.year}-%{st.mon}-%{st.dd}-%{st.hh}-%{st.mm}-%{st.ss}-%{counter}",
