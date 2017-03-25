@@ -50,7 +50,10 @@ defaultConfigFilePaths =
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
 load paths env' = do
-  mdbconf <- readYaml (dbPath          paths) env' :: IO (Maybe DB.Config)
-  mpconf  <- readYaml (pathsPath       paths) env' :: IO (Maybe PathsConfig) 
-  mrconf  <- readYaml (reservationPath paths) env' :: IO (Maybe ReservationConfig)
-  return $ from (env', mdbconf, mpconf, mrconf)
+  mdbconf <- readYaml (dbPath          paths) env'
+  mpconf  <- readYaml (pathsPath       paths) env'
+  mrconf  <- readYaml (reservationPath paths) env'
+  return $ from (env',
+                 mdbconf :: Maybe DB.Config,
+                 mpconf  :: Maybe PathsConfig,
+                 mrconf  :: Maybe ReservationConfig)
