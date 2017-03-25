@@ -7,7 +7,7 @@ import Control.Exception (evaluate)
 import DB
 import Model(save,runDB)
 import Models.Reservation
-import Config(load,Env(Test),defaultConfigFilePaths,Config(..),PathsConfig(..),ReservationConfig(..), defaultPathsConfig)
+import Config(load,Env(Test),defaultConfigFilePaths,Config(..),PathsConfig(..),ReservationConfig(..))
 import Helper((.++),holidays,weekdays,allWeekDays,weekdayInterval,nearestWeekDay)
 import Class.Castable(from)
 import DB.Status(ReservationState(..))
@@ -60,16 +60,11 @@ spec = do
   mconfig <- runIO $ Config.load defaultConfigFilePaths Test
   conn <- runIO $ runNoLoggingT $ DB.createPool $ Config.db $ fromJust mconfig
   sampleChKey <- runIO $ sampleChannelKey conn
-  dpconf <- runIO defaultPathsConfig
   let now = from (2017,3,21,13,5,11)
+      conf = fromJust mconfig
+      pconf = paths conf
       count = 37
       keta  = 4
-      vdir = "private/test/videofiles"
-      pconf = dpconf {
-        privateDir = "private/test",
-        commandDir = "private/test/commands",
-        videoFilesDir = vdir
-        } -- reservationFilePath
       sampleRec' = sampleRec sampleChKey
       sample' = sampleRec'
                 {

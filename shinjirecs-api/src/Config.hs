@@ -20,6 +20,7 @@ import qualified DB
 import Config.DB
 import Config.Paths(PathsConfig(..))
 import Config.Reservation(ReservationConfig(..),defaultReservationConfig,ReservationCommandArg(..),scriptArgs)
+import Class.Castable(Castable(from))
 
 data Config = Config {
   env :: Env,
@@ -28,26 +29,28 @@ data Config = Config {
   reservation :: ReservationConfig
   } deriving Show -- (Data, Typeable)
 
+instance Castable (Env, Maybe DB.Config,Maybe PathsConfig,Maybe ReservationConfig) (Maybe Config) where
+  from (env', Just db', Just paths', Just rsv') =
+    Just $ Config { env = env', db = db', paths = paths', reservation = rsv'}
+  from _ = Nothing
+
 data ConfigFilePaths = ConfigFilePaths {
-  dbpath :: FilePath
-  ,pathsPath  :: FilePath
+  dbPath :: FilePath,
+  pathsPath  :: FilePath,
+  reservationPath  :: FilePath
   } deriving Show
 
 defaultConfigFilePaths =
   ConfigFilePaths
   {
-    dbpath = "config/database.yml",
-    pathsPath = "config/paths.yml"
+    dbPath = "config/database.yml",
+    pathsPath = "config/paths.yml",
+    reservationPath = "config/reservation.yml"
   }
 
 load :: ConfigFilePaths -> Env -> IO (Maybe Config)
-load paths env = do
-  mdbconf <- readYaml (dbpath defaultConfigFilePaths) env
-  pconf <- defaultConfig env :: IO PathsConfig
-  rconf <- defaultConfig env :: IO ReservationConfig
-  return $ mdbconf >>= return . (\dbconf -> Config {
-    env = env,
-    db = dbconf,
-    paths = pconf,
-    reservation = rconf
-    })
+load paths env' = do
+  mdbconf <- readYaml (dbPath          paths) env' :: IO (Maybe DB.Config)
+  mpconf  <- readYaml (pathsPath       paths) env' :: IO (Maybe PathsConfig) 
+  mrconf  <- readYaml (reservationPath paths) env' :: IO (Maybe ReservationConfig)
+  return $ from (env', mdbconf, mpconf, mrconf)
