@@ -8,15 +8,15 @@ data ReservationCommandArg = ArgDevice | ArgChannel | ArgDurationSec | ArgDestFi
 
 data ReservationConfig = ReservationConfig {
   marginStart :: Word,
-  scriptFilePath :: FilePath,
-  scriptArgs :: [ReservationCommandArg]
+  scriptFilePath :: FilePath
   } deriving (Show)
+
+scriptArgs = [ArgDevice,ArgChannel,ArgDurationSec,ArgDestFilePath]
 
 defaultReservationConfig :: ReservationConfig
 defaultReservationConfig = ReservationConfig {
     marginStart = 3,
-    scriptFilePath = "recpt1.sh",
-    scriptArgs = [ArgDevice,ArgChannel,ArgDurationSec,ArgDestFilePath]
+    scriptFilePath = "recpt1.sh"
     }
 
 instance ConfigClass ReservationConfig where
@@ -24,8 +24,7 @@ instance ConfigClass ReservationConfig where
   objectToConfig obj dflt =
     ReservationConfig {
     marginStart    = marginStart    `or'` (lookupWord   "marginStart"),
-    scriptFilePath = scriptFilePath `or'` (lookupString "scriptFilePath"),
-    scriptArgs = scriptArgs dflt
+    scriptFilePath = scriptFilePath `or'` (lookupString "scriptFilePath")
     }
     where
       mor' = mor dflt obj

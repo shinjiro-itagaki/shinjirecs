@@ -16,7 +16,7 @@ import Class.Castable(from)
 import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
 
 import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
-import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..))
+import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..),scriptArgs)
 import System.FilePath.Posix((</>),pathSeparators) -- filepath
 import Database.Persist.Types (Entity(..))
 
@@ -163,7 +163,7 @@ calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
 
 reservationCommand :: MonadIO m => Reservation -> ConnectionPool -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
 reservationCommand r conn pconf rconf = liftIO $ do
-  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ scriptArgs rconf :: IO [Maybe String]
+  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ scriptArgs :: IO [Maybe String]
   return (if all isJust argMStrs'
           then Just $ from (script',catMaybes argMStrs')
           else Nothing)

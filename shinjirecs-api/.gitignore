@@ -1,4 +1,4 @@
-config/database.yml
-config/paths.yml
+config/*.yml
+!config/*.example.yml
 db/*
 private/commands/*

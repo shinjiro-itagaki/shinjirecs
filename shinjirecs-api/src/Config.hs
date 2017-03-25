@@ -19,7 +19,7 @@ import Config.Class(ConfigClass(..),Env)
 import qualified DB
 import Config.DB
 import Config.Paths(PathsConfig(..))
-import Config.Reservation(ReservationConfig(..),defaultReservationConfig,ReservationCommandArg(..))
+import Config.Reservation(ReservationConfig(..),defaultReservationConfig,ReservationCommandArg(..),scriptArgs)
 
 data Config = Config {
   env :: Env,
