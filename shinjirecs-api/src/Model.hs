@@ -58,53 +58,92 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterFind = return
   
   -- please override if you need
-  beforeValidation :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  beforeValidation, beforeValidation_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   beforeValidation = return . toSuccess
+
+  beforeValidation_ arg = do
+    -- liftIO $ putStrLn "beforeValidation_"
+    beforeValidation arg
   
   -- please override if you need
-  validate, afterValidation, beforeSave, afterSaved :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))  
+  validate,  afterValidation,  beforeSave,  afterSaved, validate_, afterValidation_, beforeSave_, afterSaved_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   validate = return . toSuccess
+  validate_ arg = do
+    liftIO $ putStrLn "validate_"
+    validate arg
   
   -- please override if you need
   afterValidation = return . toSuccess
+  afterValidation_ arg = do
+    liftIO $ putStrLn "afterValidation"
+    afterValidation arg
 
   -- please override if you need
-  afterValidationFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterValidationFailed, afterValidationFailed_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
   afterValidationFailed = return
+  afterValidationFailed_ arg = do
+    liftIO $ putStrLn "afterValidationFailed"
+    afterValidationFailed arg
   
   -- please override if you need
   beforeSave = return . toSuccess
+  beforeSave_ arg = do
+    liftIO $ putStrLn "beforeSave"
+    beforeSave arg
 
   -- please override if you need
   afterSaved = return . toSuccess
+  afterSaved_ arg = do
+    liftIO $ putStrLn "afterSaved"
+    afterSaved arg
 
-  afterSaveFailed, afterModifyFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterSaveFailed,  afterModifyFailed, afterSaveFailed_, afterModifyFailed_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
   
   -- please override if you need  
   afterSaveFailed = return
+  afterSaveFailed_ arg = do
+    liftIO $ putStrLn "afterSaveFailed"
+    afterSaveFailed arg
   
   -- please override if you need
-  beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
+  beforeCreate, beforeCreate_ :: entity -> ReaderT SqlBackend IO (Bool, entity)
   beforeCreate = return . toSuccess
+  beforeCreate_ arg = do
+    liftIO $ putStrLn "beforeCreate"
+    beforeCreate arg
 
-  afterCreated, beforeModify, afterModified :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterCreated,  beforeModify,  afterModified, afterCreated_, beforeModify_, afterModified_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
 
   -- please override if you need  
   afterCreated = return . toSuccess
-
+  afterCreated_ arg = do
+    liftIO $ putStrLn "afterCreate"
+    afterCreated arg
+    
   -- please override if you need
-  afterCreateFailed :: entity -> ReaderT SqlBackend IO entity
+  afterCreateFailed, afterCreateFailed_ :: entity -> ReaderT SqlBackend IO entity
   afterCreateFailed = return
+  afterCreateFailed_ arg = do
+    liftIO $ putStrLn "afterCreateFailed"
+    afterCreateFailed arg
 
   -- please override if you need
   beforeModify = return . toSuccess
+  beforeModify_ arg = do
+    liftIO $ putStrLn "beforeModify"
+    beforeModify arg
 
   -- please override if you need
-
   afterModified = return . toSuccess
+  afterModified_ arg = do
+    liftIO $ putStrLn "afterModified"
+    afterModified arg
 
   -- please override if you need
   afterModifyFailed = return
+  afterModifyFailed_ arg = do
+    liftIO $ putStrLn "afterModifyFailed"
+    afterModifyFailed arg
 
   beforeDestroy, afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
   
@@ -119,12 +158,18 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   afterDestroyFailed = return
 
   -- please override if you need
-  afterCommit :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterCommit, afterCommit_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterCommit = return . toSuccess
+  afterCommit_ arg = do
+    liftIO $ putStrLn "afterCommit"
+    afterCommit arg
 
   -- please override if you need
-  afterRollback :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
+  afterRollback, afterRollback_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
   afterRollback = return
+  afterRollback_ arg = do
+    liftIO $ putStrLn "afterRollback"
+    afterRollback arg
   
   existOnDb :: PS.Key entity -> ReaderT SqlBackend IO Bool
   existOnDb key = (return . isJust) =<< (PS.liftPersist $ PS.get key)
@@ -136,7 +181,9 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   modifyWithoutHooks key entity = PS.replace key entity >> afterSaveWithoutHooks entity key
     
   createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  createWithoutHooks entity = PS.insert entity >>= afterSaveWithoutHooks entity
+  createWithoutHooks entity = do
+    key <- PS.insert entity
+    afterSaveWithoutHooks entity key
 
   afterSaveWithoutHooks :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterSaveWithoutHooks old_entity key =
@@ -178,12 +225,12 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
       key' = fromJust mkey
 
       beforeActionCommon' =
-        beforeValidation .&&>>= validate .||>>= (afterValidation <||> afterValidationFailed) .&&>>= beforeSave
+        beforeValidation_ .&&>>= validate_ .||>>= (afterValidation_ <||> afterValidationFailed_) .&&>>= beforeSave_
 
       beforeActionCreateOrUpdate' =
         case saveType' of
-          Modify -> beforeModify
-          Create -> \(mkey, entity) -> beforeCreate entity >>= \(b, entity2) -> return (b, (Nothing, entity2))
+          Modify -> beforeModify_
+          Create -> \(mkey, entity) -> beforeCreate_ entity >>= \(b, entity2) -> return (b, (Nothing, entity2))
         
       beforeActionAll' =
         beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
@@ -196,10 +243,10 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
           
       afterActionCreatedOrUpdated' =
         case saveType' of
-          Modify -> afterModified
-          Create -> afterCreated
+          Modify -> afterModified_
+          Create -> afterCreated_
 
-      afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved <||> afterSaveFailed) .||>>= (afterCommit <||> afterRollback)
+      afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved_ <||> afterSaveFailed_) .||>>= (afterCommit_ <||> afterRollback_)
       afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
 
       saveType' = if isJust mkey then Modify else Create

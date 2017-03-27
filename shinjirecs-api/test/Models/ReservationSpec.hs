@@ -27,16 +27,21 @@ import Data.Aeson(toJSON)
 --import Data.Time.Clock(getCurrentTime)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
+import Database.Persist(insert)
 
 sampleChannel :: MonadIO m => ConnectionPool -> m (Bool, (Maybe (Key DB.Channel), DB.Channel))
 sampleChannel conn = do
-  runDB conn $ save $ DB.Channel {
-    channelNumber      = "23",
-    channelType        = GR,
-    channelDisplayName = "NHK総合",
-    channelOrder       = 1,
-    channelEnable      = True
-    }
+  -- key <- runDB conn $ insert ch
+  -- return (True, (Just key, ch))
+  runDB conn $ save ch
+    where
+      ch = DB.Channel {
+        channelNumber      = "23",
+        channelType        = GR,
+        channelDisplayName = "NHK総合",
+        channelOrder       = 1,
+        channelEnable      = True
+        }
 
 sampleRec :: Key DB.Channel -> DB.Reservation
 sampleRec ckey =
