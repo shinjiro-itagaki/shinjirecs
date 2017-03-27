@@ -51,13 +51,15 @@ toSuccess x = (True, x)
 
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
   -- please override if you need
-  afterFind :: entity -> ReaderT SqlBackend IO entity
+  afterFind, afterFind_ :: entity -> ReaderT SqlBackend IO entity
   afterFind = return
+  afterFind_ arg = do
+    liftIO $ putStrLn "afterFind"
+    afterFind arg
   
   -- please override if you need
   beforeValidation, beforeValidation_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   beforeValidation = return . toSuccess
-
   beforeValidation_ arg = do
     liftIO $ putStrLn "beforeValidation"
     beforeValidation arg
@@ -197,19 +199,21 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   createWithoutHooks, createWithoutHooks_ :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   createWithoutHooks entity = do
     key <- PS.insert entity
-    liftIO $ putStrLn "createWithoutHooks"
-    -- liftIO $ putStrLn $ show key
-    afterSaveWithoutHooks entity key
+    afterSaveWithoutHooks_ entity key
   createWithoutHooks_ arg = do
     liftIO $ putStrLn "createWithoutHooks"
     -- liftIO $ putStrLn $ show key
     createWithoutHooks arg
     
 
-  afterSaveWithoutHooks :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  afterSaveWithoutHooks, afterSaveWithoutHooks_ :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterSaveWithoutHooks old_entity key =
     let ifNothing' = (False, (Nothing, old_entity)) in
     findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
+    
+  afterSaveWithoutHooks_ entity key = do
+    liftIO $ putStrLn "afterSaveWithoutHooks"
+    afterSaveWithoutHooks entity key
 
   destroyWithoutHooks, destroyWithoutHooks_ :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
   destroyWithoutHooks entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
@@ -278,7 +282,7 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
       saveType' = if isJust mkey then Modify else Create
 
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
-findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind x >>= return . Just . Entity key)
+findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind_ x >>= return . Just . Entity key)
     
 find :: (Read id, Show id, ActiveRecord entity) => id -> ReaderT SqlBackend IO (Maybe (Entity entity))
 find = let ifNothing' = -1 in findByKey . toSqlKey . fromMaybe ifNothing' . readMaybe . show
@@ -286,7 +290,7 @@ find = let ifNothing' = -1 in findByKey . toSqlKey . fromMaybe ifNothing' . read
 selectBy :: (ActiveRecord e) => [P.Filter e] -> [P.SelectOpt e] -> ReaderT SqlBackend IO [Entity e]
 selectBy filters opts = do
   list <- PS.liftPersist $ P.selectList filters opts
-  mapM (\(Entity k v) -> afterFind v >>= return . Entity k) list
+  mapM (\(Entity k v) -> afterFind_ v >>= return . Entity k) list
           
 instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity
 
