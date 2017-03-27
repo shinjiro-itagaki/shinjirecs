@@ -101,6 +101,7 @@ symbolValue r ProgramName = from $ reservationName r
 instance Show FormatSymbol where
   show Counter = "counter"
   show (StartTime tipe) = "st." ++ (show tipe)
+  show ProgramName = "name"
 
 allFormatSymbols :: [FormatSymbol]
 allFormatSymbols = [Counter] ++ (map StartTime [minBound .. maxBound])
