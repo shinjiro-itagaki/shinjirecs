@@ -7,6 +7,7 @@ import Data.Time.Clock(UTCTime(..),addUTCTime,NominalDiffTime,getCurrentTime)
 import Data.Word(Word)
 import Control.Monad.IO.Class(MonadIO) -- base
 import Data.Time.Calendar(fromGregorian,toGregorian)
+import Data.Text(Text,pack,unpack)
 
 -- time = from (2017,3,21)
 -- (y,m,d) = from time
@@ -45,3 +46,10 @@ instance (MonadIO m) => Castable [m a] (m [a]) where
 
 instance Castable (FilePath,[String]) CreateProcess where
   from (scriptpath,args) = proc scriptpath args
+
+instance Castable Text String where
+  from = unpack
+
+instance Castable String Text where
+  from = pack
+    

@@ -78,7 +78,7 @@ spec = do
       sampleRec' = sampleRec $ fromJust mSampleChKey
       sample' = sampleRec'
                 {
-                  reservationVideoFileNameFormat = "%{st.year}-%{st.mon}-%{st.dd}-%{st.hh}-%{st.mm}-%{st.ss}-%{counter}",
+                  reservationVideoFileNameFormat = "%{st.year}-%{st.mon}-%{st.dd}-%{st.hh}-%{st.mm}-%{st.ss}-%{counter}.ts",
                   reservationStartTime = now,
                   reservationXwday = from [Monday,reservationWeekDay sampleRec'],
                   reservationKeta = keta
@@ -87,7 +87,8 @@ spec = do
 
   describe "Models.Reservation test" $ do
     it "reservationFilePath" $ do
-      (reservationFilePath pconf sample') `shouldBe` ((videoFilesDir pconf) </> "2017-03-21-13-05-11-0037")
+      putStrLn $ reservationFilePath pconf sample'
+      (reservationFilePath pconf sample') `shouldBe` ((videoFilesDir pconf) </> "2017-03-21-13-05-11-0037.ts")
     it "createNextReservation starttime" $ do
       (reservationStartTime next') `shouldBe` ((reservationStartTime sample') .++ (reservationNext sample'))
     it "next after createNext" $ do

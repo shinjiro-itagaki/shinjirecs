@@ -59,7 +59,7 @@ isFailed    = isSameState Failed
 -- videoFileNameFormat FilePath
 
 data FormatSymbolDateType = Year | YYYY | Month | Mon | Day | DD | Hour | Hours | HH | Minute | Minutes | Min | MM | Second | Seconds | Sec | SS deriving (Show,Enum,Bounded)
-data FormatSymbol = Counter | StartTime FormatSymbolDateType
+data FormatSymbol = Counter | StartTime FormatSymbolDateType | ProgramName
 
 symbolKeyStr :: FormatSymbol -> String
 symbolKeyStr sym = "%{" ++ (map toLower $ show sym) ++ "}"
@@ -96,6 +96,7 @@ symbolValue r (StartTime tipe) = impl' tipe
     impl' Seconds = sec'
     impl' Sec     = sec'
     impl' SS      = sec'
+symbolValue r ProgramName = from $ reservationName r
 
 instance Show FormatSymbol where
   show Counter = "counter"
