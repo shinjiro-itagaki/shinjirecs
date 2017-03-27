@@ -26,9 +26,9 @@ import Control.Monad.Reader.Class(MonadReader) -- mtl
 import Data.Acquire(Acquire) -- resourcet
 import Data.Conduit(Source) --- conduit
 import Data.Int(Int64) -- base
-import Helper(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
-
+import Helper(OnResultFunc(..),(>>==))
 import qualified Database.Persist as P --persistent
+import Class.Castable
 
 runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
 runDB p action = liftIO $ runSqlPool action p
@@ -46,13 +46,10 @@ res <- save conn reservation [RerservationStart_time +=. ]
 
 data SaveType = Modify | Create
 
-instance ResultClass a (Bool, a) where
-  toResult b r = (b,r)
-  isSuccess r dummy = fst r
-  returnValue = snd
+toSuccess :: a -> (Bool,a)
+toSuccess x = (True, x)
 
 class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
-
   -- please override if you need
   afterFind :: entity -> ReaderT SqlBackend IO entity
   afterFind = return
@@ -62,14 +59,14 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   beforeValidation = return . toSuccess
 
   beforeValidation_ arg = do
-    -- liftIO $ putStrLn "beforeValidation_"
+    liftIO $ putStrLn "beforeValidation"
     beforeValidation arg
   
   -- please override if you need
   validate,  afterValidation,  beforeSave,  afterSaved, validate_, afterValidation_, beforeSave_, afterSaved_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   validate = return . toSuccess
   validate_ arg = do
-    liftIO $ putStrLn "validate_"
+    liftIO $ putStrLn "validate"
     validate arg
   
   -- please override if you need
@@ -93,8 +90,9 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   -- please override if you need
   afterSaved = return . toSuccess
-  afterSaved_ arg = do
+  afterSaved_ arg@(k,e) = do
     liftIO $ putStrLn "afterSaved"
+    -- liftIO $ putStrLn $ show k    
     afterSaved arg
 
   afterSaveFailed,  afterModifyFailed, afterSaveFailed_, afterModifyFailed_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
@@ -116,8 +114,9 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
 
   -- please override if you need  
   afterCreated = return . toSuccess
-  afterCreated_ arg = do
+  afterCreated_ arg@(k,e) = do
     liftIO $ putStrLn "afterCreate"
+    -- liftIO $ putStrLn $ show k
     afterCreated arg
     
   -- please override if you need
@@ -145,30 +144,41 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
     liftIO $ putStrLn "afterModifyFailed"
     afterModifyFailed arg
 
-  beforeDestroy, afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
+  beforeDestroy, afterDestroyed, beforeDestroy_, afterDestroyed_ :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
   
   -- please override if you need  
   beforeDestroy = return . toSuccess
+  beforeDestroy_ arg = do
+    liftIO $ putStrLn "beforeDestroy"
+    beforeDestroy arg
 
   -- please override if you need
   afterDestroyed = return . toSuccess
+  afterDestroyed_ arg = do
+    liftIO $ putStrLn "afterDestroyed"
+    afterDestroyed arg
 
   -- please override if you need
-  afterDestroyFailed :: Entity entity -> ReaderT SqlBackend IO (Entity entity)
+  afterDestroyFailed, afterDestroyFailed_ :: Entity entity -> ReaderT SqlBackend IO (Entity entity)
   afterDestroyFailed = return
+  afterDestroyFailed_ arg = do
+    liftIO $ putStrLn "afterDestroyFailed"
+    afterDestroyFailed arg
 
   -- please override if you need
   afterCommit, afterCommit_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterCommit = return . toSuccess
-  afterCommit_ arg = do
+  afterCommit_ arg@(k,e) = do
     liftIO $ putStrLn "afterCommit"
+    -- liftIO $ putStrLn $ show k
     afterCommit arg
 
   -- please override if you need
   afterRollback, afterRollback_ :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
   afterRollback = return
-  afterRollback_ arg = do
+  afterRollback_ arg@(k,e) = do
     liftIO $ putStrLn "afterRollback"
+    -- liftIO $ putStrLn $ show k
     afterRollback arg
   
   existOnDb :: PS.Key entity -> ReaderT SqlBackend IO Bool
@@ -177,24 +187,38 @@ class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRec
   existOnDbBy :: entity -> ReaderT SqlBackend IO Bool
   existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
   
-  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  modifyWithoutHooks, modifyWithoutHooks_ :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   modifyWithoutHooks key entity = PS.replace key entity >> afterSaveWithoutHooks entity key
+  modifyWithoutHooks_ key entity = do
+    liftIO $ putStrLn "modifyWithoutHooks"
+    -- liftIO $ putStrLn $ show key
+    modifyWithoutHooks key entity
     
-  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
+  createWithoutHooks, createWithoutHooks_ :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   createWithoutHooks entity = do
     key <- PS.insert entity
+    liftIO $ putStrLn "createWithoutHooks"
+    -- liftIO $ putStrLn $ show key
     afterSaveWithoutHooks entity key
+  createWithoutHooks_ arg = do
+    liftIO $ putStrLn "createWithoutHooks"
+    -- liftIO $ putStrLn $ show key
+    createWithoutHooks arg
+    
 
   afterSaveWithoutHooks :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
   afterSaveWithoutHooks old_entity key =
     let ifNothing' = (False, (Nothing, old_entity)) in
     findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
 
-  destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
-  destroyWithoutHook entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
+  destroyWithoutHooks, destroyWithoutHooks_ :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
+  destroyWithoutHooks entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
+  destroyWithoutHooks_ arg = do
+    liftIO $ putStrLn "destroyWithoutHooks"
+    destroyWithoutHooks arg
 
   destroyImpl :: record -> Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
-  destroyImpl _ = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
+  destroyImpl _ x = beforeDestroy_ x >>== (OnSuccessFunc destroyWithoutHooks_) >>== (OnEitherFunc afterDestroyed_ afterDestroyFailed_)
 
 
 class (PS.PersistEntity entity) => ToMaybeEntity entity a where
@@ -207,7 +231,7 @@ instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Maybe (PS.Key enti
 instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Bool, (Maybe (PS.Key entity), entity)) where
   toMaybeEntity (True,  a) = toMaybeEntity a
   toMaybeEntity (False, a) = Nothing
-  
+
 -- need MultiParamTypeClasses
 -- need AllowAmbiguousTypes
 class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
@@ -220,35 +244,37 @@ class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
 
   -- first argument is not used but it is required for determine type
   saveImpl :: record -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  saveImpl self arg@(mkey, v) = beforeActionAll' .&&>>= main' .&&>>= afterActionAll' $ arg
+  saveImpl self arg@(mkey, v) = do
+    validate_ arg
+      >>== (OnEitherFunc  afterValidation_ afterValidationFailed_)
+      >>== (OnSuccessFunc beforeSave_)
+      >>== (OnSuccessFunc beforeActionCreateOrUpdate')
+      >>== (OnSuccessFunc main')
+      >>== (OnSuccessFunc afterActionCreatedOrUpdated')
+      >>== (OnEitherFunc  afterSaved_ afterSaveFailed_)
+      >>== (OnEitherFunc  afterCommit_ afterRollback_)
     where
       key' = fromJust mkey
-
-      beforeActionCommon' =
-        beforeValidation_ .&&>>= validate_ .||>>= (afterValidation_ <||> afterValidationFailed_) .&&>>= beforeSave_
-
       beforeActionCreateOrUpdate' =
         case saveType' of
           Modify -> beforeModify_
           Create -> \(mkey, entity) -> beforeCreate_ entity >>= \(b, entity2) -> return (b, (Nothing, entity2))
-        
-      beforeActionAll' =
-        beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
 
-      main' =
-        (case saveType' of
-          Modify -> modifyWithoutHooks key'
-          Create -> createWithoutHooks
-        ) . snd
-          
+      main' arg = do
+        res@(b,(k,e)) <- (case saveType' of
+                Modify -> modifyWithoutHooks_ key'
+                Create -> createWithoutHooks_
+               ) $ snd arg
+        liftIO $ putStrLn "main'"
+        liftIO $ putStrLn $ show b
+        liftIO $ putStrLn $ show k
+        return res
+
       afterActionCreatedOrUpdated' =
         case saveType' of
           Modify -> afterModified_
           Create -> afterCreated_
-
-      afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved_ <||> afterSaveFailed_) .||>>= (afterCommit_ <||> afterRollback_)
-      afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
-
+          
       saveType' = if isJust mkey then Modify else Create
 
 findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))

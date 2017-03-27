@@ -29,8 +29,8 @@ import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
 import Database.Persist(insert)
 
-sampleChannel :: MonadIO m => ConnectionPool -> m (Bool, (Maybe (Key DB.Channel), DB.Channel))
-sampleChannel conn = do
+mkSampleChannel :: MonadIO m => ConnectionPool -> m (Bool, (Maybe (Key DB.Channel), DB.Channel))
+mkSampleChannel conn = do
   -- key <- runDB conn $ insert ch
   -- return (True, (Just key, ch))
   runDB conn $ save ch
@@ -67,8 +67,9 @@ spec = do
   conn <- runIO $ runNoLoggingT $ DB.createPool $ Config.db $ fromJust mconfig
   -- runIO $ putStrLn $ show $ fromJust mconfig
   -- runIO $ putStrLn $ show $ mconfig
-  res@(b, (mSampleChKey, recd)) <- runIO $ sampleChannel conn
-  runIO $ putStrLn $ show $ toJSON recd
+  res@(b, (mSampleChKey, recd)) <- runIO $ mkSampleChannel conn
+  --runIO $ putStrLn $ show $ toJSON recd
+  --runIO $ putStrLn $ show mSampleChKey
   let now = from (2017,3,21,13,5,11)
       conf = fromJust mconfig
       pconf = paths conf
