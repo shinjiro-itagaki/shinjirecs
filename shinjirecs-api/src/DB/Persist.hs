@@ -57,3 +57,6 @@ connect config =
 run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 run p action = liftIO $ runSqlPool action p
 
+
+type Connection__ = ConnectionPool
+

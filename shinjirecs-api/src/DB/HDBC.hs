@@ -12,3 +12,5 @@ import Database.HDBC.Sqlite3 (connectSqlite3)
 import Database.HDBC
 import Database.HDBC.Types
 
+data Connection = MkConn
+type Connection__ = Connection

@@ -27,7 +27,7 @@ import Control.Monad.Reader(ReaderT) -- mtl
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import qualified Model as M
 import Data.Bool(bool)
-
+import Database.Persist.Sql (ConnectionPool)
 
 -- class (Controller c) => (ControllerAction c) ca
 
@@ -36,8 +36,8 @@ data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | D
                   | S String | I Int | SI String Int deriving Eq
 
 class Controller a where
-  new :: DB.Connection -> a
-  conn :: a -> DB.Connection
+  new :: ConnectionPool -> a
+  conn :: a -> ConnectionPool
   db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
   db a = DB.Persist.run $ conn a
   beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
