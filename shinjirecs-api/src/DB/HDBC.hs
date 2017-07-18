@@ -7,22 +7,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 -- {-# LANGUAGE ScopedTypeVariables #-}
+module DB.HDBC where
+import Database.HDBC.Sqlite3 (connectSqlite3)
+import Database.HDBC
+import Database.HDBC.Types
 
-module DB (
-  module DB.Migration
---  ,module DB.Persist
-  ,module DB.Config
-  ,module DB.Types
-  ,Connection 
-  ) where
-import DB.Config
-import DB.Migration
-import DB.Persist
-import DB.HDBC
-import DB.Types(AdapterType(..))
-
-import Data.ByteString -- bytestring
-import Data.Pool(Pool) -- base
-import Database.Persist.Sql(ConnectionPool)
-
-type Connection = ConnectionPool

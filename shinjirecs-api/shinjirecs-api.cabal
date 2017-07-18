@@ -23,6 +23,7 @@ library
                      , Config.Reservation
                      , DB
                      , DB.Config
+                     , DB.HDBC                     
                      , DB.Migration
                      , DB.Persist
                      , DB.Status
