@@ -192,3 +192,7 @@ instance (Integral y, Integral m) => Castable UTCTime (y,m) where
 (|||) x Nothing = x
 (|||) Nothing y = y
 (|||) x y       = x
+
+
+(./) :: a -> (a -> b) -> b
+(./) arg func = func arg

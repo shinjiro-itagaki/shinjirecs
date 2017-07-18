@@ -79,3 +79,14 @@ run conn (sym, main) = do
   if res
   then afterAction sym =<< main c
   else return () -- do nothing
+
+
+data Request2 = MkRequest
+data Response2 = MkResponse
+
+data Action2 = MkAction
+
+data Controller2 = MkController {
+  dispatcher :: (String -> (Request2 -> Response2))
+  }
+

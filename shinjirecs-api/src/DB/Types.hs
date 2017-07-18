@@ -13,3 +13,12 @@ derivePersistField "ChannelType"
 
 instance A.ToJSON ChannelType
 instance A.FromJSON ChannelType
+
+data AdapterType = MySQL | PostgreSQL | SQLite3 deriving Show
+stringToAdapterType :: String -> Maybe AdapterType
+stringToAdapterType str =
+  case str of
+    "mysql"      -> return MySQL
+    "postgresql" -> return PostgreSQL
+    "sqlite3"    -> return SQLite3
+    _            -> Nothing

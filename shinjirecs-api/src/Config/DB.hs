@@ -2,7 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Config.DB where
-import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
+import qualified DB
+import DB.Types(stringToAdapterType)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack, unpack)
 import Config.Class(ConfigClass(..), Env,readInclude, lookupInt, lookupInteger, lookupText, lookupString)
@@ -47,6 +48,6 @@ readAdapter :: String -> Y.Object -> Maybe (DB.AdapterType)
 readAdapter key config =
   let k' = Data.Text.pack key
   in case M.lookup k' config of
-    Just (Y.String t) -> DB.stringToAdapterType $ Data.Text.unpack t
+    Just (Y.String t) -> stringToAdapterType $ Data.Text.unpack t
     Nothing           -> Nothing
     _                 -> fail "Invalid type (not string) for: adapter"

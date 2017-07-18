@@ -22,6 +22,9 @@ library
                      , Config.Paths
                      , Config.Reservation
                      , DB
+                     , DB.Config
+                     , DB.Migration
+                     , DB.Persist
                      , DB.Status
                      , DB.Types
                      , Model
@@ -40,6 +43,10 @@ library
                      , Routing
                      , Server
   build-depends:       base >= 4.7 && < 5
+                     , HDBC
+                     , HDBC-sqlite3
+                     , HDBC-mysql
+                     , HDBC-postgresql
                      , aeson
                      , bytestring
                      , conduit

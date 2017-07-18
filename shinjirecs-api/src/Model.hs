@@ -329,3 +329,101 @@ class (PS.PersistEntity record, Eq record, Eq (PS.Unique record) )=> UniqueRepla
   replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
 --  replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
 
+data DummyDBConn = MkDummyDBConn
+
+type DBConn = DummyDBConn
+
+data (ActiveRecord2 r) => Key r = MkKey Integer
+
+class ActiveRecord2 r where
+  key :: r -> Maybe (Key r)
+  key2int :: Key r -> Integer
+  isExists2 :: DBConn -> r -> Bool
+  isNewRecord2 :: DBConn -> r -> Bool
+  isNewRecord2 conn r = not $ isExists2 conn r
+
+  afterFind2 :: (DBConn -> r -> r)
+  
+  beforeValidation2 :: (DBConn -> r -> Maybe r)
+  afterValidation2 :: (DBConn -> r -> r)
+  afterValidationFailed2 :: (DBConn -> ValidationResult r -> r)
+  
+  beforeSave2 :: (DBConn -> r -> Maybe r)
+  afterSaved2 :: (DBConn -> SaveResult r -> SaveResult r)
+  afterSaveFailed2 :: (DBConn -> SaveResult r -> SaveResult r)
+  
+  beforeCreate2 :: (DBConn -> r -> Maybe r)
+  afterCreated2 :: (DBConn -> SaveResult r -> SaveResult r)
+  afterCreateFailed2 :: (DBConn -> SaveResult r -> SaveResult r)
+  
+  beforeModify2 :: (DBConn -> r -> Maybe r)
+  afterModified2 :: (DBConn -> SaveResult r -> SaveResult r)
+  afterModifyFailed2 :: (DBConn -> SaveResult r -> SaveResult r)
+  
+  beforeDestroy2 :: (DBConn -> r -> Maybe r)
+  afterDestroyed2 :: (DBConn -> r -> r)
+  afterDestroyFailed2 :: (DBConn -> r -> r)
+  
+  afterCommit2 :: (DBConn -> r -> r)
+  afterRollback2 :: (DBConn -> r -> r)
+
+data ErrorPoint = Validation | BeforeCreate | BeforeModify | BeforeSave
+
+data SaveError = MkSaveError {
+  errorPoint :: ErrorPoint
+  }
+
+data (ActiveRecord2 r) => ValidationResult r = ValidationNoProblem r | ValidationError r
+data (ActiveRecord2 r) => SaveResult r       = SaveSuccess r | SaveFailed r SaveError
+
+validate2 :: (ActiveRecord2 r) => DBConn -> r -> ValidationResult r
+validate2 conn r = ValidationError r
+
+insert2,update2 :: (ActiveRecord2 r) => DBConn -> r -> SaveResult r
+insert2 conn r = SaveFailed r MkSaveError {errorPoint = Validation}
+update2 conn r = SaveFailed r MkSaveError {errorPoint = Validation}
+
+doValidate :: (ActiveRecord2 r) => DBConn -> r -> ValidationResult r
+doValidate conn r =
+  case beforeValidation2 conn r of
+    Nothing -> ValidationError r
+    Just r2 ->
+      let res = validate2 conn r2 in
+        case res of
+          ValidationError r3 -> ValidationError $ afterValidationFailed2 conn res
+          ValidationNoProblem r3 -> ValidationNoProblem $ afterValidation2 conn r3
+          
+doCreate :: (ActiveRecord2 r) => DBConn -> r -> SaveResult r
+doCreate conn r =
+  case beforeCreate2 conn r of
+    Nothing -> SaveFailed r MkSaveError {errorPoint = BeforeCreate}
+    Just r2 ->
+      let res = insert2 conn r2 in
+        case res of
+          SaveFailed  r3 save_err -> afterCreateFailed2 conn res
+          SaveSuccess r3 -> afterCreated2 conn res
+
+doModify :: (ActiveRecord2 r) => DBConn -> r -> SaveResult r          
+doModify conn r =
+  case beforeModify2 conn r of
+    Nothing -> SaveFailed r MkSaveError {errorPoint = BeforeCreate}
+    Just r2 ->
+      let res = update2 conn r2 in
+        case res of
+          SaveFailed  r3 save_err -> afterModifyFailed2 conn res
+          SaveSuccess r3 -> afterModified2 conn res
+
+save2 :: (ActiveRecord2 r) => DBConn -> r -> SaveResult r
+-- save2 conn r = SaveFailed MkSaveError {errorPoint = Validation}
+save2 conn r =
+  case key r of
+    Nothing   -> doCreate conn r
+    otherwise ->
+      let res = doModify conn r in
+        case res of
+          SaveFailed  r2 save_err -> afterSaveFailed2 conn res
+          SaveSuccess r2 -> afterSaved2 conn res          
+
+find2 :: (ActiveRecord2 r) => DBConn -> Key r -> Maybe r
+find2 conn key = Nothing
+
