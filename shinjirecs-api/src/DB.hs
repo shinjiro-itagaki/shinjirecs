@@ -10,9 +10,10 @@
 
 module DB (
   module DB.Migration
-  ,module DB.Persist
+--  ,module DB.Persist
   ,module DB.Config
   ,module DB.Types
+  ,Connection 
   ) where
 import DB.Config
 import DB.Migration
@@ -24,3 +25,7 @@ import Data.Pool(Pool) -- base
 import Database.HDBC.Sqlite3 (connectSqlite3)
 import Database.HDBC
 import Database.HDBC.Types
+
+import Database.Persist.Sql(ConnectionPool)
+
+type Connection = ConnectionPool

@@ -8,6 +8,7 @@
 
 module Controller where
 import DB
+import DB.Persist
 import Data.Aeson(ToJSON(..))
 import Server(json,param,jsonData,ActionM,status)
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
@@ -35,10 +36,10 @@ data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | D
                   | S String | I Int | SI String Int deriving Eq
 
 class Controller a where
-  new :: ConnectionPool -> a
-  conn :: a -> ConnectionPool
+  new :: DB.Connection -> a
+  conn :: a -> DB.Connection
   db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
-  db a = DB.run $ conn a
+  db a = DB.Persist.run $ conn a
   beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
   beforeAction sym c = return (True, c)
   afterAction  :: ActionSymbol -> a -> ActionM ()
