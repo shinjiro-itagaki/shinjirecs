@@ -9,11 +9,12 @@
 -- {-# LANGUAGE ScopedTypeVariables #-}
 
 module DB.Persist where
+import qualified DB.Config
 import qualified Data.Text as Text --text
 import Data.Text (Text,pack) -- text
 import Database.Persist -- persistent
 import Database.Persist.Types -- persistent
-import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool) -- persistent
+import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool, runMigration) -- persistent
 import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
 import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
 import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
@@ -25,7 +26,18 @@ import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Control.Monad.Logger (MonadLogger)
 import Control.Monad.Reader (ReaderT) -- mtl
 import DB.Types(AdapterType(..))
-import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString)
+import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString,migrationFilePath)
+import Config.Env(Env(..))
+import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith, derivePersistField) -- persistent-template
+
+import Database.Persist.Quasi (lowerCaseSettings, PersistSettings) -- persistent
+import DB.Status(ReservationState(..))
+import DB.Types(ChannelType(..))
+import Data.Time -- time
+import Data.ByteString -- bytestring
+import Data.Word -- base
+import Data.Text (Text,pack) -- text
+import qualified Data.Text as Text --text
 
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
@@ -58,5 +70,16 @@ run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 run p action = liftIO $ runSqlPool action p
 
 
-type Connection__ = ConnectionPool
+-- make following datas
+-- Channel
+-- Reservation
+-- Program
+-- ... and others
+share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+  $(persistFileWith lowerCaseSettings migrationFilePath)
 
+migrate :: DB.Config.Config -> IO ()
+-- migrate = runAction (\pool -> run pool $ runMigration migrateAll)
+migrate config = (runNoLoggingT $ DB.Persist.createPool config) >>= (\pool -> run pool $ runMigration migrateAll)
+
+type Connection__ = ConnectionPool

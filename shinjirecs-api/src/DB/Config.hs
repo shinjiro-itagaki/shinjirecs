@@ -50,3 +50,5 @@ configToPgSQLConnectInfo config =  PgSQL.ConnectInfo
 
 configToPgSQLConnectionString :: Config -> ByteString
 configToPgSQLConnectionString = PgSQL.postgreSQLConnectionString . configToPgSQLConnectInfo 
+
+migrationFilePath = "config/models"

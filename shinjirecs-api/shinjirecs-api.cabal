@@ -19,12 +19,12 @@ library
                      , Config
                      , Config.Class
                      , Config.DB
+                     , Config.Env
                      , Config.Paths
                      , Config.Reservation
                      , DB
                      , DB.Config
-                     , DB.HDBC                     
-                     , DB.Migration
+                     , DB.HDBC
                      , DB.Persist
                      , DB.Status
                      , DB.Types

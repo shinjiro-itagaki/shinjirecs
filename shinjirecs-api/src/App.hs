@@ -7,7 +7,7 @@ import Network.Wai (Application,Request,Response,ResponseReceived,responseLBS,Mi
 import Network.Wai.Middleware.RequestLogger(logStdoutDev) -- wai-extra
 import Network.Wai.Middleware.AddHeaders(addHeaders) -- wai-extra
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
-import Config(Env(..))
+import Config.Env(Env(..))
 import qualified DB
 import qualified DB.Persist
 import Database.Persist.Sql(ConnectionPool, runMigration) --persistent
@@ -32,18 +32,18 @@ listen :: Int -> Env -> IO ()
 listen port = runAction $ startServer port
 
 runAction :: (ConnectionPool -> IO ()) -> Env -> IO ()
-runAction func env = config env >>= maybe
+runAction func env = Config.loadDefault env >>= maybe
   (fail "read config error") -- if Nothing
   (\config' -> (runNoLoggingT $ DB.Persist.createPool $ Config.db config') >>= func)
-
-config :: Env -> IO (Maybe Config.Config)
-config = Config.load Config.defaultConfigFilePaths
-
-migrate :: Env -> IO ()
-migrate = runAction (\pool -> DB.Persist.run pool $ runMigration DB.migrateAll)
 
 runThread :: ConnectionPool -> IO ()
 runThread conn = do
   putStr ""
   where
 --    db' = DB.run conn 
+
+migrate :: Env -> IO ()
+migrate env = Config.loadDefault env >>= maybe
+  (fail "read config error") -- if Nothing
+  (\config' -> DB.migrate $ Config.db config')
+

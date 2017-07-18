@@ -15,7 +15,8 @@ import Data.Text (Text, pack, unpack)
 import Data.List.Extra (lower) -- extra
 import Data.HashMap.Strict as M
 import Data.Word (Word)
-import Config.Class(ConfigClass(..),Env(..))
+import Config.Class(ConfigClass(..))
+import Config.Env(Env(..))
 import qualified DB
 import Config.DB
 import Config.Paths(PathsConfig(..))
@@ -63,3 +64,6 @@ load paths env' = do
                  mdbconf :: Maybe DB.Config,
                  mpconf  :: Maybe PathsConfig,
                  mrconf  :: Maybe ReservationConfig)
+
+loadDefault :: Env -> IO (Maybe Config.Config)
+loadDefault = load defaultConfigFilePaths

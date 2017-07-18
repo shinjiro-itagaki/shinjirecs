@@ -2,7 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Config.Reservation where
-import Config.Class(ConfigClass(..), Env,readInclude, lookupInt, lookupInteger, lookupText, lookupString,lookupWord)
+import Config.Class(ConfigClass(..), readInclude, lookupInt, lookupInteger, lookupText, lookupString,lookupWord)
+import Config.Env(Env(..))
 
 data ReservationCommandArg = ArgDevice | ArgChannel | ArgDurationSec | ArgDestFilePath deriving (Show)
 

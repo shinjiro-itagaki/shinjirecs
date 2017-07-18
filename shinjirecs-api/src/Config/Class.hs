@@ -8,13 +8,12 @@ import Data.List.Extra (lower) -- extra
 import Data.Yaml(decodeFile, FromJSON, Object, Value(Object, Number))
 import qualified Data.Yaml as Y
 import Data.HashMap.Strict as M
-import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
+-- import qualified DB -- (AdapterType(..), Config(Config), adapter, database, pool, timeout) as
 import Data.Scientific (Scientific(..), coefficient)
 import Data.Maybe(fromMaybe)
 import Data.List(elem)
 import Helper((|||))
-
-data Env = Production | Development | Test deriving Show
+import Config.Env(Env(..))
 
 -- 引数で指定したキーを持つオブジェクトを返す
 getObject :: Text -> Value -> Maybe (Object)

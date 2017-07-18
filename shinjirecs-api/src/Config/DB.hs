@@ -6,7 +6,8 @@ import qualified DB
 import DB.Types(stringToAdapterType)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack, unpack)
-import Config.Class(ConfigClass(..), Env,readInclude, lookupInt, lookupInteger, lookupText, lookupString)
+import Config.Class(ConfigClass(..), readInclude, lookupInt, lookupInteger, lookupText, lookupString)
+import Config.Env(Env(..))
 import Control.Applicative((<|>))
 import Data.List.Extra (lower) -- extra
 import qualified Data.Yaml as Y (Object, Value(..))

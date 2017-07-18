@@ -2,7 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Config.Paths where
-import Config.Class(ConfigClass(..), Env,readInclude, lookupInt, lookupInteger, lookupText, lookupString,lookupWord)
+import Config.Class(ConfigClass(..), readInclude, lookupInt, lookupInteger, lookupText, lookupString,lookupWord)
+import Config.Env(Env(..))
 import System.Directory(getCurrentDirectory)
 import System.FilePath.Posix((</>),takeDirectory) -- filepath
 import System.Argv0(getArgv0)
