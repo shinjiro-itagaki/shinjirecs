@@ -7,10 +7,59 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 -- {-# LANGUAGE ScopedTypeVariables #-}
-module DB.HDBC where
+module DB.HDBC (
+  Query
+  ,connect
+  ,Connection__  
+  ,P.migrate
+  ,P.Reservation(..)
+  ,P.Channel(..)
+  ,P.Program(..)
+  ) where
+import DB.Config(Config(..), MySQLConnectInfo)
+import qualified Database.HDBC.Sqlite3 as Sqlite3
 import Database.HDBC.Sqlite3 (connectSqlite3)
-import Database.HDBC
-import Database.HDBC.Types
+import qualified Database.HDBC.MySQL as MySQL
+import Database.HDBC.MySQL(connectMySQL,defaultMySQLConnectInfo)
+import qualified Database.HDBC.PostgreSQL as PostgreSQL
+import Database.HDBC.PostgreSQL(connectPostgreSQL)
+import Database.HDBC(Statement(..))
+import Database.HDBC.Types(IConnection)
+import qualified DB.Persist as P
+import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString)
+import Config.Env(Env(..))
+import qualified DB.Types as T
+import Data.Text
+import qualified Database.MySQL.Simple as SimpleMySQL -- mysql-simple
+import Data.ByteString.Char8
 
-data Connection = MkConn
+data Connection = MkMySQLConn MySQL.Connection | MkPostgreSQLConn PostgreSQL.Connection | MkSqlite3Conn Sqlite3.Connection
 type Connection__ = Connection
+
+castMySQLConnectInfo :: MySQLConnectInfo -> MySQL.MySQLConnectInfo
+castMySQLConnectInfo from =
+  MySQL.MySQLConnectInfo
+  {
+    MySQL.mysqlHost = SimpleMySQL.connectHost from,
+    MySQL.mysqlPort = fromInteger $ toInteger $ SimpleMySQL.connectPort from,
+    MySQL.mysqlUser = SimpleMySQL.connectUser from,
+    MySQL.mysqlPassword = SimpleMySQL.connectPassword from,
+    MySQL.mysqlUnixSocket = SimpleMySQL.connectPath from,
+    MySQL.mysqlDatabase = SimpleMySQL.connectDatabase from,
+    MySQL.mysqlGroup = Nothing
+  }
+
+connect :: Config -> IO Connection
+connect config = 
+  case adapter config of
+    T.MySQL      -> do
+      conn <- connectMySQL $ castMySQLConnectInfo $ configToMySQLConnectInfo config
+      return $ MkMySQLConn conn
+    T.PostgreSQL -> do
+      conn <- connectPostgreSQL $ Data.ByteString.Char8.unpack $ configToPgSQLConnectionString config
+      return $ MkPostgreSQLConn conn
+    T.SQLite3    -> do
+      conn <- connectSqlite3 $ database config
+      return $ MkSqlite3Conn conn
+    
+type Query = Statement

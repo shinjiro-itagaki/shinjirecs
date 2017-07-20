@@ -29,7 +29,8 @@ data Config = Config {
 (Just x) .||. y = x
 Nothing  .||. y = y
 
-configToMySQLConnectInfo :: Config -> MySQL.ConnectInfo
+type MySQLConnectInfo = MySQL.ConnectInfo
+configToMySQLConnectInfo :: Config -> MySQLConnectInfo
 configToMySQLConnectInfo config = MySQL.defaultConnectInfo
                                   { MySQL.connectHost     = (host config)               .||. "localhost"
                                   , MySQL.connectPort     = fromInteger $ (port config) .||. 5432

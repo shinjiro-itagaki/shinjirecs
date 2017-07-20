@@ -17,15 +17,21 @@ module DB (
   , ORM.Program(..)
   ) where
 import DB.Config
-import qualified DB.Persist as ORM
--- import qualified DB.HDBC as ORM
+-- import qualified DB.Persist as ORM
+import qualified DB.HDBC as ORM
 import DB.Types(AdapterType(..))
 
-import Data.ByteString -- bytestring
-import Data.Pool(Pool) -- base
+-- import Data.ByteString -- bytestring
+-- import Data.Pool(Pool) -- base
 import Database.Persist.Sql(ConnectionPool)
 
-type Connection = ORM.Connection__
+type MyConnection = ORM.Connection__
 
 migrate :: DB.Config.Config -> IO ()
 migrate = ORM.migrate
+
+type Query = ORM.Query
+
+connect :: Config -> IO MyConnection
+connect = ORM.connect
+

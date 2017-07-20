@@ -56,8 +56,6 @@ createPool config =
   where
     pool' = pool config :: Int
 
-  
-
 connect :: Config -> IO (Sql a -> IO a)
 connect config = 
   return $ getSQLActionRunner' $
@@ -65,7 +63,7 @@ connect config =
     MySQL      -> withMySQLConn      $ configToMySQLConnectInfo      config
     PostgreSQL -> withPostgresqlConn $ configToPgSQLConnectionString config
     SQLite3    -> withSqliteConn     $ Data.Text.pack $ database     config
-    
+
 run :: MonadIO m => ConnectionPool -> SqlPersistT IO a -> m a
 run p action = liftIO $ runSqlPool action p
 
@@ -83,3 +81,7 @@ migrate :: DB.Config.Config -> IO ()
 migrate config = (runNoLoggingT $ DB.Persist.createPool config) >>= (\pool -> run pool $ runMigration migrateAll)
 
 type Connection__ = ConnectionPool
+type Query = Sql
+
+-- connect :: Config -> IO ConnectionPool
+-- connect = createPool
