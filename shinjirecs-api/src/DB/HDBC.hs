@@ -80,40 +80,35 @@ connect config =
 
 notImplemented = error "not implemented"
 
-insert :: (Record val, Monad m) => val -> m (Key val)
-insert val = notImplemented -- return $ toRecordKey 0
+insert :: (Record val, Monad m) => Connection -> val -> m (Key val)
+insert conn val = notImplemented -- return $ toRecordKey 0
 
-update :: (Record val, Monad m) => Key val -> [Update val] -> m ()
-update key updates = notImplemented
+update :: (Record val, Monad m) => Connection -> Key val -> [Update val] -> m ()
+update conn key updates = notImplemented
 
-updateWhere :: (Record val, Monad m) => [Filter val] -> [Update val] -> m ()
-updateWhere filters updates = notImplemented
+updateWhere :: (Record val, Monad m) => Connection -> [Filter val] -> [Update val] -> m ()
+updateWhere conn filters updates = notImplemented
 
-delete :: (Record val, Monad m) => Key val -> m ()
-delete key = notImplemented
+delete :: (Record val, Monad m) => Connection -> Key val -> m ()
+delete conn key = notImplemented
 
-deleteBy :: (Record val, Monad m) => Unique val -> m ()
-deleteBy unique = notImplemented
+deleteBy :: (Record val, Monad m) => Connection -> Unique val -> m ()
+deleteBy conn unique = notImplemented
 
-deleteWhere :: (Record val, Monad m) => [Filter val] -> m ()
-deleteWhere filters = notImplemented
+deleteWhere :: (Record val, Monad m) => Connection -> [Filter val] -> m ()
+deleteWhere conn filters = notImplemented
 
-get :: Record val => Key val -> m (Maybe val)
-get key = notImplemented
+get :: Record val => Connection -> Key val -> m (Maybe val)
+get conn key = notImplemented
 
-getBy :: (Record val, Monad m) => Unique val -> m (Maybe (Key val, val))
-getBy val = notImplemented
+getBy :: (Record val, Monad m) => Connection -> Unique val -> m (Maybe (Key val, val))
+getBy conn val = notImplemented
 
-select :: (Record val, Monad m) =>
-  [Filter val]
-  -> [Order val]
-  -> Int --  limit
-  -> Int --  offset
-  -> Enumerator (Key val, val) m a
-select filters orders limit offset = notImplemented
+select :: (Record val, Monad m) => Connection -> [Filter val] -> [Order val] -> Int -> Int -> Enumerator (Key val, val) m a
+select conn filters orders limit offset = notImplemented
 
-selectKeys :: (Record val, Monad m) => [Filter val] -> Enumerator (Key val) m a
-selectKeys filters = notImplemented
+selectKeys :: (Record val, Monad m) => Connection -> [Filter val] -> Enumerator (Key val) m a
+selectKeys conn filters = notImplemented
 
-count :: (Record val, Monad m) => [Filter val] -> m Int
-count filters = notImplemented
+count :: (Record val, Monad m) => Connection -> [Filter val] -> m Int
+count conn filters = notImplemented

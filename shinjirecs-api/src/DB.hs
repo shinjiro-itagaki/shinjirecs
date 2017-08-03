@@ -44,22 +44,17 @@ connect = ORM.connect
 
 notImplemented = error "not implemented"
 
-insert :: (Record val, Monad m) => val -> m (Key val)
-update :: (Record val, Monad m) => Key val -> [Update val] -> m ()
-updateWhere :: (Record val, Monad m) => [Filter val] -> [Update val] -> m ()
-delete :: (Record val, Monad m) => Key val -> m ()
-deleteBy :: (Record val, Monad m) => Unique val -> m ()
-deleteWhere :: (Record val, Monad m) => [Filter val] -> m ()
-get,find2 :: Record val => Key val -> m (Maybe val)
-getBy :: (Record val, Monad m) => Unique val -> m (Maybe (Key val, val))
-select :: (Record val, Monad m) =>
-  [Filter val]
-  -> [Order val]
-  -> Int --  limit
-  -> Int --  offset
-  -> Enumerator (Key val, val) m a
-selectKeys :: (Record val, Monad m) => [Filter val] -> Enumerator (Key val) m a
-count :: (Record val, Monad m) => [Filter val] -> m Int
+insert      :: (Record val, Monad m) => MyConnection -> val -> m (Key val)
+update      :: (Record val, Monad m) => MyConnection -> Key val -> [Update val] -> m ()
+updateWhere :: (Record val, Monad m) => MyConnection -> [Filter val] -> [Update val] -> m ()
+delete      :: (Record val, Monad m) => MyConnection -> Key val -> m ()
+deleteBy    :: (Record val, Monad m) => MyConnection -> Unique val -> m ()
+deleteWhere :: (Record val, Monad m) => MyConnection -> [Filter val] -> m ()
+get,find2   :: (Record val, Monad m) => MyConnection -> Key val -> m (Maybe val)
+getBy       :: (Record val, Monad m) => MyConnection -> Unique val -> m (Maybe (Key val, val))
+select      :: (Record val, Monad m) => MyConnection -> [Filter val] -> [Order val] -> Int -> Int -> Enumerator (Key val, val) m a
+selectKeys  :: (Record val, Monad m) => MyConnection -> [Filter val] -> Enumerator (Key val) m a
+count       :: (Record val, Monad m) => MyConnection -> [Filter val] -> m Int
 
 insert      = ORM.insert
 update      = ORM.update
@@ -75,38 +70,32 @@ count       = ORM.count
 
 find2 = get
 
-selectList a b c d = do
-  res <- run $ select a b c d ==<< consume
+selectList :: (Record val, Monad m) => MyConnection -> [Filter val] -> [Order val] -> Int -> Int -> m [(Key val, val)]
+selectList conn a b c d = do
+  res <- run $ select conn a b c d ==<< consume
   case res of
     Left e -> error $ show e
     Right x -> return x
-
-selectList :: (Record val, Monad m)
-  => [Filter val]
-  -> [Order val]
-  -> Int -- limit
-  -> Int -- offset
-  -> m [(Key val, val)]
   
-insertBy :: (Record v, Monad m) => v -> m (Either (Key v, v) (Key v))
-insertBy val =
+insertBy :: (Record v, Monad m) => MyConnection -> v -> m (Either (Key v, v) (Key v))
+insertBy conn val =
   go $ recordUniqueKeys val
   where
-    go [] = Right `liftM` insert val
+    go [] = Right `liftM` insert conn val
     go (x:xs) = do
-      y <- getBy x
+      y <- getBy conn x
       case y of
         Nothing -> go xs
         Just z -> return $ Left z
 
 
-checkUnique :: (Record val, Monad m) => val -> m Bool
-checkUnique val =
+checkUnique :: (Record val, Monad m) => MyConnection -> val -> m Bool
+checkUnique conn val =
   go $ recordUniqueKeys val
   where
     go [] = return True
     go (x:xs) = do
-      y <- getBy x
+      y <- getBy conn x
       case y of
         Nothing -> go xs
         Just _ -> return False
