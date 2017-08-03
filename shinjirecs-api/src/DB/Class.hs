@@ -104,3 +104,4 @@ class Record r where
   recordUniqueToFieldNames :: Unique r -> [String]
   recordUniqueToValues :: Unique r -> [RecordValue]
   recordUniqueKeys :: r -> [Unique r]
+

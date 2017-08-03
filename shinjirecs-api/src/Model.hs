@@ -7,7 +7,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 -- {-# LANGUAGE FunctionalDependencies #-}
 -- {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DatatypeContexts #-}
 
 module Model where
 import Text.Read(readMaybe) -- !!!
