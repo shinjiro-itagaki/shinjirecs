@@ -24,6 +24,7 @@ library
                      , Config.Reservation
                      , DB
                      , DB.Config
+                     , DB.Class
                      , DB.HDBC
                      , DB.Persist
                      , DB.Status
