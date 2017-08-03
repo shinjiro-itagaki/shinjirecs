@@ -8,14 +8,24 @@
 {-# LANGUAGE FlexibleContexts           #-}
 -- {-# LANGUAGE ScopedTypeVariables #-}
 module DB.HDBC (
-  Query
-  ,connect
+--  Query
+  connect
   ,Connection__  
   ,P.migrate
   ,P.Reservation(..)
   ,P.Channel(..)
   ,P.Program(..)
---  ,Record
+  ,insert
+  ,update
+  ,updateWhere
+  ,delete
+  ,deleteBy
+  ,deleteWhere
+  ,get
+  ,getBy
+  ,select
+  ,selectKeys
+  ,DB.HDBC.count
   ) where
 import DB.Config(Config(..), MySQLConnectInfo)
 import qualified Database.HDBC.Sqlite3 as Sqlite3
@@ -34,6 +44,8 @@ import Data.Text
 import qualified Database.MySQL.Simple as SimpleMySQL -- mysql-simple
 import Data.ByteString.Char8
 import Database.Persist(PersistEntity) -- persistent
+import DB.Class(Key,Record(..),Filter,Order)
+import Data.Enumerator(Enumerator)
 
 data Connection = MkMySQLConn MySQL.Connection | MkPostgreSQLConn PostgreSQL.Connection | MkSqlite3Conn Sqlite3.Connection
 type Connection__ = Connection
@@ -64,22 +76,35 @@ connect config =
       conn <- connectSqlite3 $ database config
       return $ MkSqlite3Conn conn
     
-type Query = Statement
+-- type Query = Statement
 
--- insert :: PersistEntity val => val -> m (Key val)
--- update :: PersistEntity val => Key val -> [Update val] -> m ()
--- updateWhere :: PersistEntity val => [Filter val] -> [Update val] -> m ()
--- delete :: PersistEntity val => Key val -> m ()
--- deleteBy :: PersistEntity val => Unique val -> m ()
--- deleteWhere :: PersistEntity val => [Filter val] -> m ()
--- get :: PersistEntity val => Key val -> m (Maybe val)
--- getBy :: PersistEntity val => Unique val -> m (Maybe (Key val, val))
--- selectSource :: PersistEntity val => [Filter val] -> [Order val]
---   -> Int --  limit
---   -> Int --  offset
---   -> Enumerator (Key val, val) m a
--- selectKeys :: PersistEntity val => [Filter val] -> Enumerator (Key val) m a
--- count :: PersistEntity val => [Filter val] -> m Int
+notImplemented = error "not implemented"
 
+insert :: (Record val, Monad m) => val -> m (Key val)
+update :: (Record val, Monad m) => Key val -> [Update val] -> m ()
+updateWhere :: (Record val, Monad m) => [Filter val] -> [Update val] -> m ()
+delete :: (Record val, Monad m) => Key val -> m ()
+deleteBy :: (Record val, Monad m) => Unique val -> m ()
+deleteWhere :: (Record val, Monad m) => [Filter val] -> m ()
+get :: Record val => Key val -> m (Maybe val)
+getBy :: (Record val, Monad m) => Unique val -> m (Maybe (Key val, val))
+select :: (Record val, Monad m) =>
+  [Filter val]
+  -> [Order val]
+  -> Int --  limit
+  -> Int --  offset
+  -> Enumerator (Key val, val) m a
+selectKeys :: (Record val, Monad m) => [Filter val] -> Enumerator (Key val) m a
+count :: (Record val, Monad m) => [Filter val] -> m Int
 
--- data (PersistEntity e) => Record e = MkRecord e
+insert val = notImplemented -- return $ toRecordKey 0
+update key updates = notImplemented
+updateWhere filters updates = notImplemented
+delete key = notImplemented
+deleteBy unique = notImplemented
+deleteWhere filters = notImplemented
+get key = notImplemented
+getBy val = notImplemented
+select filters orders limit offset = notImplemented
+selectKeys filters = notImplemented
+count filters = notImplemented
