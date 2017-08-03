@@ -81,30 +81,39 @@ connect config =
 notImplemented = error "not implemented"
 
 insert :: (Record val, Monad m) => val -> m (Key val)
+insert val = notImplemented -- return $ toRecordKey 0
+
 update :: (Record val, Monad m) => Key val -> [Update val] -> m ()
+update key updates = notImplemented
+
 updateWhere :: (Record val, Monad m) => [Filter val] -> [Update val] -> m ()
+updateWhere filters updates = notImplemented
+
 delete :: (Record val, Monad m) => Key val -> m ()
+delete key = notImplemented
+
 deleteBy :: (Record val, Monad m) => Unique val -> m ()
+deleteBy unique = notImplemented
+
 deleteWhere :: (Record val, Monad m) => [Filter val] -> m ()
+deleteWhere filters = notImplemented
+
 get :: Record val => Key val -> m (Maybe val)
+get key = notImplemented
+
 getBy :: (Record val, Monad m) => Unique val -> m (Maybe (Key val, val))
+getBy val = notImplemented
+
 select :: (Record val, Monad m) =>
   [Filter val]
   -> [Order val]
   -> Int --  limit
   -> Int --  offset
   -> Enumerator (Key val, val) m a
-selectKeys :: (Record val, Monad m) => [Filter val] -> Enumerator (Key val) m a
-count :: (Record val, Monad m) => [Filter val] -> m Int
-
-insert val = notImplemented -- return $ toRecordKey 0
-update key updates = notImplemented
-updateWhere filters updates = notImplemented
-delete key = notImplemented
-deleteBy unique = notImplemented
-deleteWhere filters = notImplemented
-get key = notImplemented
-getBy val = notImplemented
 select filters orders limit offset = notImplemented
+
+selectKeys :: (Record val, Monad m) => [Filter val] -> Enumerator (Key val) m a
 selectKeys filters = notImplemented
+
+count :: (Record val, Monad m) => [Filter val] -> m Int
 count filters = notImplemented
