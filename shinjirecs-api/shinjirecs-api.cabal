@@ -52,6 +52,7 @@ library
                      , aeson
                      , bytestring
                      , conduit
+                     , containers
                      , dates
                      , directory
                      , enumerator
@@ -65,7 +66,7 @@ library
                      , regex-posix
                      , resource-pool
                      , resourcet
-                     , persistent
+                     , persistent >= 2.6
                      , persistent-template
                      , persistent-mysql
                      , persistent-postgresql
@@ -79,6 +80,7 @@ library
                      , time
                      , transformers
                      , unordered-containers
+                     , vector
                      , wai
                      , wai-extra
                      , yaml

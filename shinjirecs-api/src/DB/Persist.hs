@@ -8,7 +8,14 @@
 {-# LANGUAGE FlexibleContexts           #-}
 -- {-# LANGUAGE ScopedTypeVariables #-}
 
-module DB.Persist where
+module DB.Persist(
+  migrate
+  ,Reservation(..)
+  ,Channel(..)
+  ,Program(..)
+  ,run
+  ,createPool
+  ) where
 import qualified DB.Config
 import qualified Data.Text as Text --text
 import Data.Text (Text,pack) -- text
@@ -19,12 +26,12 @@ import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mys
 import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
 import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Database.Persist.Class (BaseBackend, IsPersistBackend) -- persistent
+import Database.Persist.Class (BaseBackend, IsPersistBackend, PersistEntity(..), Key(..)) -- persistent
 import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl) -- resourcet
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Control.Monad.Logger (MonadLogger)
-import Control.Monad.Reader (ReaderT) -- mtl
+import Control.Monad.Reader (ReaderT, runReaderT) -- mtl
 import DB.Types(AdapterType(..))
 import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString,migrationFilePath)
 import Config.Env(Env(..))
@@ -39,6 +46,7 @@ import Data.Word -- base
 import Data.Text (Text,pack) -- text
 import qualified Data.Text as Text --text
 
+-- ReaderT SqlBackend (ResourceT (NoLoggingT IO))
 type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
 getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backend, MonadBaseControl IO m1, MonadBaseControl IO m) =>
@@ -83,5 +91,5 @@ migrate config = (runNoLoggingT $ DB.Persist.createPool config) >>= (\pool -> ru
 type Connection__ = ConnectionPool
 type Query = Sql
 
--- connect :: Config -> IO ConnectionPool
--- connect = createPool
+insert :: (PersistRecordBackend record SqlBackend) => Connection__ -> record -> IO (Key record)
+insert connpool val = runSqlPool (Database.Persist.insert val) connpool
