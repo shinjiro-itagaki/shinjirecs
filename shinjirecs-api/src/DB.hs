@@ -29,7 +29,7 @@ import Database.Persist.Sql(ConnectionPool)
 import Data.Enumerator(Enumerator, (==<<),run)
 import Data.Enumerator.List(consume)
 import Control.Monad(liftM)
-import Control.Monad.Logger (MonadLogger)
+import Control.Monad.Logger (MonadLogger,runNoLoggingT)
 import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Data.Conduit(Source)
@@ -42,8 +42,9 @@ migrate = ORM.migrate
 
 -- type Query = ORM.Query
 
-connect :: (MonadIO m, MonadBaseControl IO m, MonadLogger m) => Config -> m Connection
-connect = ORM.connect
+-- connect :: (MonadIO m, MonadBaseControl IO m, MonadLogger m) => Config -> m Connection
+connect :: DB.Config.Config -> IO Connection
+connect = runNoLoggingT . ORM.connect
 
 -- data Condition :: (Record r) = MkCondition r
 -- type Record = ORM.Record

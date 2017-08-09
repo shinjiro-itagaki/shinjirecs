@@ -15,12 +15,9 @@ import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
 -- import Network.Wai.Middleware.AddHeaders(addHeaders) -- wai-extra
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
 import Config.Env(Env(..))
-import qualified DB
---import qualified DB.Persist
---import Database.Persist.Sql(ConnectionPool, runMigration) --persistent
+import DB
 --import Control.Monad.Logger(MonadLogger, monadLoggerLog, NoLoggingT, runNoLoggingT) -- monad-logger
 import Routing(run)
--- import Server(server, middleware)
 
 {-
 setCommonHeaders :: Middleware
@@ -37,31 +34,25 @@ startServer port conn = do
     Routing.run conn
 -}
 
--- type Application = Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
-app :: Application
-app request respond = do
-  respond $ responseLBS
-    status200
-    [("Content-Type", "text/plain")]
-    "Hello, Web!"
+app :: Env -> Application
+app env request respond = do
+  maybeConf <- Config.loadDefault env
+  case maybeConf of
+    Just conf -> do
+      conn <- (DB.connect $ Config.db conf)
+      respond $ responseLBS
+        status200
+        [("Content-Type", "text/plain")]
+        "Hello, Web!"
+    Nothing -> respond $ responseLBS
+      status500
+      [("Content-Type", "text/plain")]
+      "Connect database failed!"
+
 
 listen :: Int -> Env -> IO ()
--- listen port = runAction $ startServer port
--- listen port env = return ()
-listen port env = Network.Wai.Handler.Warp.run port app
+listen port env = Network.Wai.Handler.Warp.run port $ app env
 
-{-
-runAction :: (ConnectionPool -> IO ()) -> Env -> IO ()
-runAction func env = Config.loadDefault env >>= maybe
-  (fail "read config error") -- if Nothing
-  (\config' -> (runNoLoggingT $ DB.Persist.createPool $ Config.db config') >>= func)
-
-runThread :: ConnectionPool -> IO ()
-runThread conn = do
-  putStr ""
-  where
---    db' = DB.run conn 
--}
 migrate :: Env -> IO ()
 migrate env = Config.loadDefault env >>= maybe
   (fail "read config error") -- if Nothing
