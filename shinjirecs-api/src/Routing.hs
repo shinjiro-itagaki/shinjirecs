@@ -1,22 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Routing where
-import Server (ServerM, status, get, patch, delete, post, options, ActionM, RoutePattern)
-
+-- import Server (ServerM, status, get, patch, delete, post, options, ActionM, RoutePattern)
+import Network.Wai (Request(..))
 import qualified Controller
-import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
+-- import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
+import Controller(Controller(..), ActionSymbol(..))
 import qualified Controllers.ChannelsController     as ChannelsC
 import qualified Controllers.InstallController      as InstallC
 import qualified Controllers.ProgramsController     as ProgramsC
 import qualified Controllers.ReservationsController as ReservationsC
 
-import Database.Persist.Sql(ConnectionPool) --persistent
+-- import Database.Persist.Sql(ConnectionPool) --persistent
+import DB(Connection)
 
 import Network.HTTP.Types (status200, status201, status400, status404)
+import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
+import Data.List(find)
+import Data.ByteString(ByteString)
+{-
 
 defRoute :: (Controller c) =>
   (RoutePattern -> ActionM () -> ServerM ())
-  -> ConnectionPool
+  -> Connection
   -> RoutePattern
   -> ControllerAction c
   -> ServerM ()
@@ -24,9 +30,43 @@ defRoute func conn pat act = do
   options pat (status status200) -- add OPTIONS
   func pat $ Controller.run conn act
 
-run :: ConnectionPool -> ServerM ()
-run conn = do
-  return ();
+-}
+
+type ContentType = String
+type Body = String
+type ControllerResponse = (ContentType, Body)
+
+notFound :: Connection -> Request -> ControllerResponse
+notFound conn req = ("application/json", "")
+
+type Path = ByteString
+type PathPattern = ByteString
+type Action = (Connection -> Request -> ControllerResponse)
+type Route = ([StdMethod], PathPattern, Action)
+
+routingMap :: [Route]
+routingMap = [
+  ( [GET], "/channels/list", notFound )
+  ]
+
+findRoute :: StdMethod -> Path -> Maybe Action
+findRoute stdmethod path =
+  case res of
+    Just (_ ,_ ,action) -> Just action
+    Nothing             -> Nothing
+  where
+    res = find (\(stdmethods, path', action') -> elem stdmethod stdmethods && path == path') routingMap
+
+run :: Connection -> Request -> Action
+run conn req = do
+  case parseMethod $ requestMethod req of
+    Left _ -> notFound
+    Right stdmethod
+      -> case findRoute stdmethod (rawPathInfo req) of
+           Just action -> action
+           Nothing     -> notFound
+    
+  -- return ()
   {- 
   _GET    "/channels/list" ChannelsC.list
   _GET    "/channels/:id"  ChannelsC.get
@@ -53,11 +93,12 @@ run conn = do
   _DELETE "/reservations/:id"  ReservationsC.destroy
 -}
   where
+    {-
     _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ServerM ()
     _GET    = defRoute get    conn
     _PATCH  = defRoute patch  conn
     _POST   = defRoute post   conn
     _DELETE = defRoute delete conn
-
+-}
     
     

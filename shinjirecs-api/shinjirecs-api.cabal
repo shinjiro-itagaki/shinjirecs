@@ -43,7 +43,7 @@ library
                      , Job
                      , Jobs.Recording
                      , Routing
-                     , Server
+--                     , Server
   build-depends:       base >= 4.7 && < 5
                      , HDBC
                      , HDBC-sqlite3
@@ -58,7 +58,7 @@ library
                      , enumerator
                      , extra
                      , filepath
-                     , scotty
+--                     , scotty
                      , http-types
                      , mtl
                      , mysql-simple
@@ -83,6 +83,7 @@ library
                      , vector
                      , wai
                      , wai-extra
+                     , warp
                      , yaml
   default-language:    Haskell2010
 

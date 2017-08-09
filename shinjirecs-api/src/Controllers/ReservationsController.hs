@@ -7,7 +7,7 @@ module Controllers.ReservationsController where
 
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
-import Web.Scotty(json,param,jsonData, ActionM, status)
+-- import Web.Scotty(json,param,jsonData, ActionM, status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified Database.Persist as P --persistent

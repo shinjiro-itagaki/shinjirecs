@@ -3,10 +3,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Controllers.InstallController where
 -- import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
-import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
-import Server(json,param,jsonData,ActionM,status)
+-- import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
+-- import Server(json,param,jsonData,ActionM,status)
+import DB(Connection)
 
-data InstallController = InstallController { conn_ :: ConnectionPool }
+data InstallController = InstallController { conn_ :: Connection }
 
 {- 
 instance Controller InstallController where

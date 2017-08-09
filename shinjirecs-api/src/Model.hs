@@ -19,7 +19,7 @@ import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Types (Update,Entity(..),Filter,SelectOpt)
 import qualified DB
-import Server (ActionM)
+-- import Server (ActionM)
 import Control.Monad.Trans.Resource(MonadResource) -- resourcet
 import Control.Monad.Reader(ReaderT) -- mtl
 import Control.Monad.Reader.Class(MonadReader) -- mtl

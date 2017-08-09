@@ -10,7 +10,7 @@ module Controller where
 import DB(Entity(..))
 import DB.Persist
 import Data.Aeson(ToJSON(..))
-import Server(json,param,jsonData,ActionM,status)
+-- import Server(json,param,jsonData,ActionM,status)
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Database.Persist.Sql(ConnectionPool,SqlPersistT, runSqlPool)  --persistent
 import Database.Persist (PersistEntity (..)) --persistent
@@ -57,7 +57,7 @@ class Controller a where
 -}
 
 
-type ControllerAction c = (ActionSymbol, (c -> ActionM c))
+-- type ControllerAction c = (ActionSymbol, (c -> ActionM c))
 
 {-
 def :: (Controller c) => ActionSymbol -> (c -> ActionM c) -> (ActionSymbol, (c -> ActionM c))
@@ -81,15 +81,15 @@ class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
 instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
 -}
 
-run :: (Controller c) => ConnectionPool -> ControllerAction c -> ActionM ()
-run conn (sym, main) = do
+--run :: (Controller c) => ConnectionPool -> ControllerAction c -> ActionM ()
+--run conn (sym, main) = do
   {-
   (res, c) <- beforeAction sym $ new conn
   if res
   then afterAction sym =<< main c
   else return () -- do nothing
 -}
-  return ()
+--  return ()
 
 {-
 data Request2 = MkRequest
