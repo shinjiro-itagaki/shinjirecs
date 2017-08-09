@@ -15,6 +15,7 @@ module DB.HDBC (
   ,P.Reservation(..)
   ,P.Channel(..)
   ,P.Program(..)
+  {-
   ,insert
   ,update
   ,updateWhere
@@ -26,6 +27,7 @@ module DB.HDBC (
   ,select
   ,selectKeys
   ,DB.HDBC.count
+-}
   ) where
 import DB.Config(Config(..), MySQLConnectInfo)
 import qualified Database.HDBC.Sqlite3 as Sqlite3
@@ -44,7 +46,7 @@ import Data.Text
 import qualified Database.MySQL.Simple as SimpleMySQL -- mysql-simple
 import Data.ByteString.Char8
 import Database.Persist(PersistEntity) -- persistent
-import DB.Class(Key,Record(..),Filter,Order)
+-- import DB.Class(Record(..))
 import Data.Enumerator(Enumerator)
 
 data Connection = MkMySQLConn MySQL.Connection | MkPostgreSQLConn PostgreSQL.Connection | MkSqlite3Conn Sqlite3.Connection
@@ -80,6 +82,7 @@ connect config =
 
 notImplemented = error "not implemented"
 
+{-
 insert :: (Record val, Monad m) => Connection -> val -> m (Key val)
 insert conn val = notImplemented -- return $ toRecordKey 0
 
@@ -112,3 +115,4 @@ selectKeys conn filters = notImplemented
 
 count :: (Record val, Monad m) => Connection -> [Filter val] -> m Int
 count conn filters = notImplemented
+ -}

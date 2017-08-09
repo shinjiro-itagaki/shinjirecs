@@ -5,10 +5,10 @@ import Server (ServerM, status, get, patch, delete, post, options, ActionM, Rout
 
 import qualified Controller
 import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
-import qualified Controllers.Channels     as ChannelsC
-import qualified Controllers.Install      as InstallC
-import qualified Controllers.Programs     as ProgramsC
-import qualified Controllers.Reservations as ReservationsC
+import qualified Controllers.ChannelsController     as ChannelsC
+import qualified Controllers.InstallController      as InstallC
+import qualified Controllers.ProgramsController     as ProgramsC
+import qualified Controllers.ReservationsController as ReservationsC
 
 import Database.Persist.Sql(ConnectionPool) --persistent
 
@@ -26,6 +26,8 @@ defRoute func conn pat act = do
 
 run :: ConnectionPool -> ServerM ()
 run conn = do
+  return ();
+  {- 
   _GET    "/channels/list" ChannelsC.list
   _GET    "/channels/:id"  ChannelsC.get
   _PATCH  "/channels/:id"  ChannelsC.modify
@@ -49,6 +51,7 @@ run conn = do
   _PATCH  "/reservations/:id"  ReservationsC.modify
   _POST   "/reservations"      ReservationsC.create
   _DELETE "/reservations/:id"  ReservationsC.destroy
+-}
   where
     _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ServerM ()
     _GET    = defRoute get    conn

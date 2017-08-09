@@ -2,8 +2,9 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Controllers.Programs where
-import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
+module Controllers.ChannelsController where
+-- import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
+import Controller(ActionSymbol(..))
 
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
@@ -18,59 +19,60 @@ import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persiste
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Model (find, saveE,saveR ,ToMaybeEntity(..))
 import qualified Model as M
-import Models.Program
+import Models.Channel
 import Control.Monad.Reader(ReaderT) -- mtl
 
-data ProgramsController = ProgramsController { conn_ :: ConnectionPool }
+data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 
-instance Controller ProgramsController where
-  new                 = ProgramsController
+{-
+instance Controller ChannelsController where
+  new                 = ChannelsController
   conn                = conn_
   beforeAction List c = return (True, c)
   beforeAction _    c = return (True, c)
-
+-}
 -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
-toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Program)
-
-list, get, modify, create, destroy :: (ActionSymbol, (ProgramsController -> ActionM ProgramsController))
+toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
+{- 
+list, get, modify, create, destroy :: (ActionSymbol, (ChannelsController -> ActionM ChannelsController))
 
 list = def List list'
   where
-    filter = [] :: [P.Filter DB.Program]
-    opt    = [] :: [P.SelectOpt DB.Program]
-    list' :: ProgramsController -> ActionM ProgramsController
+    filter = [] :: [P.Filter DB.Channel]
+    opt    = [] :: [P.SelectOpt DB.Channel]
+    list' :: ChannelsController -> ActionM ChannelsController
     list' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
 
 get = def Get impl'
   where
-    impl' :: ProgramsController -> ActionM ProgramsController
+    impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
       toJsonResponseMaybeEntity FindR mEntity >> return c
 
 modify = def Modify impl'
   where
-    impl' :: ProgramsController -> ActionM ProgramsController
+    impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
-      newrec <- (jsonData :: ActionM DB.Program)
+      mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
+      newrec <- (jsonData :: ActionM DB.Channel)
       case mEntity of
         Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
         Nothing -> return c
 
 create = def Create impl'
   where
-    impl' :: ProgramsController -> ActionM ProgramsController
+    impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
-      newrec <- (jsonData :: ActionM DB.Program)
+      newrec <- (jsonData :: ActionM DB.Channel)
       (db c $ saveR newrec) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
 
 destroy = def Destroy impl'
   where
-    destroy' :: Entity DB.Program -> ReaderT SqlBackend IO (Bool, (Entity DB.Program), PS.Key DB.Program)
+    destroy' :: Entity DB.Channel -> ReaderT SqlBackend IO (Bool, (Entity DB.Channel), PS.Key DB.Channel)
     destroy' e = M.destroy e
-    findRecord' c = findRecord c "id" :: ActionM (Maybe (Entity DB.Program))
-    impl' :: ProgramsController -> ActionM ProgramsController
+    findRecord' c = findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
+    impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       findRecord' c >>= maybe
         (status status404 >> return c)
@@ -79,3 +81,4 @@ destroy = def Destroy impl'
             status $ bool status201 status400 b
             return c
         )
+-}

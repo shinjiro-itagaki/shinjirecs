@@ -34,10 +34,10 @@ library
                      , Models.Reservation
                      , Models.Program
                      , Controller
-                     , Controllers.Channels
-                     , Controllers.Install
-                     , Controllers.Programs
-                     , Controllers.Reservations
+                     , Controllers.ChannelsController
+                     , Controllers.InstallController
+                     , Controllers.ProgramsController
+                     , Controllers.ReservationsController
                      , Class.Castable
                      , Helper
                      , Job

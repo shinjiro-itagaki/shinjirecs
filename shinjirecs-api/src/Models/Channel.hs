@@ -2,7 +2,7 @@
 module Models.Channel where
 import DB(Channel)
 -- import Model(ActiveRecord(..))
-import DB.Class(Record)
+-- import DB.Class(Record)
 
 -- instance UniqueReplaceableModel Channel
 -- instance CascadeDeletableModel Channel

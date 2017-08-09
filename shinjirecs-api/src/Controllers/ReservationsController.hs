@@ -2,8 +2,8 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Controllers.Reservations where
-import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
+module Controllers.ReservationsController where
+-- import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
 
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
@@ -23,6 +23,7 @@ import Control.Monad.Reader(ReaderT) -- mtl
 
 data ReservationsController = ReservationsController { conn_ :: ConnectionPool }
 
+{- 
 instance Controller ReservationsController where
   new                 = ReservationsController
   conn                = conn_
@@ -79,3 +80,4 @@ destroy = def Destroy impl'
             status $ bool status201 status400 b
             return c
         )
+-}
