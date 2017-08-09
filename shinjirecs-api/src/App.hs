@@ -19,7 +19,7 @@ import qualified DB
 --import qualified DB.Persist
 --import Database.Persist.Sql(ConnectionPool, runMigration) --persistent
 --import Control.Monad.Logger(MonadLogger, monadLoggerLog, NoLoggingT, runNoLoggingT) -- monad-logger
-import Routing
+import Routing(run)
 -- import Server(server, middleware)
 
 {-

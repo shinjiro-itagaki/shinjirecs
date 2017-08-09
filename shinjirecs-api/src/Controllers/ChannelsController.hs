@@ -4,7 +4,7 @@
 
 module Controllers.ChannelsController where
 -- import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
-import Controller(ActionSymbol(..))
+-- import Controller(ActionSymbol(..))
 
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!

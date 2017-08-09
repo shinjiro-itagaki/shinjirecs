@@ -7,34 +7,39 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Controller where
-import DB(Entity(..))
-import DB.Persist
+--import DB(Entity(..))
+--import DB.Persist
 import Data.Aeson(ToJSON(..))
 -- import Server(json,param,jsonData,ActionM,status)
-import Control.Monad.IO.Class(liftIO,MonadIO) -- base
-import Database.Persist.Sql(ConnectionPool,SqlPersistT, runSqlPool)  --persistent
-import Database.Persist (PersistEntity (..)) --persistent
-import qualified Database.Persist.Class as PS
-import Data.Enumerator (Enumerator) -- enumerator
-import qualified Data.Text.Lazy as LText
-import Model(ActiveRecord(..), find, saveR, saveE, ToMaybeEntity(..))
+-- import Control.Monad.IO.Class(liftIO,MonadIO) -- base
+--import Database.Persist.Sql(ConnectionPool,SqlPersistT, runSqlPool)  --persistent
+--import Database.Persist (PersistEntity (..)) --persistent
+--import qualified Database.Persist.Class as PS
+-- import Data.Enumerator (Enumerator) -- enumerator
+-- import qualified Data.Text.Lazy as LText
+-- import Model(ActiveRecord(..), find, saveR, saveE, ToMaybeEntity(..))
 -- import Database.Persist.Types (Entity(..))
-
+import Network.Wai (Request(..))
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
+import DB(Connection)
 
 -- import qualified Database.Persist as P --persistent
-import DB as P
-import Control.Monad.Reader(ReaderT) -- mtl
-import Database.Persist.Sql.Types.Internal (SqlBackend)
-import qualified Model as M
-import Data.Bool(bool)
-import Database.Persist.Sql (ConnectionPool)
+-- import DB as P
+-- import Control.Monad.Reader(ReaderT) -- mtl
+-- import Database.Persist.Sql.Types.Internal (SqlBackend)
+-- import qualified Model as M
+-- import Data.Bool(bool)
+-- import Database.Persist.Sql (ConnectionPool)
 
 -- class (Controller c) => (ControllerAction c) ca
-data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy
-                  | IndexN Int | ListN Int | GetN Int | ReadN Int | ModifyN Int | EditN Int | CreateN Int | NewN Int | DeleteN Int | DestroyN Int
-                  | S String | I Int | SI String Int deriving Eq
+-- data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy
+--                  | IndexN Int | ListN Int | GetN Int | ReadN Int | ModifyN Int | EditN Int | CreateN Int | NewN Int | DeleteN Int | DestroyN Int
+--                  | S String | I Int | SI String Int deriving Eq
 
+type ContentType = String
+type Body = String
+type ControllerResponse = (ContentType, Body)
+type Action = (Connection -> Request -> ControllerResponse)
 
 class Controller a where
   
