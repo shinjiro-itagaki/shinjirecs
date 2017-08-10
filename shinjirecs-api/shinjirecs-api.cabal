@@ -43,7 +43,7 @@ library
                      , Job
                      , Jobs.Recording
                      , Routing
---                     , Server
+                     , Routing.Class
   build-depends:       base >= 4.7 && < 5
                      , HDBC
                      , HDBC-sqlite3
