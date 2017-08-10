@@ -35,20 +35,24 @@ startServer port conn = do
 -}
 
 app :: Env -> Application
-app env request respond = do
+app env req respond = do
   maybeConf <- Config.loadDefault env
   case maybeConf of
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
-      respond $ responseLBS
-        status200
-        [("Content-Type", "text/plain")]
-        "Hello, Web!"
+      case Routing.run req of
+        Just actionset -> respond $ responseLBS
+          status200
+          [("Content-Type", "text/plain")]
+          "Hello, Web!"
+        Nothing -> respond $ responseLBS
+          status404
+          [("Content-Type", "text/plain")]
+          "Hello, Web!"          
     Nothing -> respond $ responseLBS
       status500
       [("Content-Type", "text/plain")]
       "Connect database failed!"
-
 
 listen :: Int -> Env -> IO ()
 listen port env = Network.Wai.Handler.Warp.run port $ app env
