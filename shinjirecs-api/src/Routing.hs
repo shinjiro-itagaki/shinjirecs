@@ -17,6 +17,7 @@ import Data.List(find)
 import Data.ByteString(ByteString)
 import Controller(Action(..), ActionType, ContentType ,Body ,ControllerResponse(..) ,Symbol ,defaultControllerResponse)
 import Data.Map(Map(..), empty, fromList)
+import Data.Int(Int64)
 
 notFound, badRequest :: ActionType ()
 notFound conn req _ = return $ defaultControllerResponse {
@@ -72,7 +73,7 @@ instance PathParamList String where
   path2args = path2arg'
   toAction = Action_S
 
-instance PathParamList Int where
+instance PathParamList Int64 where
   path2args = path2arg'
   toAction = Action_I
 
@@ -80,7 +81,7 @@ instance PathParamList (Map String String) where
   path2args = Right . fromList
   toAction = Action_SMap
 
-instance PathParamList (Map String Int) where
+instance PathParamList (Map String Int64) where
   path2args = Right . fromList . map (\(k,v) -> (k, read v))
   toAction = Action_IMap
 
@@ -88,43 +89,43 @@ instance PathParamList (String ,String) where
   path2args = path2argsXX'
   toAction = Action_SS
   
-instance PathParamList (Int ,Int) where
+instance PathParamList (Int64 ,Int64) where
   path2args = path2argsXX'
   toAction = Action_II
   
-instance PathParamList (Int ,String) where
+instance PathParamList (Int64 ,String) where
   path2args = path2argsXX'
   toAction = Action_IS
   
-instance PathParamList (String , Int) where
+instance PathParamList (String , Int64) where
   path2args = path2argsXX'
   toAction = Action_SI
   
-instance PathParamList (Int , Int , Int) where
+instance PathParamList (Int64 , Int64 , Int64) where
   path2args = path2argsXXX'
   toAction = Action_III
   
-instance PathParamList (String , Int , Int) where
+instance PathParamList (String , Int64 , Int64) where
   path2args = path2argsXXX'
   toAction = Action_SII
   
-instance PathParamList (Int,String,Int) where
+instance PathParamList (Int64,String,Int64) where
   path2args = path2argsXXX'
   toAction = Action_ISI
   
-instance PathParamList (Int,Int,String) where
+instance PathParamList (Int64,Int64,String) where
   path2args = path2argsXXX'
   toAction = Action_IIS
   
-instance PathParamList (String,String,Int) where
+instance PathParamList (String,String,Int64) where
   path2args = path2argsXXX'
   toAction = Action_SSI  
   
-instance PathParamList (Int,String,String) where
+instance PathParamList (Int64,String,String) where
   path2args = path2argsXXX'
   toAction = Action_ISS  
   
-instance PathParamList (String,Int,String) where
+instance PathParamList (String,Int64,String) where
   path2args = path2argsXXX'
   toAction = Action_SIS
   
@@ -135,7 +136,7 @@ instance PathParamList (String,String,String) where
 routingMap :: [Route]
 routingMap = map (\(x,y,z) -> MkRoute x y z) [
    ( [GET],    "/channels/list",                  toAction ChannelsC.list )
-  ,( [GET],    "/channels/:id",                   toAction notFound ) -- ChannelsC.get
+  ,( [GET],    "/channels/:id",                   toAction ChannelsC.get  ) -- ChannelsC.get
   ,( [PATCH],  "/channels/:id",                   toAction notFound ) -- ChannelsC.modify
   ,( [POST],   "/channels",                       toAction notFound ) -- ChannelsC.create
   ,( [DELETE], "/channels/:id",                   toAction notFound ) -- ChannelsC.destroy

@@ -23,6 +23,7 @@ import Data.Aeson(parseJSON,toJSON,ToJSON)
 import Data.Aeson.Types(parseMaybe)
 import Data.Text(Text)
 import Network.Wai(Request)
+import Data.Int(Int64)
 
 -- data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 
@@ -36,9 +37,11 @@ instance Controller ChannelsController where
 -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
 -- toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
 
--- list, get, modify, create, destroy :: (ActionSymbol, (ChannelsController -> ActionM ChannelsController))
-list :: ActionType Int -- (Connection -> Request -> Int -> IO ControllerResponse)
-list conn req id = do
+toMaybeText :: ToJSON a => a -> Maybe Text
+toMaybeText x = parseMaybe (parseJSON . toJSON) x
+
+list :: ActionType () -- (Connection -> Request -> Int -> IO ControllerResponse)
+list conn req _ = do
   channels <- (DB.select $ DB.channelsTable conn) filters opts
   return $ defaultControllerResponse {
     body = cast $ maybe "" (\x -> x) $ toMaybeText channels -- resText
@@ -47,10 +50,15 @@ list conn req id = do
     filters = [] -- :: [DB.Filter DB.Channel]
     opts    = [] -- :: [DB.SelectOpt DB.Channel]
     data' = [1,2] :: [Int]
-    toMaybeText :: ToJSON a => [a] -> Maybe Text
-    toMaybeText xs = parseMaybe (parseJSON . toJSON) xs
     maybeText = toMaybeText data'
     resText = maybe "" (\x -> x) maybeText :: Text
+
+get :: ActionType Int64
+get conn req id = do
+  channel <- (DB.find $ DB.channelsTable conn) id
+  return $ defaultControllerResponse {
+    body = cast $ maybe "" (\x -> x) $ toMaybeText channel -- resText
+  }  
 
 {- 
 get = def Get impl'

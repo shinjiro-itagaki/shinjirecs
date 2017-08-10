@@ -34,6 +34,7 @@ import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Data.Conduit(Source)
 import DB.Status(ReservationState(..))
+import Data.Int(Int64)
 
 type Connection = ORM.Connection__
 
@@ -74,6 +75,7 @@ data Table record = MkTable {
   ,deleteBy    :: Unique record -> IO ()
   ,deleteWhere :: [Filter record] -> IO ()
   ,get         :: Key record -> IO (Maybe record)
+  ,find        :: Int64 -> IO (Maybe record)
   ,getBy       :: Unique record -> IO (Maybe (Entity record))
   ,select      :: [Filter record] -> [SelectOpt record] -> IO [Entity record]
 --  ,selectKeys  :: [Filter record] -> [SelectOpt record] -> Source IO (Key record)
@@ -93,6 +95,7 @@ mkTable conn = MkTable {
   ,deleteBy    = ORM.deleteBy     conn
   ,deleteWhere = ORM.deleteWhere  conn
   ,get         = ORM.get          conn
+  ,find        = ORM.find         conn
   ,getBy       = ORM.getBy        conn
   ,select      = ORM.select       conn
   ,count       = ORM.count        conn

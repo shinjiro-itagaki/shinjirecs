@@ -25,6 +25,7 @@ module DB.Persist(
   ,DB.Persist.deleteWhere
   ,DB.Persist.get
   ,DB.Persist.getBy
+  ,DB.Persist.find
   ,DB.Persist.select
   ,DB.Persist.selectKeys
   ,DB.Persist.count
@@ -65,6 +66,7 @@ import Data.Time -- time
 import Data.ByteString -- bytestring
 import Data.Word -- base
 import Data.Text (Text,pack) -- text
+import Data.Int(Int64)
 import qualified Data.Text as Text --text
 -- import DB.Class(Record(..))
 import Data.Conduit(Source)
@@ -184,6 +186,12 @@ deleteWhere connpool filters = runSqlPool (Database.Persist.deleteWhere filters)
 
 get :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m (Maybe record)
 get connpool key = runSqlPool (Database.Persist.get key) connpool
+
+find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe record)
+find connpool id =
+  case keyFromValues [PersistInt64 id] of
+    Left x -> return Nothing
+    Right key -> DB.Persist.get connpool key
 
 getBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m (Maybe (Entity record))
 getBy connpool unique = runSqlPool (Database.Persist.getBy unique) connpool
