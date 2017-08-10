@@ -14,21 +14,20 @@ import Data.List(find)
 import Data.ByteString(ByteString)
 import Controller(ContentType ,Body ,ControllerResponse(..) ,Symbol ,Action ,defaultControllerResponse)
 
-notFoundFunc :: Connection -> Request -> Symbol -> ControllerResponse
-notFoundFunc conn req sym = defaultControllerResponse {
+notFoundFunc :: Connection -> Request -> IO ControllerResponse
+notFoundFunc conn req = return $ defaultControllerResponse {
   status = status404
   }
 
-notFound = (notFoundFunc, "")
+notFound = notFoundFunc
 
 type Path = ByteString
 type PathPattern = ByteString
-type ActionSet = (Action, Symbol)
-type Route = ([StdMethod], PathPattern, ActionSet)
+type Route = ([StdMethod], PathPattern, Action)
 
 routingMap :: [Route]
 routingMap = [
-  (  [GET],    "/channels/list",                  notFound ) -- ChannelsC.list
+  (  [GET],    "/channels/list",                  ChannelsC.list ) -- ChannelsC.list
   ,( [GET],    "/channels/:id" ,                  notFound ) -- ChannelsC.get
   ,( [PATCH],  "/channels/:id",                   notFound ) -- ChannelsC.modify
   ,( [POST],   "/channels",                       notFound ) -- ChannelsC.create
@@ -53,15 +52,15 @@ routingMap = [
   ,( [DELETE], "/reservations/:id",               notFound ) -- ReservationsC.destroy
   ]
 
-findRoute :: StdMethod -> Path -> Maybe ActionSet
+findRoute :: StdMethod -> Path -> Maybe Action
 findRoute stdmethod path =
   case res of
-    Just (_ ,_ ,actionset) -> Just actionset
-    Nothing                -> Nothing
+    Just (_ ,_ ,action) -> Just action
+    Nothing             -> Nothing
   where
-    res = find (\(stdmethods, path', actionset') -> elem stdmethod stdmethods && path == path') routingMap
+    res = find (\(stdmethods, path', action') -> elem stdmethod stdmethods && path == path') routingMap
 
-run :: Request -> Maybe ActionSet
+run :: Request -> Maybe Action
 run req = do
   case parseMethod $ requestMethod req of
     Left _ -> Nothing

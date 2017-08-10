@@ -13,6 +13,7 @@ import Data.ByteString.Lazy as L
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
 import DB(Connection)
+import Class.Castable(Castable(..))
 
 type ContentType = B.ByteString
 type Body = L.ByteString
@@ -31,4 +32,4 @@ defaultControllerResponse = MkControllerResponse {
   }
   
 type Symbol = String
-type Action = (Connection -> Request -> Symbol -> ControllerResponse)
+type Action = (Connection -> Request -> IO ControllerResponse)

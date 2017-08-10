@@ -11,18 +11,16 @@ import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
 -- import Server(json,param,jsonData,ActionM,status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
-import qualified Database.Persist as P --persistent
-import Database.Persist.Types (Entity(entityVal))
 import qualified DB
-import qualified Database.Persist.Class as PS
-import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
-import Database.Persist.Sql.Types.Internal (SqlBackend)
+-- import qualified Database.Persist.Class as PS
 import Model (find, saveE,saveR ,ToMaybeEntity(..))
 import qualified Model as M
 import Models.Channel
 import Control.Monad.Reader(ReaderT) -- mtl
+import Controller(Action,Symbol, ControllerResponse(..), defaultControllerResponse)
+import Class.Castable(cast)
 
-data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
+-- data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 
 {-
 instance Controller ChannelsController where
@@ -32,17 +30,21 @@ instance Controller ChannelsController where
   beforeAction _    c = return (True, c)
 -}
 -- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
-toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
-{- 
-list, get, modify, create, destroy :: (ActionSymbol, (ChannelsController -> ActionM ChannelsController))
+-- toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
 
-list = def List list'
+-- list, get, modify, create, destroy :: (ActionSymbol, (ChannelsController -> ActionM ChannelsController))
+list :: Action -- (Connection -> Request -> IO ControllerResponse)
+list conn req = do
+  channels <- (DB.select $ DB.channelsTable conn) filters opts
+  return $ defaultControllerResponse {
+    body = cast $ map show [1,2]
+  }
   where
-    filter = [] :: [P.Filter DB.Channel]
-    opt    = [] :: [P.SelectOpt DB.Channel]
-    list' :: ChannelsController -> ActionM ChannelsController
-    list' c = (db c $ P.selectList filter opt) >>= json . map P.entityVal >> return c
-
+    filters = [] -- :: [DB.Filter DB.Channel]
+    opts    = [] -- :: [DB.SelectOpt DB.Channel]
+--     channels_io = 
+--    list' c = (channelsTableDB.select conn filter opt) >>= json . map P.entityVal >> return c
+{- 
 get = def Get impl'
   where
     impl' :: ChannelsController -> ActionM ChannelsController

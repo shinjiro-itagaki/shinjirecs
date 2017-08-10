@@ -16,8 +16,8 @@ import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
 import Config.Env(Env(..))
 import DB
-import Controller(ControllerResponse(..))
-import Routing(run,ActionSet)
+import Controller(Action,ControllerResponse(..))
+import Routing(run)
 
 {-
 setCommonHeaders :: Middleware
@@ -34,9 +34,9 @@ startServer port conn = do
     Routing.run conn
 -}
 
-fireActionSet :: Connection -> Request -> ActionSet -> ControllerResponse
-fireActionSet conn req (action, sym) =
-  action conn req sym
+fireAction :: Connection -> Request -> Action -> IO ControllerResponse
+fireAction conn req action =
+  action conn req
 
 toResponse :: ControllerResponse -> Response
 toResponse res = responseLBS
@@ -50,12 +50,13 @@ app env req respond = do
   case maybeConf of
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
-      respond $ case Routing.run req of
-        Just actionset -> toResponse $ fireActionSet conn req actionset
-        Nothing -> responseLBS
+      response <- case Routing.run req of
+        Just action -> fmap toResponse $ fireAction conn req action
+        Nothing -> return $ responseLBS
           status404
           [("Content-Type", "text/plain")]
-          "Hello, Web!"          
+          "Hello, Web!"
+      respond response
     Nothing -> respond $ responseLBS
       status500
       [("Content-Type", "text/plain")]

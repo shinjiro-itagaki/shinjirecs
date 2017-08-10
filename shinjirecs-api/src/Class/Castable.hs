@@ -7,12 +7,16 @@ import Data.Time.Clock(UTCTime(..),addUTCTime,NominalDiffTime,getCurrentTime)
 import Data.Word(Word)
 import Control.Monad.IO.Class(MonadIO) -- base
 import Data.Time.Calendar(fromGregorian,toGregorian)
-import Data.Text(Text,pack,unpack)
+import Data.Text as T
+import Data.ByteString as B
+import Data.ByteString.Char8 as BC
+import Data.ByteString.Lazy as L
 
 -- time = from (2017,3,21)
 -- (y,m,d) = from time
-class Castable b a where
-  from :: b -> a
+class Castable from' to' where
+  from, cast :: from' -> to'
+  cast = from
 
 -- time = from (2017,3,21,22,33,45) :: UTCTime
 instance (Integral y, Integral m, Integral d, Integral hh, Integral mm, Integral ss) => Castable (y,m,d,hh,mm,ss) UTCTime where
@@ -47,9 +51,17 @@ instance (MonadIO m) => Castable [m a] (m [a]) where
 instance Castable (FilePath,[String]) CreateProcess where
   from (scriptpath,args) = proc scriptpath args
 
-instance Castable Text String where
-  from = unpack
+instance Castable T.Text String where
+  from = T.unpack
 
-instance Castable String Text where
-  from = pack
+instance Castable String T.Text where
+  from = T.pack
     
+instance Castable [B.ByteString] L.ByteString where
+  from = L.fromChunks
+
+instance Castable String B.ByteString where
+  from = BC.pack
+
+instance Castable [String] L.ByteString where
+  from = L.fromChunks . Prelude.map from
