@@ -35,8 +35,7 @@ startServer port conn = do
 -}
 
 fireAction :: Connection -> Request -> Action -> IO ControllerResponse
-fireAction conn req action =
-  action conn req
+fireAction conn req action = error "not implemented"
 
 toResponse :: ControllerResponse -> Response
 toResponse res = responseLBS
