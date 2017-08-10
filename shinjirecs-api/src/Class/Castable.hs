@@ -11,6 +11,7 @@ import Data.Text as T
 import Data.ByteString as B
 import Data.ByteString.Char8 as BC
 import Data.ByteString.Lazy as L
+import Data.ByteString.Lazy.Char8 as LC
 
 -- time = from (2017,3,21)
 -- (y,m,d) = from time
@@ -65,3 +66,9 @@ instance Castable String B.ByteString where
 
 instance Castable [String] L.ByteString where
   from = L.fromChunks . Prelude.map from
+
+instance Castable String L.ByteString where
+  from = LC.pack
+
+instance Castable T.Text L.ByteString where
+  from = LC.pack . T.unpack

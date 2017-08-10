@@ -19,6 +19,9 @@ import Models.Channel
 import Control.Monad.Reader(ReaderT) -- mtl
 import Controller(Action,Symbol, ControllerResponse(..), defaultControllerResponse)
 import Class.Castable(cast)
+import Data.Aeson(parseJSON,toJSON)
+import Data.Aeson.Types(parseMaybe)
+import Data.Text(Text)
 
 -- data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
 
@@ -37,11 +40,14 @@ list :: Action -- (Connection -> Request -> IO ControllerResponse)
 list conn req = do
   channels <- (DB.select $ DB.channelsTable conn) filters opts
   return $ defaultControllerResponse {
-    body = cast $ map show [1,2]
+    body = cast $ resText
   }
   where
     filters = [] -- :: [DB.Filter DB.Channel]
     opts    = [] -- :: [DB.SelectOpt DB.Channel]
+    data' = [1,2] :: [Int]
+    maybeText = parseMaybe (parseJSON . toJSON) data' :: Maybe Text
+    resText = maybe "" (\x -> x) maybeText :: Text
 --     channels_io = 
 --    list' c = (channelsTableDB.select conn filter opt) >>= json . map P.entityVal >> return c
 {- 
