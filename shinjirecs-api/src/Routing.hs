@@ -64,15 +64,27 @@ class PathParamList a where
   path2args :: RawPathParams -> Either RawPathParams a
   path2args others = Left others  
   mkRoute :: [StdMethod] -> PathPattern -> (Connection -> Request -> a ->  IO ControllerResponse) -> Route2
+
+path2arg' :: (Read a) => RawPathParams -> Either RawPathParams a
+path2arg' (x:yy) = Right $ read $ snd x
+path2arg' others = Left others
+
+path2argsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParams (a,b)
+path2argsXX' (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+path2argsXX' others = Left others
+
+path2argsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParams (a,b,c)
+path2argsXXX' (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd $ x2)
+path2argsXXX' others = Left others
   
 -- for MkRoute_S
 instance PathParamList String where
-  path2args (x:yy) = Right $ read $ snd x
+  path2args = path2arg'
   mkRoute = MkRoute_S
 
 -- for MkRoute_I
 instance PathParamList Int where
-  path2args (x:yy) = Right $ read $ snd x
+  path2args = path2arg'
   mkRoute = MkRoute_I
 
 -- for MkRoute_SMap
@@ -87,68 +99,68 @@ instance PathParamList (Map String Int) where
 
 -- for MkRoute_SS
 instance PathParamList (String ,String) where
-  path2args (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+  path2args = path2argsXX'
   mkRoute = MkRoute_SS
   
 -- for MkRoute_II
 instance PathParamList (Int ,Int) where
-  path2args (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+  path2args = path2argsXX'
   mkRoute = MkRoute_II
   
 -- for MkRoute_IS
 instance PathParamList (Int ,String) where
-  path2args (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+  path2args = path2argsXX'
   mkRoute = MkRoute_IS
   
 -- for MkRoute_SI
 instance PathParamList (String , Int) where
-  path2args (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+  path2args = path2argsXX'
   mkRoute = MkRoute_SI
   
 -- for MkRoute_III
 instance PathParamList (Int , Int , Int) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_III
   
 -- for MkRoute_SII
 instance PathParamList (String , Int , Int) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_SII
   
 -- for MkRoute_ISI
 instance PathParamList (Int,String,Int) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_ISI
   
 -- for MkRoute_IIS
 instance PathParamList (Int,Int,String) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_IIS
   
 -- for MkRoute_SSI
 instance PathParamList (String,String,Int) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_SSI  
   
 -- for MkRoute_ISS
 instance PathParamList (Int,String,String) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_ISS  
   
 -- for MkRoute_SIS
 instance PathParamList (String,Int,String) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_SIS
   
 -- for MkRoute_SSS
 instance PathParamList (String,String,String) where
-  path2args (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd x2)
+  path2args = path2argsXXX'
   mkRoute = MkRoute_SSS  
 
   
 routingMap2 :: [Route2]
-routingMap2 = [
-  mkRoute [GET] "/channels/list" ChannelsC.list2
+routingMap2 = map (\(x,y,z) -> mkRoute x y z) [
+  ( [GET] , "/channels/list" , ChannelsC.list2 )
   ]
 
 routingMap :: [Route]

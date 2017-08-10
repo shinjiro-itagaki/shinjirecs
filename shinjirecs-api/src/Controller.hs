@@ -33,6 +33,6 @@ defaultControllerResponse = MkControllerResponse {
   
 type Symbol = String
 type Action = (Connection -> Request -> IO ControllerResponse)
-
+type Action2 a = (Connection -> Request -> a -> IO ControllerResponse)
 
 
