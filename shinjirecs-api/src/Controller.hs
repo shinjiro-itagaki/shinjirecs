@@ -8,12 +8,14 @@
 
 module Controller where
 import Data.Aeson(ToJSON(..))
+import Data.ByteString as B
+import Data.ByteString.Lazy as L
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
 import DB(Connection)
 
-type ContentType = String
-type Body = String
+type ContentType = B.ByteString
+type Body = L.ByteString
 
 data ControllerResponse = MkControllerResponse {
   contentType :: ContentType

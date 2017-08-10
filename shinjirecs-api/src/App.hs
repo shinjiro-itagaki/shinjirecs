@@ -16,8 +16,8 @@ import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
 import Config.Env(Env(..))
 import DB
---import Control.Monad.Logger(MonadLogger, monadLoggerLog, NoLoggingT, runNoLoggingT) -- monad-logger
-import Routing(run)
+import Controller(ControllerResponse(..))
+import Routing(run,ActionSet)
 
 {-
 setCommonHeaders :: Middleware
@@ -34,18 +34,25 @@ startServer port conn = do
     Routing.run conn
 -}
 
+fireActionSet :: Connection -> Request -> ActionSet -> ControllerResponse
+fireActionSet conn req (action, sym) =
+  action conn req sym
+
+toResponse :: ControllerResponse -> Response
+toResponse res = responseLBS
+  (status res)
+  [("Content-Type", contentType res)]
+  (body res)
+
 app :: Env -> Application
 app env req respond = do
   maybeConf <- Config.loadDefault env
   case maybeConf of
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
-      case Routing.run req of
-        Just actionset -> respond $ responseLBS
-          status200
-          [("Content-Type", "text/plain")]
-          "Hello, Web!"
-        Nothing -> respond $ responseLBS
+      respond $ case Routing.run req of
+        Just actionset -> toResponse $ fireActionSet conn req actionset
+        Nothing -> responseLBS
           status404
           [("Content-Type", "text/plain")]
           "Hello, Web!"          
