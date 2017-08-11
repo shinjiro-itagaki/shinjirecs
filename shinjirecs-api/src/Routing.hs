@@ -17,9 +17,10 @@ import Data.List(find)
 import Data.ByteString(ByteString)
 import Data.ByteString.Char8(split,null)
 
-import Controller(Action(..), ActionType, ControllerResponse(..) ,defaultControllerResponse)
+import Controller.Types(Action(..), ActionType, ControllerResponse(..) ,ParamGivenActionType)
+import Controller(defaultControllerResponse)
 
-import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..))
+import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenActionType)
 import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
@@ -33,10 +34,6 @@ notFound conn req _ = return $ defaultControllerResponse {
 badRequest conn req _ = return $ defaultControllerResponse {
   status = status400
   }
-notImplemented = error "not implemented"
-
-ptn2params :: PathPattern -> ByteString -> RawPathParams
-ptn2params ptn path = notImplemented
 
 data Route = MkRoute [StdMethod] PathPattern Action
 
@@ -53,13 +50,22 @@ matchPathElements ptn@(x:xs) pathelems@(y:ys) params =
   then matchPathElements xs ys params -- match and do next
   else Nothing -- unmatch
 
-matchPath :: Route -> Path -> Bool
-matchPath (MkRoute _ ptn _ ) path = isJust $ matchPathElements ptn_pieces' path_pieces' (Just [])
+pathToPieces :: Path -> [String]
+pathToPieces path = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString path
+
+getMaybeRawPathParams :: Route -> Path -> Maybe RawPathParams
+getMaybeRawPathParams (MkRoute _ ptn _ ) path = matchPathElements ptn_pieces' path_pieces' (Just [])
   where
-    toPieces' str = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString str
-    ptn_pieces'  = toPieces' ptn
-    path_pieces' = toPieces' path
+    ptn_pieces'  = pathToPieces ptn
+    path_pieces' = pathToPieces path
+
+matchPath :: Route -> Path -> Bool
+matchPath r p = isJust $ getMaybeRawPathParams r p
     
+getRawPathParams :: Route -> Path -> RawPathParams
+getRawPathParams r p = case getMaybeRawPathParams r p of
+  Just params -> params
+  Nothing     -> []
 
 routingMap :: [Route]
 routingMap = map (\(x,y,z) -> MkRoute x y z) [
@@ -95,8 +101,10 @@ findAction stdmethod path = case res of
   where
     res = find (\route -> (matchStdMethods route stdmethod) && (matchPath route path)) routingMap
 
-run :: Request -> Maybe Action
+run :: Request -> Maybe ParamGivenActionType
 run req = do
   case parseMethod $ requestMethod req of
     Left _ -> Nothing
-    Right stdmethod -> findAction stdmethod (rawPathInfo req)
+    Right stdmethod -> case findAction stdmethod (rawPathInfo req) of
+      Just action -> Just $ toParamGivenActionType action []
+      Nothing -> Nothing

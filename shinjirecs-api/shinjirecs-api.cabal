@@ -34,6 +34,7 @@ library
                      , Models.Reservation
                      , Models.Program
                      , Controller
+                     , Controller.Types                     
                      , Controllers.ChannelsController
                      , Controllers.InstallController
                      , Controllers.ProgramsController

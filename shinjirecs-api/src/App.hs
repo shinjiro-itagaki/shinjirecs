@@ -16,7 +16,7 @@ import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
 import Config.Env(Env(..))
 import DB
-import Controller(Action,ControllerResponse(..))
+import Controller.Types(Action,ControllerResponse(..),ParamGivenActionType)
 import Routing(run)
 
 {-
@@ -34,8 +34,8 @@ startServer port conn = do
     Routing.run conn
 -}
 
-fireAction :: Connection -> Request -> Action -> IO ControllerResponse
-fireAction conn req action = error "not implemented"
+fireAction :: Connection -> Request -> ParamGivenActionType -> IO ControllerResponse
+fireAction conn req action = action conn req
 
 toResponse :: ControllerResponse -> Response
 toResponse res = responseLBS

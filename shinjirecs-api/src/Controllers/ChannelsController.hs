@@ -17,7 +17,8 @@ import Model (find, saveE,saveR ,ToMaybeEntity(..))
 import qualified Model as M
 import Models.Channel
 import Control.Monad.Reader(ReaderT) -- mtl
-import Controller(ActionType,Symbol, ControllerResponse(..), defaultControllerResponse,toBody)
+import Controller.Types(ActionType,Symbol, ControllerResponse(..))
+import Controller(defaultControllerResponse,toBody)
 import Class.String(StringClass(..))
 import Data.Aeson(parseJSON,toJSON,ToJSON)
 import Data.Aeson.Types(parseMaybe)
@@ -40,8 +41,8 @@ instance Controller ChannelsController where
 toMaybeText :: ToJSON a => a -> Maybe Text
 toMaybeText x = parseMaybe (parseJSON . toJSON) x
 
-list :: ActionType () -- (Connection -> Request -> Int -> IO ControllerResponse)
-list conn req _ = do
+list :: ActionType () -- (Int -> Connection -> Request -> IO ControllerResponse)
+list _ conn req = do
   channels <- (DB.select $ DB.channelsTable conn) filters opts
   return $ defaultControllerResponse {
     body = toBody $ maybe "" (\x -> x) $ toMaybeText channels -- resText
@@ -54,7 +55,7 @@ list conn req _ = do
     resText = maybe "" (\x -> x) maybeText :: Text
 
 get :: ActionType Int64
-get conn req id = do
+get id conn req = do
   channel <- (DB.find $ DB.channelsTable conn) id
   return $ defaultControllerResponse {
     body = toBody $ maybe "" (\x -> x) $ toMaybeText channel -- resText
