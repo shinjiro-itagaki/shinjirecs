@@ -39,6 +39,7 @@ library
                      , Controllers.ProgramsController
                      , Controllers.ReservationsController
                      , Class.Castable
+                     , Class.String
                      , Helper
                      , Job
                      , Jobs.Recording

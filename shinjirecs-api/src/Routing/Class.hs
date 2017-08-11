@@ -16,6 +16,8 @@ type RawPathParamVal = String
 type RawPathParam    = (RawPathParamKey, RawPathParamVal)
 type RawPathParams   = [RawPathParam]
 
+
+
 class PathParamList a where
   path2args :: RawPathParams -> Either RawPathParams a
   path2args others = Left others

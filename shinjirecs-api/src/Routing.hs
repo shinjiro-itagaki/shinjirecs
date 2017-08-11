@@ -38,7 +38,10 @@ matchStdMethods :: Route -> StdMethod -> Bool
 matchStdMethods (MkRoute ys _ _ ) x = elem x ys
 
 matchPath :: Route -> Path -> Bool
-matchPath (MkRoute _ ptn _ ) path = notImplemented
+matchPath (MkRoute _ ptn _ ) path =
+  notImplemented
+  where
+--    ptndiv = 
 
 routingMap :: [Route]
 routingMap = map (\(x,y,z) -> MkRoute x y z) [
