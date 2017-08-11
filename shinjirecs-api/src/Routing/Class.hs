@@ -19,88 +19,88 @@ type RawPathParams   = [RawPathParam]
 
 
 class PathParamList a where
-  path2args :: RawPathParams -> Either RawPathParams a
-  path2args others = Left others
+  rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
+  rawPathParamsToArgs others = Left others
   toAction :: ActionType a -> Action
 
 
 
-path2arg' :: (Read a) => RawPathParams -> Either RawPathParams a
-path2arg' (x:yy) = Right $ read $ snd x
-path2arg' others = Left others
+rawPathParamsToArg' :: (Read a) => RawPathParams -> Either RawPathParams a
+rawPathParamsToArg' (x:yy) = Right $ read $ snd x
+rawPathParamsToArg' others = Left others
 
-path2argsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParams (a,b)
-path2argsXX' (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
-path2argsXX' others = Left others
+rawPathParamsToArgsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParams (a,b)
+rawPathParamsToArgsXX' (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
+rawPathParamsToArgsXX' others = Left others
 
-path2argsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParams (a,b,c)
-path2argsXXX' (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd $ x2)
-path2argsXXX' others = Left others
+rawPathParamsToArgsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParams (a,b,c)
+rawPathParamsToArgsXXX' (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd $ x2)
+rawPathParamsToArgsXXX' others = Left others
 
 instance PathParamList () where
-  path2args = path2arg'
+  rawPathParamsToArgs = rawPathParamsToArg'
   toAction = Action_N
   
 instance PathParamList String where
-  path2args = path2arg'
+  rawPathParamsToArgs = rawPathParamsToArg'
   toAction = Action_S
 
 instance PathParamList Int64 where
-  path2args = path2arg'
+  rawPathParamsToArgs = rawPathParamsToArg'
   toAction = Action_I
 
 instance PathParamList (Map String String) where
-  path2args = Right . fromList
+  rawPathParamsToArgs = Right . fromList
   toAction = Action_SMap
 
 instance PathParamList (Map String Int64) where
-  path2args = Right . fromList . map (\(k,v) -> (k, read v))
+  rawPathParamsToArgs = Right . fromList . map (\(k,v) -> (k, read v))
   toAction = Action_IMap
 
 instance PathParamList (String ,String) where
-  path2args = path2argsXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXX'
   toAction = Action_SS
   
 instance PathParamList (Int64 ,Int64) where
-  path2args = path2argsXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXX'
   toAction = Action_II
   
 instance PathParamList (Int64 ,String) where
-  path2args = path2argsXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXX'
   toAction = Action_IS
   
 instance PathParamList (String , Int64) where
-  path2args = path2argsXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXX'
   toAction = Action_SI
   
 instance PathParamList (Int64 , Int64 , Int64) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_III
   
 instance PathParamList (String , Int64 , Int64) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_SII
   
 instance PathParamList (Int64,String,Int64) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_ISI
   
 instance PathParamList (Int64,Int64,String) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_IIS
   
 instance PathParamList (String,String,Int64) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_SSI  
   
 instance PathParamList (Int64,String,String) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_ISS  
   
 instance PathParamList (String,Int64,String) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_SIS
   
 instance PathParamList (String,String,String) where
-  path2args = path2argsXXX'
+  rawPathParamsToArgs = rawPathParamsToArgsXXX'
   toAction = Action_SSS  
