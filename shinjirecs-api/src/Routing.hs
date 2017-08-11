@@ -15,9 +15,15 @@ import Network.HTTP.Types (status200, status201, status400, status404)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
 import Data.List(find)
 import Data.ByteString(ByteString)
+import Data.ByteString.Char8(split,null)
+
 import Controller(Action(..), ActionType, ControllerResponse(..) ,defaultControllerResponse)
 
-import Routing.Class
+import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..))
+import Class.String(StringClass(..))
+import Data.List.Split
+import Data.Maybe(fromJust,isJust)
+import Data.Word(Word8)
 
 notFound, badRequest :: ActionType ()
 notFound conn req _ = return $ defaultControllerResponse {
@@ -37,11 +43,23 @@ data Route = MkRoute [StdMethod] PathPattern Action
 matchStdMethods :: Route -> StdMethod -> Bool
 matchStdMethods (MkRoute ys _ _ ) x = elem x ys
 
+matchPathElements :: [String] -> [String] -> Maybe RawPathParams -> Maybe RawPathParams
+matchPathElements _      _      Nothing = Nothing -- protect error by fromJust
+matchPathElements []     (y:ys) _       = Nothing -- mismatch count of elements
+matchPathElements (x:xs) []     _       = Nothing -- mismatch count of elements
+matchPathElements ptn@(x@(':':sym):xs) pathelems@(y:ys) params = matchPathElements xs ys $ Just $ (fromJust params) ++ [(sym, y)]
+matchPathElements ptn@(x:xs) pathelems@(y:ys) params =
+  if x == y
+  then matchPathElements xs ys params -- match and do next
+  else Nothing -- unmatch
+
 matchPath :: Route -> Path -> Bool
-matchPath (MkRoute _ ptn _ ) path =
-  notImplemented
+matchPath (MkRoute _ ptn _ ) path = isJust $ matchPathElements ptn_pieces' path_pieces' (Just [])
   where
---    ptndiv = 
+    toPieces' str = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString str
+    ptn_pieces'  = toPieces' ptn
+    path_pieces' = toPieces' path
+    
 
 routingMap :: [Route]
 routingMap = map (\(x,y,z) -> MkRoute x y z) [

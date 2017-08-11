@@ -76,6 +76,7 @@ library
                      , process
                      , resourcet
                      , scientific
+                     , split
                      , system-argv0
                      , text
                      , time

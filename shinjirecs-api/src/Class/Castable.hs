@@ -51,24 +51,3 @@ instance (MonadIO m) => Castable [m a] (m [a]) where
 
 instance Castable (FilePath,[String]) CreateProcess where
   from (scriptpath,args) = proc scriptpath args
-
-instance Castable T.Text String where
-  from = T.unpack
-
-instance Castable String T.Text where
-  from = T.pack
-    
-instance Castable [B.ByteString] L.ByteString where
-  from = L.fromChunks
-
-instance Castable String B.ByteString where
-  from = BC.pack
-
-instance Castable [String] L.ByteString where
-  from = L.fromChunks . Prelude.map from
-
-instance Castable String L.ByteString where
-  from = LC.pack
-
-instance Castable T.Text L.ByteString where
-  from = LC.pack . T.unpack

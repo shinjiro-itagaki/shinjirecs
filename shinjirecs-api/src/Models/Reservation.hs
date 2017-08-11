@@ -19,6 +19,8 @@ import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
 import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..),scriptArgs)
 import System.FilePath.Posix((</>),pathSeparators) -- filepath
 import Database.Persist.Types (Entity(..))
+import Class.String(StringClass(..))
+
 
 instance ActiveRecord Reservation
 
@@ -96,7 +98,7 @@ symbolValue r (StartTime tipe) = impl' tipe
     impl' Seconds = sec'
     impl' Sec     = sec'
     impl' SS      = sec'
-symbolValue r ProgramName = from $ reservationName r
+symbolValue r ProgramName = toString $ reservationName r
 
 instance Show FormatSymbol where
   show Counter = "counter"

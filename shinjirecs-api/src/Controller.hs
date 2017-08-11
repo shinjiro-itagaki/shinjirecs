@@ -14,8 +14,10 @@ import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
 import DB(Connection)
 import Class.Castable(Castable(..))
+import Class.String(StringClass(..))
 import Data.Map(Map(..), empty, fromList)
 import Data.Int(Int64)
+
 
 type ContentType = B.ByteString
 type Body = L.ByteString
@@ -53,3 +55,6 @@ data Action = Action_N    (ActionType ()                     )
             | Action_ISS  (ActionType (Int64,String,String)    )
             | Action_SIS  (ActionType (String,Int64,String)    )
             | Action_SSS  (ActionType (String,String,String) )
+
+toBody :: (StringClass str) => str -> Body
+toBody = toByteStringL
