@@ -1,0 +1,18 @@
+default:
+  marginStart: 3
+
+  # args
+  # 1 : device file path
+  # 2 : physical channel number
+  # 3 : recording seconds
+  # 4 : dest file path
+  scriptFilePath: "recpt1.sh"
+
+development:
+  <<: default
+  
+test:
+  <<: development
+  
+production:
+  <<: default
