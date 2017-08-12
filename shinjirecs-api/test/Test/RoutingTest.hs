@@ -54,5 +54,6 @@ findActionTest =
 tests :: Test
 tests = TestList [
   pathToPiecesTest
-  ,getMaybeRawPathParamsFromPatternAndPathTest  
+  ,getMaybeRawPathParamsFromPatternAndPathTest
+  ,findActionTest
   ]
