@@ -50,7 +50,7 @@ matchPathElements ptn@(x:xs) pathelems@(y:ys) params =
   then matchPathElements xs ys params -- match and do next
   else Nothing -- unmatch
 matchPathElements [] [] x = x -- finished
-matchPathElements _ _ _ = Nothing -- error
+-- matchPathElements _ _ _ = Nothing -- error
 
 pathToPieces :: Path -> [String]
 pathToPieces path = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString path
@@ -73,31 +73,40 @@ getRawPathParams r p = case getMaybeRawPathParams r p of
   Just params -> params
   Nothing     -> []
 
+(@>>) :: (PathParamList a) => ([StdMethod], PathPattern) -> Action a -> Route
+(@>>) (stdmethods, pathpattern) action = MkRoute stdmethods pathpattern $ toActionWrapper action
+
+_GET_ = [GET]
+_POST_ = [POST]
+_PATCH_ = [PATCH,PUT]
+_DELETE_ = [DELETE]
+
 routingMap :: [Route]
-routingMap = map (\(x,y,z) -> MkRoute x y z) [
-   ( [GET],    "/channels/list",                  toActionWrapper ChannelsC.list )
-  ,( [GET],    "/channels/:id",                   toActionWrapper ChannelsC.get  ) -- ChannelsC.get
-  ,( [PATCH],  "/channels/:id",                   toActionWrapper notFound ) -- ChannelsC.modify
-  ,( [POST],   "/channels",                       toActionWrapper notFound ) -- ChannelsC.create
-  ,( [DELETE], "/channels/:id",                   toActionWrapper notFound ) -- ChannelsC.destroy
+routingMap = [
+  (  []    ,   "/"                  ) @>> notFound -- constantly not match
+  ,( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
+  ,( _GET_,    "/channels/:id"      ) @>> ChannelsC.get
+  ,( _PATCH_,  "/channels/:id"      ) @>> notFound -- ChannelsC.modify
+  ,( _POST_,   "/channels"          ) @>> notFound -- ChannelsC.create
+  ,( _DELETE_, "/channels/:id"      ) @>> notFound -- ChannelsC.destroy
     
-  ,( [GET],    "/install/index",                  toActionWrapper notFound ) -- InstallC.index
-  ,( [GET],    "/install/result_detect_channels", toActionWrapper notFound ) -- InstallC.resultDetectChannels
-  ,( [GET],    "/install/step1",                  toActionWrapper notFound ) -- (InstallC.step 1)
-  ,( [GET],    "/install/step2",                  toActionWrapper notFound ) -- (InstallC.step 2)
-  ,( [GET],    "/install/step3",                  toActionWrapper notFound ) -- (InstallC.step 3)
+  ,( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
+  ,( _GET_,    "/install/channels"  ) @>> notFound -- InstallC.resultDetectChannels
+  ,( _GET_,    "/install/step1"     ) @>> notFound -- (InstallC.step 1)
+  ,( _GET_,    "/install/step2"     ) @>> notFound -- (InstallC.step 2)
+  ,( _GET_,    "/install/step3"     ) @>> notFound -- (InstallC.step 3)
     
-  ,( [GET],    "/programs/list",                  toActionWrapper notFound ) -- ProgramsC.list
-  ,( [GET],    "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.get
-  ,( [PATCH],  "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.modify
-  ,( [POST],   "/programs",                       toActionWrapper notFound ) -- ProgramsC.create
-  ,( [DELETE], "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.destroy
+  ,( _GET_,    "/programs/list"     ) @>> notFound -- ProgramsC.list
+  ,( _GET_,    "/programs/:id"      ) @>> notFound -- ProgramsC.get
+  ,( _PATCH_,  "/programs/:id"      ) @>> notFound -- ProgramsC.modify
+  ,( _POST_,   "/programs"          ) @>> notFound -- ProgramsC.create
+  ,( _DELETE_, "/programs/:id"      ) @>> notFound -- ProgramsC.destroy
     
-  ,( [GET],    "/reservations/list",              toActionWrapper notFound ) -- ReservationsC.list
-  ,( [GET],    "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.get
-  ,( [PATCH],  "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.modify
-  ,( [POST],   "/reservations",                   toActionWrapper notFound ) -- ReservationsC.create
-  ,( [DELETE], "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.destroy  
+  ,( _GET_,    "/reservations/list" ) @>> notFound -- ReservationsC.list
+  ,( _GET_,    "/reservations/:id"  ) @>> notFound -- ReservationsC.get
+  ,( _PATCH_,  "/reservations/:id"  ) @>> notFound -- ReservationsC.modify
+  ,( _POST_,   "/reservations"      ) @>> notFound -- ReservationsC.create
+  ,( _DELETE_, "/reservations/:id"  ) @>> notFound -- ReservationsC.destroy
   ]
   
 findAction :: StdMethod -> Path -> Maybe ActionWrapper
