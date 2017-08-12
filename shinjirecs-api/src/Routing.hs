@@ -53,11 +53,15 @@ matchPathElements ptn@(x:xs) pathelems@(y:ys) params =
 pathToPieces :: Path -> [String]
 pathToPieces path = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString path
 
-getMaybeRawPathParams :: Route -> Path -> Maybe RawPathParams
-getMaybeRawPathParams (MkRoute _ ptn _ ) path = matchPathElements ptn_pieces' path_pieces' (Just [])
+getMaybeRawPathParamsFromPatternAndPath :: PathPattern -> Path -> Maybe RawPathParams
+getMaybeRawPathParamsFromPatternAndPath ptn path =
+  matchPathElements ptn_pieces' path_pieces' (Just [])
   where
     ptn_pieces'  = pathToPieces ptn
     path_pieces' = pathToPieces path
+
+getMaybeRawPathParams :: Route -> Path -> Maybe RawPathParams
+getMaybeRawPathParams (MkRoute _ ptn _ ) path = getMaybeRawPathParamsFromPatternAndPath ptn path
 
 matchPath :: Route -> Path -> Bool
 matchPath r p = isJust $ getMaybeRawPathParams r p
