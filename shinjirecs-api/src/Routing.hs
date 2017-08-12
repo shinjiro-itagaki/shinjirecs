@@ -80,13 +80,14 @@ _GET_ = [GET]
 _POST_ = [POST]
 _PATCH_ = [PATCH,PUT]
 _DELETE_ = [DELETE]
+_ALL_ = [minBound .. maxBound] :: [StdMethod]
 
 routingMap :: [Route]
 routingMap = [
   (  []    ,   "/"                  ) @>> notFound -- constantly not match
   ,( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
   ,( _GET_,    "/channels/:id"      ) @>> ChannelsC.get
-  ,( _PATCH_,  "/channels/:id"      ) @>> notFound -- ChannelsC.modify
+  ,( _PATCH_,  "/channels/:id"      ) @>> ChannelsC.modify
   ,( _POST_,   "/channels"          ) @>> notFound -- ChannelsC.create
   ,( _DELETE_, "/channels/:id"      ) @>> notFound -- ChannelsC.destroy
     
@@ -107,6 +108,7 @@ routingMap = [
   ,( _PATCH_,  "/reservations/:id"  ) @>> notFound -- ReservationsC.modify
   ,( _POST_,   "/reservations"      ) @>> notFound -- ReservationsC.create
   ,( _DELETE_, "/reservations/:id"  ) @>> notFound -- ReservationsC.destroy
+  ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
   ]
   
 findAction :: StdMethod -> Path -> Maybe ActionWrapper

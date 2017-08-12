@@ -110,11 +110,13 @@ test-suite shinjirecs-api-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Test.hs
+  other-modules:       Test.RoutingTest
+                     , Test.HelperTest
   build-depends:       base
                      , shinjirecs-api
                      , HUnit
+                     , dates
                      -- , aeson
-                     -- , dates
                      -- , directory
                      -- , filepath
                      -- , hspec

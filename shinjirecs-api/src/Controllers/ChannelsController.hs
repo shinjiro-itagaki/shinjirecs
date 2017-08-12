@@ -3,20 +3,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Controllers.ChannelsController where
--- import Controller(Controller(..), def, ActionSymbol(..), ToJsonResponse(..), ResponseType(..), findRecord)
--- import Controller(ActionSymbol(..))
-
 import Data.Bool(bool)
 import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
--- import Server(json,param,jsonData,ActionM,status)
 import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
-import Control.Monad.IO.Class(MonadIO,liftIO) -- base
+-- import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified DB
--- import qualified Database.Persist.Class as PS
-import Model (find, saveE,saveR ,ToMaybeEntity(..))
-import qualified Model as M
+-- import Model (find, saveE,saveR ,ToMaybeEntity(..))
+-- import qualified Model as M
 import Models.Channel
-import Control.Monad.Reader(ReaderT) -- mtl
+-- import Control.Monad.Reader(ReaderT) -- mtl
 import Controller.Types(ActionWrapper(..), Action, Symbol, ControllerResponse(..))
 import Controller(defaultControllerResponse,toBody)
 import Class.String(StringClass(..))
@@ -59,16 +54,26 @@ get id conn req = do
   channel <- (DB.find $ DB.channelsTable conn) id
   return $ defaultControllerResponse {
     body = toBody $ maybe "" (\x -> x) $ toMaybeText channel -- resText
-  }  
+  }
 
-{- 
-get = def Get impl'
+modify :: Action Int64
+modify id conn req = do
+  channel <- (DB.find $ DB.channelsTable conn) id
+  return $ defaultControllerResponse {
+    body = toBody $ maybe "" (\x -> x) $ toMaybeText channel -- resText
+  }  
+  {-
   where
     impl' :: ChannelsController -> ActionM ChannelsController
     impl' c = do
       mEntity <- findRecord c "id" :: ActionM (Maybe (Entity DB.Channel))
-      toJsonResponseMaybeEntity FindR mEntity >> return c
+      newrec <- (jsonData :: ActionM DB.Channel)
+      case mEntity of
+        Just e  -> (db c $ saveE $ e {entityVal = newrec}) >>= return . toMaybeEntity' >>= toJsonResponseMaybeEntity SaveR >> return c
+        Nothing -> return c
+-}
 
+{- 
 modify = def Modify impl'
   where
     impl' :: ChannelsController -> ActionM ChannelsController
