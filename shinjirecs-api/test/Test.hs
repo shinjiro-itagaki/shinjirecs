@@ -11,9 +11,12 @@ pathToPiecesTest =
 
 getMaybeRawPathParamsFromPatternAndPathTest :: Test
 getMaybeRawPathParamsFromPatternAndPathTest =
-  "Test of Routing.getMaybeRawPathParamsFromPatternAndPath"
-  ~: Just [("id","1")] --expected
-  ~=? getMaybeRawPathParamsFromPatternAndPath (toByteString "/hoge/:id/foo") (toByteString "/hoge/1/foo") -- result
+  TestLabel "Test of Routing.getMaybeRawPathParamsFromPatternAndPath" $ TestList $ [
+  f (toByteString "/hoge/:id/foo") (toByteString "/hoge/1/foo") ~?= Just [("id","1")],
+  f (toByteString "/hoge/foo")     (toByteString "/hoge/foo")   ~?= Just []
+  ]
+  where
+    f = getMaybeRawPathParamsFromPatternAndPath
 
 tests = TestList [
   pathToPiecesTest
