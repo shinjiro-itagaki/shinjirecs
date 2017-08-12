@@ -85,8 +85,7 @@ _ALL_ = [minBound .. maxBound] :: [StdMethod]
 
 routingMap :: [Route]
 routingMap = [
-  (  []    ,   "/"                  ) @>> notFound -- constantly not match
-  ,( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
+   ( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
   ,( _GET_,    "/channels/:id"      ) @>> ChannelsC.get
   ,( _PATCH_,  "/channels/:id"      ) @>> ChannelsC.modify
   ,( _POST_,   "/channels"          ) @>> notFound -- ChannelsC.create

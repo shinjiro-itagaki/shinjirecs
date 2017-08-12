@@ -116,6 +116,7 @@ test-suite shinjirecs-api-test
                      , shinjirecs-api
                      , HUnit
                      , dates
+                     , http-types
                      -- , aeson
                      -- , directory
                      -- , filepath

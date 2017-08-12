@@ -8,15 +8,34 @@ import Data.Int(Int64)
 import Data.Map(Map(..), empty, fromList)
 import Data.ByteString(ByteString)
 import Controller.Types(ActionWrapper(..), Action, ParamGivenAction)
-
+import Class.String(StringClass,toByteString,toString)
 type Path = ByteString
-type PathPattern = ByteString
-type RawPathParamKey = String
-type RawPathParamVal = String
-type RawPathParam    = (RawPathParamKey, RawPathParamVal)
-type RawPathParams   = [RawPathParam]
 
-data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch | UnknownMethod
+toPath :: (StringClass a) => a -> Path
+toPath = toByteString
+
+type PathPattern = ByteString
+
+toPathPattern :: (StringClass a) => a -> PathPattern
+toPathPattern = toByteString
+
+type RawPathParamKey = String
+toRawPathParamKey :: (StringClass a) => a -> RawPathParamKey
+toRawPathParamKey = toString
+
+type RawPathParamVal = String
+toRawPathParamVal :: (StringClass a) => a -> RawPathParamVal
+toRawPathParamVal = toString
+
+type RawPathParam = (RawPathParamKey, RawPathParamVal)
+toRawPathParam :: (StringClass a, StringClass b) => (a,b) -> RawPathParam
+toRawPathParam (x,y) = (toString x, toString y)
+
+type RawPathParams = [RawPathParam]
+toRawPathParams :: (StringClass a, StringClass b) => [(a,b)] -> RawPathParams
+toRawPathParams = Prelude.map toRawPathParam
+
+data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch | UnknownMethod deriving (Eq,Ord,Show,Enum)
 
 class PathParamList a where
   rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
