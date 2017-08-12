@@ -49,6 +49,7 @@ matchPathElements ptn@(x:xs) pathelems@(y:ys) params =
   if x == y
   then matchPathElements xs ys params -- match and do next
   else Nothing -- unmatch
+matchPathElements _ _ _ = Nothing
 
 pathToPieces :: Path -> [String]
 pathToPieces path = Prelude.map toString $ filter (not . Data.ByteString.Char8.null) $ Data.ByteString.Char8.split '/' $ toByteString path

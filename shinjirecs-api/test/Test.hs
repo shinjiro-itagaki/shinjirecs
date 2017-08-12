@@ -1,13 +1,24 @@
 import Test.HUnit
-import Routing(getMaybeRawPathParamsFromPatternAndPath)
+import Routing(getMaybeRawPathParamsFromPatternAndPath, pathToPieces)
 --import Data.ByteString
-import Class.String(StringClass(..))
+import Class.String(toStrings,toByteString)
+
+pathToPiecesTest :: Test
+pathToPiecesTest =
+  "Test of Routing.pathToPieces"
+  ~: ["hoge","foo","baa"]
+  ~=? (toStrings $ pathToPieces $ toByteString "//hoge///foo/baa")
 
 getMaybeRawPathParamsFromPatternAndPathTest :: Test
 getMaybeRawPathParamsFromPatternAndPathTest =
   "Test of Routing.getMaybeRawPathParamsFromPatternAndPath"
-  ~: getMaybeRawPathParamsFromPatternAndPath (toByteString "/hoge/:id/foo") (toByteString "/hoge/1/foo")
-  ~=? Just [("id","1")]
+  ~: Just [("id","1")] --expected
+  ~=? getMaybeRawPathParamsFromPatternAndPath (toByteString "/hoge/:id/foo") (toByteString "/hoge/1/foo") -- result
+
+tests = TestList [
+  pathToPiecesTest
+  ,getMaybeRawPathParamsFromPatternAndPathTest  
+  ]
 
 main :: IO ()
-main = runTestTT getMaybeRawPathParamsFromPatternAndPathTest >>= print
+main = runTestTT tests >>= print

@@ -21,10 +21,20 @@ class StringClass a where
   toTextL       :: a -> TL.Text
   toByteString  :: a -> B.ByteString
   toByteStringL :: a -> BL.ByteString
+  toStrings      :: [a] -> [Prelude.String]
+  toTexts        :: [a] -> [T.Text]
+  toTextLs       :: [a] -> [TL.Text]
+  toByteStrings  :: [a] -> [B.ByteString]
+  toByteStringLs :: [a] -> [BL.ByteString]
   toTextL       = TL.fromStrict . toText
   toByteStringL = BL.fromStrict . toByteString
   toText        = TL.toStrict   . toTextL
   toByteString  = BL.toStrict   . toByteStringL
+  toStrings      = Prelude.map toString
+  toTexts        = Prelude.map toText
+  toTextLs       = Prelude.map toTextL
+  toByteStrings  = Prelude.map toByteString
+  toByteStringLs = Prelude.map toByteStringL
 
 instance StringClass Prelude.String where
   toString    a = a
