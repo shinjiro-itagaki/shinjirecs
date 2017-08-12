@@ -17,16 +17,16 @@ import Data.List(find)
 import Data.ByteString(ByteString)
 import Data.ByteString.Char8(split,null)
 
-import Controller.Types(Action(..), ActionType, ControllerResponse(..) ,ParamGivenActionType)
+import Controller.Types(ActionWrapper(..), Action, ControllerResponse(..) ,ParamGivenAction)
 import Controller(defaultControllerResponse)
 
-import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenActionType)
+import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper)
 import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
 
-notFound, badRequest :: ActionType ()
+notFound, badRequest :: Action ()
 notFound conn req _ = return $ defaultControllerResponse {
   status = status404
   }
@@ -35,7 +35,7 @@ badRequest conn req _ = return $ defaultControllerResponse {
   status = status400
   }
 
-data Route = MkRoute [StdMethod] PathPattern Action
+data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
 matchStdMethods :: Route -> StdMethod -> Bool
 matchStdMethods (MkRoute ys _ _ ) x = elem x ys
@@ -75,42 +75,42 @@ getRawPathParams r p = case getMaybeRawPathParams r p of
 
 routingMap :: [Route]
 routingMap = map (\(x,y,z) -> MkRoute x y z) [
-   ( [GET],    "/channels/list",                  toAction ChannelsC.list )
-  ,( [GET],    "/channels/:id",                   toAction ChannelsC.get  ) -- ChannelsC.get
-  ,( [PATCH],  "/channels/:id",                   toAction notFound ) -- ChannelsC.modify
-  ,( [POST],   "/channels",                       toAction notFound ) -- ChannelsC.create
-  ,( [DELETE], "/channels/:id",                   toAction notFound ) -- ChannelsC.destroy
+   ( [GET],    "/channels/list",                  toActionWrapper ChannelsC.list )
+  ,( [GET],    "/channels/:id",                   toActionWrapper ChannelsC.get  ) -- ChannelsC.get
+  ,( [PATCH],  "/channels/:id",                   toActionWrapper notFound ) -- ChannelsC.modify
+  ,( [POST],   "/channels",                       toActionWrapper notFound ) -- ChannelsC.create
+  ,( [DELETE], "/channels/:id",                   toActionWrapper notFound ) -- ChannelsC.destroy
     
-  ,( [GET],    "/install/index",                  toAction notFound ) -- InstallC.index
-  ,( [GET],    "/install/result_detect_channels", toAction notFound ) -- InstallC.resultDetectChannels
-  ,( [GET],    "/install/step1",                  toAction notFound ) -- (InstallC.step 1)
-  ,( [GET],    "/install/step2",                  toAction notFound ) -- (InstallC.step 2)
-  ,( [GET],    "/install/step3",                  toAction notFound ) -- (InstallC.step 3)
+  ,( [GET],    "/install/index",                  toActionWrapper notFound ) -- InstallC.index
+  ,( [GET],    "/install/result_detect_channels", toActionWrapper notFound ) -- InstallC.resultDetectChannels
+  ,( [GET],    "/install/step1",                  toActionWrapper notFound ) -- (InstallC.step 1)
+  ,( [GET],    "/install/step2",                  toActionWrapper notFound ) -- (InstallC.step 2)
+  ,( [GET],    "/install/step3",                  toActionWrapper notFound ) -- (InstallC.step 3)
     
-  ,( [GET],    "/programs/list",                  toAction notFound ) -- ProgramsC.list
-  ,( [GET],    "/programs/:id",                   toAction notFound ) -- ProgramsC.get
-  ,( [PATCH],  "/programs/:id",                   toAction notFound ) -- ProgramsC.modify
-  ,( [POST],   "/programs",                       toAction notFound ) -- ProgramsC.create
-  ,( [DELETE], "/programs/:id",                   toAction notFound ) -- ProgramsC.destroy
+  ,( [GET],    "/programs/list",                  toActionWrapper notFound ) -- ProgramsC.list
+  ,( [GET],    "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.get
+  ,( [PATCH],  "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.modify
+  ,( [POST],   "/programs",                       toActionWrapper notFound ) -- ProgramsC.create
+  ,( [DELETE], "/programs/:id",                   toActionWrapper notFound ) -- ProgramsC.destroy
     
-  ,( [GET],    "/reservations/list",              toAction notFound ) -- ReservationsC.list
-  ,( [GET],    "/reservations/:id",               toAction notFound ) -- ReservationsC.get
-  ,( [PATCH],  "/reservations/:id",               toAction notFound ) -- ReservationsC.modify
-  ,( [POST],   "/reservations",                   toAction notFound ) -- ReservationsC.create
-  ,( [DELETE], "/reservations/:id",               toAction notFound ) -- ReservationsC.destroy  
+  ,( [GET],    "/reservations/list",              toActionWrapper notFound ) -- ReservationsC.list
+  ,( [GET],    "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.get
+  ,( [PATCH],  "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.modify
+  ,( [POST],   "/reservations",                   toActionWrapper notFound ) -- ReservationsC.create
+  ,( [DELETE], "/reservations/:id",               toActionWrapper notFound ) -- ReservationsC.destroy  
   ]
   
-findAction :: StdMethod -> Path -> Maybe Action
+findAction :: StdMethod -> Path -> Maybe ActionWrapper
 findAction stdmethod path = case res of
   Just (MkRoute _ _ action) -> Just action
   Nothing                   -> Nothing
   where
     res = find (\route -> (matchStdMethods route stdmethod) && (matchPath route path)) routingMap
 
-run :: Request -> Maybe ParamGivenActionType
+run :: Request -> Maybe ParamGivenAction
 run req = do
   case parseMethod $ requestMethod req of
     Left _ -> Nothing
     Right stdmethod -> case findAction stdmethod (rawPathInfo req) of
-      Just action -> Just $ toParamGivenActionType action []
+      Just action -> Just $ toParamGivenAction action []
       Nothing -> Nothing

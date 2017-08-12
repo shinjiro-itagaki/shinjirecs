@@ -7,7 +7,7 @@ module Routing.Class where
 import Data.Int(Int64)
 import Data.Map(Map(..), empty, fromList)
 import Data.ByteString(ByteString)
-import Controller.Types(Action(..), ActionType, ParamGivenActionType)
+import Controller.Types(ActionWrapper(..), Action, ParamGivenAction)
 
 type Path = ByteString
 type PathPattern = ByteString
@@ -19,10 +19,10 @@ type RawPathParams   = [RawPathParam]
 class PathParamList a where
   rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
   rawPathParamsToArgs others = Left others
-  toAction :: ActionType a -> Action
+  toActionWrapper :: Action a -> ActionWrapper
 
-toParamGivenActionType :: Action -> RawPathParams -> ParamGivenActionType
-toParamGivenActionType action params =
+toParamGivenAction :: ActionWrapper -> RawPathParams -> ParamGivenAction
+toParamGivenAction action params =
   case action of
     Action_N    f -> impl' f params -- (ActionType ()                     )
     Action_S    f -> impl' f params -- (ActionType String                 )
@@ -42,7 +42,7 @@ toParamGivenActionType action params =
     Action_SIS  f -> impl' f params -- (ActionType (String,Int64,String)    )
     Action_SSS  f -> impl' f params -- (ActionType (String,String,String) )
   where
-    impl' :: (PathParamList a) => ActionType a -> RawPathParams -> ParamGivenActionType
+    impl' :: (PathParamList a) => Action a -> RawPathParams -> ParamGivenAction
     impl' f params = f $ case rawPathParamsToArgs params of
                            Left  _    -> error "bad request"
                            Right args -> args
@@ -62,68 +62,68 @@ rawPathParamsToArgsXXX' others = Left others
 
 instance PathParamList () where
   rawPathParamsToArgs = rawPathParamsToArg'
-  toAction = Action_N
+  toActionWrapper = Action_N
   
 instance PathParamList String where
   rawPathParamsToArgs = rawPathParamsToArg'
-  toAction = Action_S
+  toActionWrapper = Action_S
 
 instance PathParamList Int64 where
   rawPathParamsToArgs = rawPathParamsToArg'
-  toAction = Action_I
+  toActionWrapper = Action_I
 
 instance PathParamList (Map String String) where
   rawPathParamsToArgs = Right . fromList
-  toAction = Action_SMap
+  toActionWrapper = Action_SMap
 
 instance PathParamList (Map String Int64) where
   rawPathParamsToArgs = Right . fromList . map (\(k,v) -> (k, read v))
-  toAction = Action_IMap
+  toActionWrapper = Action_IMap
 
 instance PathParamList (String ,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXX'
-  toAction = Action_SS
+  toActionWrapper = Action_SS
   
 instance PathParamList (Int64 ,Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXX'
-  toAction = Action_II
+  toActionWrapper = Action_II
   
 instance PathParamList (Int64 ,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXX'
-  toAction = Action_IS
+  toActionWrapper = Action_IS
   
 instance PathParamList (String , Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXX'
-  toAction = Action_SI
+  toActionWrapper = Action_SI
   
 instance PathParamList (Int64 , Int64 , Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_III
+  toActionWrapper = Action_III
   
 instance PathParamList (String , Int64 , Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_SII
+  toActionWrapper = Action_SII
   
 instance PathParamList (Int64,String,Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_ISI
+  toActionWrapper = Action_ISI
   
 instance PathParamList (Int64,Int64,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_IIS
+  toActionWrapper = Action_IIS
   
 instance PathParamList (String,String,Int64) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_SSI
+  toActionWrapper = Action_SSI
   
 instance PathParamList (Int64,String,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_ISS
+  toActionWrapper = Action_ISS
   
 instance PathParamList (String,Int64,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_SIS
+  toActionWrapper = Action_SIS
   
 instance PathParamList (String,String,String) where
   rawPathParamsToArgs = rawPathParamsToArgsXXX'
-  toAction = Action_SSS
+  toActionWrapper = Action_SSS

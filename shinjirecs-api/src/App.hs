@@ -16,7 +16,7 @@ import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
 import Config.Env(Env(..))
 import DB
-import Controller.Types(Action,ControllerResponse(..),ParamGivenActionType)
+import Controller.Types(Action,ControllerResponse(..),ParamGivenAction)
 import Routing(run)
 
 {-
@@ -34,7 +34,7 @@ startServer port conn = do
     Routing.run conn
 -}
 
-fireAction :: Connection -> Request -> ParamGivenActionType -> IO ControllerResponse
+fireAction :: Connection -> Request -> ParamGivenAction -> IO ControllerResponse
 fireAction conn req action = action conn req
 
 toResponse :: ControllerResponse -> Response

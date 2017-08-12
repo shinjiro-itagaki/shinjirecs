@@ -14,7 +14,7 @@ import DB(Connection)
 import Class.Castable(Castable(..))
 import Class.String(StringClass(..))
 import Routing.Class(RawPathParams, PathParamList(..))
-import Controller.Types(ControllerResponse(..), Action(..), ActionType,Body)
+import Controller.Types(ControllerResponse(..), ActionWrapper(..), Action, Body)
 
 defaultControllerResponse :: ControllerResponse
 defaultControllerResponse = MkControllerResponse {
