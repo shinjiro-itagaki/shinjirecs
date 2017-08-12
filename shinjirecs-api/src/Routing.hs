@@ -20,7 +20,7 @@ import Data.ByteString.Char8(split,null)
 import Controller.Types(ActionWrapper(..), Action, ControllerResponse(..) ,ParamGivenAction)
 import Controller(defaultControllerResponse)
 
-import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper)
+import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
@@ -62,11 +62,12 @@ getMaybeRawPathParamsFromPatternAndPath ptn path =
     ptn_pieces'  = pathToPieces ptn
     path_pieces' = pathToPieces path
 
+-- Nothing means unmatch path
 getMaybeRawPathParams :: Route -> Path -> Maybe RawPathParams
 getMaybeRawPathParams (MkRoute _ ptn _ ) path = getMaybeRawPathParamsFromPatternAndPath ptn path
 
-matchPath :: Route -> Path -> Bool
-matchPath r p = isJust $ getMaybeRawPathParams r p
+matchPath :: Path -> Route -> Bool
+matchPath p r = isJust $ getMaybeRawPathParams r p
     
 getRawPathParams :: Route -> Path -> RawPathParams
 getRawPathParams r p = case getMaybeRawPathParams r p of
@@ -110,18 +111,26 @@ routingMap = [
   ,( _DELETE_, "/reservations/:id"  ) @>> notFound -- ReservationsC.destroy
   ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
   ]
-  
-findAction :: StdMethod -> Path -> Maybe ActionWrapper
-findAction stdmethod path = case res of
-  Just (MkRoute _ _ action) -> Just action
-  Nothing                   -> Nothing
-  where
-    res = find (\route -> (matchStdMethods route stdmethod) && (matchPath route path)) routingMap
 
-run :: Request -> Maybe ParamGivenAction
-run req = do
+findPathMatchedRoute :: Path -> [Route] -> Maybe (Route, RawPathParams)
+findPathMatchedRoute path [] = Nothing
+findPathMatchedRoute path (r:rs) = case getMaybeRawPathParams r path of
+  Just p  -> Just (r, p)
+  Nothing -> findPathMatchedRoute path rs
+  
+findAction :: StdMethod -> Path -> Either RouteNotFound (ActionWrapper, RawPathParams)
+findAction stdmethod path =
+  case findPathMatchedRoute path routingMap of
+    Just (route@(MkRoute methods ptn actionWrapper), rawpathparams) ->
+      if matchStdMethods route stdmethod
+      then Right (actionWrapper, rawpathparams)
+      else Left PathFoundButMethodUnmatch
+    Nothing -> Left PathNotFound
+
+run :: Request -> Either RouteNotFound ParamGivenAction
+run req =
   case parseMethod $ requestMethod req of
-    Left _ -> Nothing
+    Left _ -> Left UnknownMethod
     Right stdmethod -> case findAction stdmethod (rawPathInfo req) of
-      Just action -> Just $ toParamGivenAction action []
-      Nothing -> Nothing
+      Right (actionWrapper, rawPathParams) -> Right $ toParamGivenAction actionWrapper rawPathParams
+      Left x -> Left x

@@ -16,6 +16,8 @@ type RawPathParamVal = String
 type RawPathParam    = (RawPathParamKey, RawPathParamVal)
 type RawPathParams   = [RawPathParam]
 
+data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch | UnknownMethod
+
 class PathParamList a where
   rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
   rawPathParamsToArgs others = Left others
