@@ -75,7 +75,7 @@ app env req respond = do
         Right action -> respond . toResponse =<< fireAction conn req action
         Left x -> respond $ case x of
           PathNotFound              -> response404                path'
-          PathFoundButMethodUnmatch -> response_NotAllowedMethod  method' path'
+          PathFoundButMethodUnmatch msg -> response_NotAllowedMethod  method' path'
           UnknownMethod             -> response_UnsupportedMethod method'
     Nothing -> respond $ response500 "load config error!"
   where

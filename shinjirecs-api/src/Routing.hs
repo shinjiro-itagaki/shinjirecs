@@ -109,20 +109,29 @@ routingMap = [
   ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
   ]
 
-findPathMatchedRoute :: Path -> [Route] -> Maybe (Route, RawPathParams)
-findPathMatchedRoute path [] = Nothing
-findPathMatchedRoute path (r:rs) = case getMaybeRawPathParams r path of
-  Just p  -> Just (r, p)
-  Nothing -> findPathMatchedRoute path rs
+findPathMatchedRoutes :: Path -> [Route] -> [(Route, RawPathParams)]
+findPathMatchedRoutes path [] = []
+findPathMatchedRoutes path (r:rs) = case getMaybeRawPathParams r path of
+  Just p  -> [(r, p)] ++ findPathMatchedRoutes path rs
+  Nothing -> findPathMatchedRoutes path rs
   
 findAction :: StdMethod -> Path -> Either RouteNotFound (ActionWrapper, RawPathParams)
 findAction stdmethod path =
-  case findPathMatchedRoute path routingMap of
-    Just (route@(MkRoute methods ptn actionWrapper), rawpathparams) ->
+  case findPathMatchedRoutes path routingMap of
+    [] -> Left PathNotFound
+    xs -> case findMethodMatchedAction' xs of
+      Just x  -> Right x
+      Nothing ->
+        Left $ PathFoundButMethodUnmatch $ Prelude.concat $ Prelude.map (showRoute' . fst) xs
+  where
+    findMethodMatchedAction' :: [(Route, RawPathParams)] -> Maybe (ActionWrapper, RawPathParams)
+    findMethodMatchedAction' [] = Nothing
+    findMethodMatchedAction' ((route@(MkRoute methods ptn actionWrapper),params):xs) =
       if matchStdMethods route stdmethod
-      then Right (actionWrapper, rawpathparams)
-      else Left PathFoundButMethodUnmatch
-    Nothing -> Left PathNotFound
+      then Just (actionWrapper, params)
+      else findMethodMatchedAction' xs
+    showRoute' :: Route -> String
+    showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
 run :: Request -> Either RouteNotFound ParamGivenAction
 run req =

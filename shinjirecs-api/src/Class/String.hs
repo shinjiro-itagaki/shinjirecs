@@ -26,6 +26,8 @@ class StringClass a where
   toTextLs       :: [a] -> [TL.Text]
   toByteStrings  :: [a] -> [B.ByteString]
   toByteStringLs :: [a] -> [BL.ByteString]
+  join           :: [a] -> a -> a
+  (+++)          ::  a  -> a -> a
   toTextL       = TL.fromStrict . toText
   toByteStringL = BL.fromStrict . toByteString
   toText        = TL.toStrict   . toTextL
@@ -35,28 +37,35 @@ class StringClass a where
   toTextLs       = Prelude.map toTextL
   toByteStrings  = Prelude.map toByteString
   toByteStringLs = Prelude.map toByteStringL
+  join  (x:[]) y = y +++ x
+  join  (x:xs) y = x +++ y +++ (join xs y)
 
 instance StringClass Prelude.String where
   toString    a = a
   toText        = T.pack
   toByteString  = BC.pack
+  (+++)     x y = Prelude.concat [x,y]
 
 instance StringClass T.Text where
   toString      = T.unpack
   toText      a = a
   toByteString  = BC.pack . toString
+  (+++)     x y = T.concat [x,y]
 
 instance StringClass TL.Text where
   toString      = TL.unpack
   toTextL     a = a
   toByteString  = BC.pack . toString
+  (+++)     x y = TL.concat [x,y]
 
 instance StringClass B.ByteString where
   toString       = BC.unpack
   toText         = toText . toString
   toByteString a = a
+  (+++)      x y = B.concat [x,y]
 
 instance StringClass BL.ByteString where
   toString        = toString . toByteString
   toText          = toText . BL.toStrict
   toByteStringL a = a
+  (+++)       x y = BL.concat [x,y]
