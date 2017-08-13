@@ -5,7 +5,8 @@ import Routing.Class(RawPathParams,Path,toPath)
 import Class.String(toStrings,toByteString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
 import Data.Maybe(fromJust)
-import Routing.Class(Route(..))
+import Data.List((\\)) 
+import Routing.Class(Route(..),RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 
 pathToPiecesTest :: Test
 pathToPiecesTest = TestLabel "Test of Routing.pathToPieces"
@@ -25,7 +26,12 @@ findActionTest :: Test
 findActionTest =
   TestLabel "Test of Routing.findAction"
   $ TestList
-  $ Prelude.map (\(methods, path, res_params) -> TestList $ toTests' (toPath path) res_params methods )
+  $ Prelude.map (\(methods, path, res_params) ->
+                   TestList $ [
+                    TestList  $ toTests'  (toPath path) res_params methods
+                    ,TestList $ toTests2' (toPath path) res_params ( [minBound .. maxBound] \\ methods)
+                    ]
+                )
   $ [([GET],      "/channels/list"     ,[])
     ,([GET],      "/channels/1"        ,[("id","1")])
     ,([PATCH,PUT],"/channels/2"        ,[("id","2")])
@@ -48,18 +54,18 @@ findActionTest =
     ,([DELETE],   "/reservations/9"    ,[("id","9")])
     ]
   where
---    toRawPathParams' :: Either RouteNotFound (ActionWrapper, RawPathParams) -> Either RouteNotFound RawPathParams
     toRawPathParams' = fmap (\(_, x) -> x)
-    toTest' :: Routing.Class.Path -> RawPathParams -> StdMethod -> Test
-    toTest' path res_params method = (toRawPathParams' $ findAction method (toByteString path)) ~?= Right res_params
-    toTests' :: Routing.Class.Path -> RawPathParams -> [StdMethod] -> [Test]
-    toTests' path params methods = Prelude.map (toTest' path params) methods
+    toTest',toTest2' :: Routing.Class.Path -> RawPathParams -> StdMethod -> Test
+    toTest'  path res_params method = (toRawPathParams' $ findAction method (toByteString path)) ~?= Right res_params
+    toTest2' path res_params method = fmap (\x -> "")(toRawPathParams' $ findAction method (toByteString path)) ~?= (Left $ PathFoundButMethodUnmatch "")
+    toTests',toTests2' :: Routing.Class.Path -> RawPathParams -> [StdMethod] -> [Test]
+    toTests'  path params methods = Prelude.map (toTest'  path params) methods
+    toTests2' path params methods = Prelude.map (toTest2' path params) methods
 
 matchStdMethodsTest :: Test
 matchStdMethodsTest = TestLabel "Test of Routing.matchStdMethodsTest"
                       $ (matchStdMethods (routingMap !! 3) POST) ~?= True
 
--- findPathMatchedRoutes :: Path -> [Route] -> [(Route, RawPathParams)]
 findPathMatchedRoutesTest :: Test
 findPathMatchedRoutesTest =
   TestLabel "Test of Routing.findPathMatchedRoutes"
