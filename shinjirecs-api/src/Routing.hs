@@ -20,7 +20,7 @@ import Data.ByteString.Char8(split,null)
 import Controller.Types(ActionWrapper(..), Action, ControllerResponse(..) ,ParamGivenAction)
 import Controller(defaultControllerResponse)
 
-import Routing.Class(Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
+import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
@@ -35,10 +35,8 @@ badRequest conn req _ = return $ defaultControllerResponse {
   status = status400
   }
 
-data Route = MkRoute [StdMethod] PathPattern ActionWrapper
-
 matchStdMethods :: Route -> StdMethod -> Bool
-matchStdMethods (MkRoute ys _ _ ) x = elem x ys
+matchStdMethods (MkRoute methods _ _ ) method = elem method methods
 
 matchPathElements :: [String] -> [String] -> Maybe RawPathParams -> Maybe RawPathParams
 matchPathElements _      _      Nothing = Nothing -- protect error by fromJust

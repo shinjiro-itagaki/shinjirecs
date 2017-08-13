@@ -9,6 +9,8 @@ import Data.Map(Map(..), empty, fromList)
 import Data.ByteString(ByteString)
 import Controller.Types(ActionWrapper(..), Action, ParamGivenAction)
 import Class.String(StringClass,toByteString,toString)
+import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH))
+
 type Path = ByteString
 
 toPath :: (StringClass a) => a -> Path
@@ -36,6 +38,8 @@ toRawPathParams :: (StringClass a, StringClass b) => [(a,b)] -> RawPathParams
 toRawPathParams = Prelude.map toRawPathParam
 
 data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch | UnknownMethod deriving (Eq,Ord,Show,Enum)
+
+data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
 class PathParamList a where
   rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
