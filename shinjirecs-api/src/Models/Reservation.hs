@@ -13,7 +13,10 @@ import Data.Foldable(all)
 import Data.Char
 import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
 import Class.Castable(from)
-import Helper(finishTime,inTime,inTimeNow,(.++),weekDayFlagsToWeekDays,nearestWeekDayInterval,DateTime(..), pNum0xd,replaceString)
+import Class.String(replace)
+import Class.DateTime(DateTimeClass(..))
+import Helper.DateTimeHelper(finishTime,inTime,inTimeNow,weekDayFlagsToWeekDays,nearestWeekDayInterval,(.++))
+import Helper.NumHelper(pNum0xd)
 
 import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
 import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..),scriptArgs)
@@ -117,9 +120,9 @@ reservationCounterStr r = pNum0xd keta' counter'
 reservationFileName :: Reservation -> FilePath
 reservationFileName r = sanitize' $ foldl replace' (reservationVideoFileNameFormat r) allFormatSymbols
   where
-    replace' rtn sym = replaceString (symbolKeyStr sym) (symbolValue r sym) rtn
-    sanitizeOne' str separator = replaceString [separator] "_" str
-    sanitize' str = foldl sanitizeOne' str pathSeparators
+    replace'     rtn       sym = replace (symbolKeyStr sym) (symbolValue r sym) rtn
+    sanitizeOne' str separator = replace [separator] "_" str
+    sanitize'    str           = foldl sanitizeOne' str pathSeparators
 
 reservationFilePath :: PathsConfig -> Reservation -> FilePath
 reservationFilePath pconfig r = (videoFilesDir pconfig) </> reservationFileName r

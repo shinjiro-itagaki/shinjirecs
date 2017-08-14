@@ -41,7 +41,10 @@ library
                      , Controllers.ReservationsController
                      , Class.Castable
                      , Class.String
+                     , Class.DateTime
                      , Helper
+                     , Helper.NumHelper
+                     , Helper.DateTimeHelper
                      , Job
                      , Jobs.Recording
                      , Routing
@@ -51,6 +54,7 @@ library
                      , HDBC-sqlite3
                      , HDBC-mysql
                      , HDBC-postgresql
+                     , MissingH
                      , aeson
                      , bytestring
                      , conduit

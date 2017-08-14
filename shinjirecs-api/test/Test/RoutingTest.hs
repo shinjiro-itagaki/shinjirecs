@@ -5,8 +5,9 @@ import Routing.Class(RawPathParams,Path,toPath)
 import Class.String(toStrings,toByteString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
 import Data.Maybe(fromJust)
-import Data.List((\\)) 
+import Data.List((\\))
 import Routing.Class(Route(..),RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
+import Controller.Types(ActionWrapper(..))
 
 pathToPiecesTest :: Test
 pathToPiecesTest = TestLabel "Test of Routing.pathToPieces"
@@ -54,10 +55,16 @@ findActionTest =
     ,([DELETE],   "/reservations/9"    ,[("id","9")])
     ]
   where
-    toRawPathParams' = fmap (\(_, x) -> x)
+    -- Either RouteNotFound (ActionWrapper, RawPathParams)
+    fromLeft' :: Either RouteNotFound (ActionWrapper, RawPathParams) -> RouteNotFound
+    fromLeft' (Right (_, params)) = error "Argument takes form 'Right _'"
+    fromLeft' (Left x)  = x
+    fromRight' :: Either RouteNotFound (ActionWrapper, RawPathParams) -> (ActionWrapper, RawPathParams)
+    fromRight' (Left _)  = error "Argument takes form 'Left _'"
+    fromRight' (Right x) = x
     toTest',toTest2' :: Routing.Class.Path -> RawPathParams -> StdMethod -> Test
-    toTest'  path res_params method = (toRawPathParams' $ findAction method (toByteString path)) ~?= Right res_params
-    toTest2' path res_params method = fmap (\x -> "")(toRawPathParams' $ findAction method (toByteString path)) ~?= (Left $ PathFoundButMethodUnmatch "")
+    toTest'  path res_params method = (snd $ fromRight' $ findAction method (toByteString path)) ~?= res_params
+    toTest2' path res_params method = (fromLeft' $ findAction method (toByteString path)) ~?= (PathFoundButMethodUnmatch "")
     toTests',toTests2' :: Routing.Class.Path -> RawPathParams -> [StdMethod] -> [Test]
     toTests'  path params methods = Prelude.map (toTest'  path params) methods
     toTests2' path params methods = Prelude.map (toTest2' path params) methods

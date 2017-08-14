@@ -37,7 +37,13 @@ type RawPathParams = [RawPathParam]
 toRawPathParams :: (StringClass a, StringClass b) => [(a,b)] -> RawPathParams
 toRawPathParams = Prelude.map toRawPathParam
 
-data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch String | UnknownMethod deriving (Eq,Ord,Show)
+data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch String | UnknownMethod deriving (Ord,Show)
+instance Eq RouteNotFound where
+  (==) PathNotFound PathNotFound = True
+  (==) (PathFoundButMethodUnmatch _) (PathFoundButMethodUnmatch _) = True -- ignore msg
+  (==) UnknownMethod UnknownMethod  = True
+  (==) _ _ = False
+
 
 data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
