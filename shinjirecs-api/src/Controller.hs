@@ -25,9 +25,3 @@ defaultControllerResponse = MkControllerResponse {
 
 toBody :: (StringClass str) => str -> Body
 toBody = toByteStringL
-
---fireAction :: Connection -> Request -> ActionType a -> RawPathParams -> IO ControllerResponse
---fireAction conn req action rawparams =
---  action (case rawPathParamsToArgs rawparams of
---             Left  _ -> error "bad request"
---             Right x -> x) conn req
