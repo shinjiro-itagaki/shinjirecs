@@ -126,7 +126,7 @@ findRoute :: StdMethod -> Path -> Either RouteNotFound (Route, RawPathParams)
 findRoute stdmethod path =
   case findPathMatchedRoutes path routingMap of
     [] -> Left PathNotFound
-    xs -> case findMethodMatchedRoute stdmethod xs of
+    xs -> case find (\(route, params) -> matchStdMethods route stdmethod) xs of
       Just x  -> Right x
       Nothing ->
         Left $ PathFoundButMethodUnmatch $ Prelude.concat $ Prelude.map (showRoute' . fst) xs
