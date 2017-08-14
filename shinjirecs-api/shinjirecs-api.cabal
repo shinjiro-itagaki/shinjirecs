@@ -43,8 +43,9 @@ library
                      , Class.String
                      , Class.DateTime
                      , Helper
-                     , Helper.NumHelper
                      , Helper.DateTimeHelper
+                     , Helper.MaybeHelper
+                     , Helper.NumHelper
                      , Job
                      , Jobs.Recording
                      , Routing

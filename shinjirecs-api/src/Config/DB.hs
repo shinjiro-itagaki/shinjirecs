@@ -13,7 +13,6 @@ import Data.List.Extra (lower) -- extra
 import qualified Data.Yaml as Y (Object, Value(..))
 import Data.HashMap.Strict as M
 import Class.Castable(Castable(from))
-import Helper((|||))
 
 instance ConfigClass DB.Config where
   defaultConfig env = return $

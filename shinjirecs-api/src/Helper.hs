@@ -38,6 +38,7 @@ data OnResultFunc m a = OnSuccessFunc (a -> m (Bool,a)) | OnFailedFunc (a -> m a
 
 infixl 2 >>==
 
+{-
 --replaceString :: String -> String -> String -> String
 --replaceString old new obj = unpack $ replace (pack old) (pack new) (pack obj)
 
@@ -50,3 +51,4 @@ infixl 2 >>==
 
 (./) :: a -> (a -> b) -> b
 (./) arg func = func arg
+-}

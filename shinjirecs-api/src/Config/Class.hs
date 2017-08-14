@@ -2,6 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Config.Class where
+import Prelude hiding ((||))
+import Helper.MaybeHelper((||))
 import Data.Text (Text, pack, unpack)
 import Class.Castable(Castable(from))
 import Data.List.Extra (lower) -- extra
@@ -12,7 +14,6 @@ import Data.HashMap.Strict as M
 import Data.Scientific (Scientific(..), coefficient)
 import Data.Maybe(fromMaybe)
 import Data.List(elem)
-import Helper((|||))
 import Config.Env(Env(..))
 
 -- 引数で指定したキーを持つオブジェクトを返す
@@ -33,7 +34,7 @@ class ConfigClass a where
   defaultConfig :: Env -> IO a
   objectToConfig :: Object -> a -> a
   mor :: a -> Object -> (a -> Maybe b) -> (Object -> Maybe b) -> Maybe b
-  mor dflt obj dfltf objf = (objf obj) ||| (dfltf dflt)
+  mor dflt obj dfltf objf = (objf obj) || (dfltf dflt)
   or :: a -> Object -> (a -> b) -> (Object -> Maybe b) -> b
   or dflt obj dfltf objf = fromMaybe (dfltf dflt) (objf obj)
   readYaml :: FilePath -> Env -> IO (Maybe a)
