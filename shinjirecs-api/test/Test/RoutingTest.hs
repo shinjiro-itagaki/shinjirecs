@@ -1,11 +1,11 @@
 module Test.RoutingTest where
 import Test.HUnit
-import Routing(routingMap, getMaybeRawPathParamsFromPatternAndPath, pathToPieces, findAction, matchStdMethods,findPathMatchedRoutes)
+import Routing(routingMap, getMaybeRawPathParamsFromPatternAndPath, pathToPieces, findRoute, matchStdMethods,findPathMatchedRoutes)
 import Routing.Class(RawPathParams,Path,toPath)
 import Class.String(toStrings,toByteString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
 import Data.Maybe(fromJust)
-import Data.List((\\))
+import Helper.ListHelper((\\))
 import Routing.Class(Route(..),RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 import Controller.Types(ActionWrapper(..))
 
@@ -23,14 +23,14 @@ getMaybeRawPathParamsFromPatternAndPathTest =
   where
     f = getMaybeRawPathParamsFromPatternAndPath
 
-findActionTest :: Test
-findActionTest =
-  TestLabel "Test of Routing.findAction"
+findRouteTest :: Test
+findRouteTest =
+  TestLabel "Test of Routing.findRoute"
   $ TestList
   $ Prelude.map (\(methods, path, res_params) ->
                    TestList $ [
                     TestList  $ toTests'  (toPath path) res_params methods
-                    ,TestList $ toTests2' (toPath path) res_params ( [minBound .. maxBound] \\ methods)
+                    ,TestList $ toTests2' (toPath path) res_params $ ([minBound .. maxBound] \\ methods)
                     ]
                 )
   $ [([GET],      "/channels/list"     ,[])
@@ -56,15 +56,15 @@ findActionTest =
     ]
   where
     -- Either RouteNotFound (ActionWrapper, RawPathParams)
-    fromLeft' :: Either RouteNotFound (ActionWrapper, RawPathParams) -> RouteNotFound
-    fromLeft' (Right (_, params)) = error "Argument takes form 'Right _'"
-    fromLeft' (Left x)  = x
-    fromRight' :: Either RouteNotFound (ActionWrapper, RawPathParams) -> (ActionWrapper, RawPathParams)
-    fromRight' (Left _)  = error "Argument takes form 'Left _'"
-    fromRight' (Right x) = x
+    fromLeft' :: Routing.Class.Path -> StdMethod -> Either RouteNotFound (Route, RawPathParams) -> RouteNotFound
+    fromLeft' path method (Left x)  = x
+    fromLeft' path method (Right ((MkRoute methods ptn _ ), params))  = error $ "expect is RouteNotFound but actual is that [" ++ (show method) ++ "] " ++ (show path) ++ " matches at [" ++ (show methods) ++ "] " ++ (show ptn)
+    fromRight' :: Routing.Class.Path -> StdMethod -> Either RouteNotFound (Route, RawPathParams) -> (Route, RawPathParams)
+    fromRight' path method (Left _)  = error $ "expect is some route but actual is RouteNotFound by [" ++ (show method) ++ "] " ++ (show path)
+    fromRight' path method (Right x) = x
     toTest',toTest2' :: Routing.Class.Path -> RawPathParams -> StdMethod -> Test
-    toTest'  path res_params method = (snd $ fromRight' $ findAction method (toByteString path)) ~?= res_params
-    toTest2' path res_params method = (fromLeft' $ findAction method (toByteString path)) ~?= (PathFoundButMethodUnmatch "")
+    toTest'  path res_params method = (snd . fromRight' path method $ findRoute method (toByteString path)) ~?= res_params
+    toTest2' path res_params method = (fromLeft'  path method $ findRoute method (toByteString path)) ~?= (PathFoundButMethodUnmatch "")
     toTests',toTests2' :: Routing.Class.Path -> RawPathParams -> [StdMethod] -> [Test]
     toTests'  path params methods = Prelude.map (toTest'  path params) methods
     toTests2' path params methods = Prelude.map (toTest2' path params) methods
@@ -86,7 +86,7 @@ tests :: Test
 tests = TestList [
   pathToPiecesTest
   ,getMaybeRawPathParamsFromPatternAndPathTest
-  ,findActionTest
+  ,findRouteTest
   ,matchStdMethodsTest
   ,findPathMatchedRoutesTest
   ]

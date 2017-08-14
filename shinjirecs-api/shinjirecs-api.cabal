@@ -44,6 +44,8 @@ library
                      , Class.DateTime
                      , Helper
                      , Helper.DateTimeHelper
+                     , Helper.EnumHelper
+                     , Helper.ListHelper
                      , Helper.MaybeHelper
                      , Helper.NumHelper
                      , Job

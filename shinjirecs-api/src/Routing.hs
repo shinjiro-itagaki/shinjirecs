@@ -114,22 +114,23 @@ findPathMatchedRoutes path [] = []
 findPathMatchedRoutes path (r:rs) = case getMaybeRawPathParams r path of
   Just p  -> [(r, p)] ++ findPathMatchedRoutes path rs
   Nothing -> findPathMatchedRoutes path rs
+
+findMethodMatchedRoute :: StdMethod -> [(Route, RawPathParams)] -> Maybe (Route, RawPathParams)
+findMethodMatchedRoute _ [] = Nothing
+findMethodMatchedRoute stdmethod ((route@(MkRoute methods ptn actionWrapper),params):xs) =
+  if matchStdMethods route stdmethod
+  then Just (route, params)
+  else findMethodMatchedRoute stdmethod xs
   
-findAction :: StdMethod -> Path -> Either RouteNotFound (ActionWrapper, RawPathParams)
-findAction stdmethod path =
+findRoute :: StdMethod -> Path -> Either RouteNotFound (Route, RawPathParams)
+findRoute stdmethod path =
   case findPathMatchedRoutes path routingMap of
     [] -> Left PathNotFound
-    xs -> case findMethodMatchedAction' xs of
+    xs -> case findMethodMatchedRoute stdmethod xs of
       Just x  -> Right x
       Nothing ->
         Left $ PathFoundButMethodUnmatch $ Prelude.concat $ Prelude.map (showRoute' . fst) xs
   where
-    findMethodMatchedAction' :: [(Route, RawPathParams)] -> Maybe (ActionWrapper, RawPathParams)
-    findMethodMatchedAction' [] = Nothing
-    findMethodMatchedAction' ((route@(MkRoute methods ptn actionWrapper),params):xs) =
-      if matchStdMethods route stdmethod
-      then Just (actionWrapper, params)
-      else findMethodMatchedAction' xs
     showRoute' :: Route -> String
     showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
@@ -137,6 +138,6 @@ run :: Request -> Either RouteNotFound ParamGivenAction
 run req =
   case parseMethod $ requestMethod req of
     Left _ -> Left UnknownMethod
-    Right stdmethod -> case findAction stdmethod (rawPathInfo req) of
-      Right (actionWrapper, rawPathParams) -> Right $ toParamGivenAction actionWrapper rawPathParams
+    Right stdmethod -> case findRoute stdmethod (rawPathInfo req) of
+      Right ((MkRoute methods ptn actionWrapper), rawPathParams) -> Right $ toParamGivenAction actionWrapper rawPathParams
       Left x -> Left x
