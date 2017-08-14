@@ -37,8 +37,8 @@ type RawPathParams = [RawPathParam]
 toRawPathParams :: (StringClass a, StringClass b) => [(a,b)] -> RawPathParams
 toRawPathParams = Prelude.map toRawPathParam
 
-data RouteNotFound = PathNotFound | PathFoundButMethodUnmatch String | UnknownMethod deriving (Ord,Show)
-instance Eq RouteNotFound where
+data RouteNotFoundError = PathNotFound | PathFoundButMethodUnmatch String | UnknownMethod deriving (Ord,Show)
+instance Eq RouteNotFoundError where
   (==) PathNotFound PathNotFound = True
   (==) (PathFoundButMethodUnmatch _) (PathFoundButMethodUnmatch _) = True -- ignore msg
   (==) UnknownMethod UnknownMethod  = True
@@ -47,12 +47,16 @@ instance Eq RouteNotFound where
 
 data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
+data RawPathParamsError = BadParamTypes [String] | BadRouteDefinition
+
+data RoutingError = RouteNotFound RouteNotFoundError | BadPathParams RawPathParamsError
+
 class PathParamList a where
-  rawPathParamsToArgs :: RawPathParams -> Either RawPathParams a
-  rawPathParamsToArgs others = Left others
+  rawPathParamsToArgs :: RawPathParams -> Either RawPathParamsError a
+  rawPathParamsToArgs others = Left BadRouteDefinition
   toActionWrapper :: Action a -> ActionWrapper
 
-toParamGivenAction :: ActionWrapper -> RawPathParams -> ParamGivenAction
+toParamGivenAction :: ActionWrapper -> RawPathParams -> Either RawPathParamsError ParamGivenAction
 toParamGivenAction action params =
   case action of
     Action_N    f -> impl' f params -- (ActionType ()                     )
@@ -73,23 +77,26 @@ toParamGivenAction action params =
     Action_SIS  f -> impl' f params -- (ActionType (String,Int64,String)    )
     Action_SSS  f -> impl' f params -- (ActionType (String,String,String) )
   where
-    impl' :: (PathParamList a) => Action a -> RawPathParams -> ParamGivenAction
-    impl' f params = f $ case rawPathParamsToArgs params of
-                           Left  _    -> error "bad request"
-                           Right args -> args
+    impl' :: (PathParamList a) => Action a -> RawPathParams -> Either RawPathParamsError ParamGivenAction
+    impl' f params = case rawPathParamsToArgs params of
+                       Right args -> Right (f args)
+                       Left x     -> Left x
     
 
-rawPathParamsToArg' :: (Read a) => RawPathParams -> Either RawPathParams a
+rawPathParamsToArg' :: (Read a) => RawPathParams -> Either RawPathParamsError a
 rawPathParamsToArg' (x:yy) = Right $ read $ snd x
-rawPathParamsToArg' others = Left others
+rawPathParamsToArg' _      = Left BadRouteDefinition
 
-rawPathParamsToArgsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParams (a,b)
+rawPathParamsToArgsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParamsError (a,b)
 rawPathParamsToArgsXX' (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
-rawPathParamsToArgsXX' others = Left others
+rawPathParamsToArgsXX' _          = Left BadRouteDefinition
 
-rawPathParamsToArgsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParams (a,b,c)
+rawPathParamsToArgsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParamsError (a,b,c)
 rawPathParamsToArgsXXX' (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd $ x2)
-rawPathParamsToArgsXXX' others = Left others
+rawPathParamsToArgsXXX' _             = Left BadRouteDefinition
+
+rawPathParamsToArgsMap' :: (Read a) => RawPathParams -> Either RawPathParamsError (Map String a)
+rawPathParamsToArgsMap' xs = Right $ fromList $ map (\(k,v) -> (k, read v)) xs
 
 instance PathParamList () where
   rawPathParamsToArgs = rawPathParamsToArg'
@@ -104,11 +111,11 @@ instance PathParamList Int64 where
   toActionWrapper = Action_I
 
 instance PathParamList (Map String String) where
-  rawPathParamsToArgs = Right . fromList
+  rawPathParamsToArgs = rawPathParamsToArgsMap'
   toActionWrapper = Action_SMap
 
 instance PathParamList (Map String Int64) where
-  rawPathParamsToArgs = Right . fromList . map (\(k,v) -> (k, read v))
+  rawPathParamsToArgs = rawPathParamsToArgsMap'
   toActionWrapper = Action_IMap
 
 instance PathParamList (String ,String) where

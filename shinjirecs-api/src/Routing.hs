@@ -20,7 +20,7 @@ import Data.ByteString.Char8(split,null)
 import Controller.Types(ActionWrapper(..), Action, ControllerResponse(..) ,ParamGivenAction)
 import Controller(defaultControllerResponse)
 
-import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
+import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod), RawPathParamsError(BadParamTypes,BadRouteDefinition), RoutingError(RouteNotFound,BadPathParams))
 import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
@@ -121,8 +121,16 @@ findMethodMatchedRoute stdmethod ((route@(MkRoute methods ptn actionWrapper),par
   if matchStdMethods route stdmethod
   then Just (route, params)
   else findMethodMatchedRoute stdmethod xs
+
+applyParams :: (Route, RawPathParams) -> Either RawPathParamsError (Route, RawPathParams, ParamGivenAction)
+applyParams (route@(MkRoute methods ptn actionWrapper), rawPathParams) =
+  case toParamGivenAction actionWrapper rawPathParams of
+--    Left ParamsTypeError keys -> 
+--    Left BadRouteDefinition   ->
+    Left x -> Left x
+    Right paramGivenAction -> Right $ (route, rawPathParams, paramGivenAction)
   
-findRoute :: StdMethod -> Path -> Either RouteNotFound (Route, RawPathParams)
+findRoute :: StdMethod -> Path -> Either RouteNotFoundError (Route, RawPathParams)
 findRoute stdmethod path =
   case findPathMatchedRoutes path routingMap of
     [] -> Left PathNotFound
@@ -134,10 +142,13 @@ findRoute stdmethod path =
     showRoute' :: Route -> String
     showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
-run :: Request -> Either RouteNotFound ParamGivenAction
+run :: Request -> Either RoutingError ParamGivenAction
 run req =
   case parseMethod $ requestMethod req of
-    Left _ -> Left UnknownMethod
+    Left _ -> Left $ RouteNotFound UnknownMethod
     Right stdmethod -> case findRoute stdmethod (rawPathInfo req) of
-      Right ((MkRoute methods ptn actionWrapper), rawPathParams) -> Right $ toParamGivenAction actionWrapper rawPathParams
-      Left x -> Left x
+      Right ((MkRoute methods ptn actionWrapper), rawPathParams) ->
+        case toParamGivenAction actionWrapper rawPathParams of
+          Left x -> Left $ BadPathParams x
+          Right action -> Right action
+      Left x -> Left $ RouteNotFound x

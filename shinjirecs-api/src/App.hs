@@ -17,7 +17,7 @@ import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath
 import Config.Env(Env(..))
 import DB
 import Controller.Types(Action,ControllerResponse(..),ParamGivenAction)
-import Routing.Class(RouteNotFound(PathNotFound, PathFoundButMethodUnmatch, UnknownMethod))
+import Routing.Class(RouteNotFoundError(PathNotFound, PathFoundButMethodUnmatch, UnknownMethod), RoutingError(RouteNotFound,BadPathParams), RawPathParamsError(BadParamTypes,BadRouteDefinition))
 import Routing(run)
 import qualified Data.ByteString.Lazy as L
 import Class.String(toByteStringL)
@@ -71,9 +71,11 @@ app env req respond = do
       case Routing.run req of
         Right action -> action conn req >>= respond . toResponse
         Left x -> respond $ case x of
-          PathNotFound                  -> response404                path'
-          PathFoundButMethodUnmatch msg -> response_NotAllowedMethod  method' path'
-          UnknownMethod                 -> response_UnsupportedMethod method'
+          RouteNotFound PathNotFound                    -> response404                path'
+          RouteNotFound (PathFoundButMethodUnmatch msg) -> response_NotAllowedMethod  method' path'
+          RouteNotFound UnknownMethod                   -> response_UnsupportedMethod method'
+          BadPathParams (BadParamTypes keys) -> mkResponse status400 $ toByteStringL $ (show keys) ++ " are bad type"
+          BadPathParams BadRouteDefinition   -> response500 "BadRouteDefinition!"
     Nothing -> respond $ response500 "load config error!"
   where
     method' = toByteStringL $ requestMethod req
