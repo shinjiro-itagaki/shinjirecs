@@ -15,7 +15,9 @@ import Class.Castable
 import Control.Monad(Monad) -- base
 import Data.Either(Either(..))
 
-data OnResultFunc m a = OnSuccessFunc (a -> m (Bool,a)) | OnFailedFunc (a -> m a) | OnEitherFunc (a -> m (Bool,a)) (a -> m a)
+data OnResultFunc m a = OnSuccessFunc (a -> m (Bool,a))
+                      | OnFailedFunc  (a -> m a)
+                      | OnEitherFunc  (a -> m (Bool,a)) (a -> m a)
 
 (>>==) :: (Monad m) => m (Bool,a) -> OnResultFunc m a -> m (Bool,a)
 (>>==) mRes (OnSuccessFunc fs) = do
@@ -39,16 +41,6 @@ data OnResultFunc m a = OnSuccessFunc (a -> m (Bool,a)) | OnFailedFunc (a -> m a
 infixl 2 >>==
 
 {-
---replaceString :: String -> String -> String -> String
---replaceString old new obj = unpack $ replace (pack old) (pack new) (pack obj)
-
-(|||) :: Maybe a -> Maybe a -> Maybe a
-(|||) Nothing  Nothing = Nothing
-(|||) x Nothing = x
-(|||) Nothing y = y
-(|||) x y       = x
-
-
 (./) :: a -> (a -> b) -> b
 (./) arg func = func arg
 -}

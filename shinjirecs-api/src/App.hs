@@ -37,9 +37,6 @@ startServer port conn = do
     Routing.run conn
 -}
 
-fireAction :: Connection -> Request -> ParamGivenAction -> IO ControllerResponse
-fireAction conn req action = action conn req
-
 toResponse :: ControllerResponse -> Response
 toResponse res = responseLBS
   (status res)
@@ -72,11 +69,11 @@ app env req respond = do
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
       case Routing.run req of
-        Right action -> respond . toResponse =<< fireAction conn req action
+        Right action -> action conn req >>= respond . toResponse
         Left x -> respond $ case x of
-          PathNotFound              -> response404                path'
+          PathNotFound                  -> response404                path'
           PathFoundButMethodUnmatch msg -> response_NotAllowedMethod  method' path'
-          UnknownMethod             -> response_UnsupportedMethod method'
+          UnknownMethod                 -> response_UnsupportedMethod method'
     Nothing -> respond $ response500 "load config error!"
   where
     method' = toByteStringL $ requestMethod req
