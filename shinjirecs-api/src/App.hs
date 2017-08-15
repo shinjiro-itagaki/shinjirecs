@@ -69,7 +69,7 @@ app env req respond = do
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
       case Routing.run req of
-        Right action -> action conn req >>= respond . toResponse
+        Right (stdmethod, action) -> action stdmethod conn req >>= respond . toResponse
         Left x -> respond $ case x of
           RouteNotFound PathNotFound                    -> response404                path'
           RouteNotFound (PathFoundButMethodUnmatch msg) -> response_NotAllowedMethod  method' path'

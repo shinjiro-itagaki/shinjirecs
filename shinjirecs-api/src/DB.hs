@@ -75,7 +75,7 @@ data Table record = MkTable {
   ,deleteBy    :: Unique record -> IO ()
   ,deleteWhere :: [Filter record] -> IO ()
   ,get         :: Key record -> IO (Maybe record)
-  ,find        :: Int64 -> IO (Maybe record)
+  ,find        :: Int64 -> IO (Maybe (Entity record))
   ,getBy       :: Unique record -> IO (Maybe (Entity record))
   ,select      :: [Filter record] -> [SelectOpt record] -> IO [Entity record]
 --  ,selectKeys  :: [Filter record] -> [SelectOpt record] -> Source IO (Key record)

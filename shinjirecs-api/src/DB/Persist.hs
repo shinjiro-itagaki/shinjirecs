@@ -187,11 +187,15 @@ deleteWhere connpool filters = runSqlPool (Database.Persist.deleteWhere filters)
 get :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m (Maybe record)
 get connpool key = runSqlPool (Database.Persist.get key) connpool
 
-find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe record)
+find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe (Entity record))
 find connpool id =
   case keyFromValues [PersistInt64 id] of
     Left x -> return Nothing
-    Right key -> DB.Persist.get connpool key
+    Right key -> do
+      mval <- DB.Persist.get connpool key
+      return $ case mval of
+        Just val -> Just $ Entity key val
+        Nothing  -> Nothing
 
 getBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m (Maybe (Entity record))
 getBy connpool unique = runSqlPool (Database.Persist.getBy unique) connpool

@@ -14,6 +14,7 @@ import Data.ByteString.Lazy as L
 import DB(Connection)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status)
+import Network.HTTP.Types.Method(StdMethod)
 
 type ContentType = B.ByteString
 type Body = L.ByteString
@@ -25,8 +26,8 @@ data ControllerResponse = MkControllerResponse {
   }
 
 type Symbol = String
-type ParamGivenAction = (Connection -> Request -> IO ControllerResponse)
-type Action a = (a -> Connection -> Request -> IO ControllerResponse)
+type ParamGivenAction = (StdMethod -> Connection -> Request -> IO ControllerResponse)
+type Action a    = (a -> ParamGivenAction)
 
 data ActionWrapper = Action_N    (Action ())
                    | Action_S    (Action String)

@@ -27,11 +27,11 @@ import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
 
 notFound, badRequest :: Action ()
-notFound conn req _ = return $ defaultControllerResponse {
+notFound conn method req _ = return $ defaultControllerResponse {
   status = status404
   }
 
-badRequest conn req _ = return $ defaultControllerResponse {
+badRequest conn method req _ = return $ defaultControllerResponse {
   status = status400
   }
 
@@ -122,14 +122,6 @@ findMethodMatchedRoute stdmethod ((route@(MkRoute methods ptn actionWrapper),par
   then Just (route, params)
   else findMethodMatchedRoute stdmethod xs
 
-applyParams :: (Route, RawPathParams) -> Either RawPathParamsError (Route, RawPathParams, ParamGivenAction)
-applyParams (route@(MkRoute methods ptn actionWrapper), rawPathParams) =
-  case toParamGivenAction actionWrapper rawPathParams of
---    Left ParamsTypeError keys -> 
---    Left BadRouteDefinition   ->
-    Left x -> Left x
-    Right paramGivenAction -> Right $ (route, rawPathParams, paramGivenAction)
-  
 findRoute :: StdMethod -> Path -> Either RouteNotFoundError (Route, RawPathParams)
 findRoute stdmethod path =
   case findPathMatchedRoutes path routingMap of
@@ -142,7 +134,7 @@ findRoute stdmethod path =
     showRoute' :: Route -> String
     showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
-run :: Request -> Either RoutingError ParamGivenAction
+run :: Request -> Either RoutingError (StdMethod, ParamGivenAction)
 run req =
   case parseMethod $ requestMethod req of
     Left _ -> Left $ RouteNotFound UnknownMethod
@@ -150,5 +142,5 @@ run req =
       Right ((MkRoute methods ptn actionWrapper), rawPathParams) ->
         case toParamGivenAction actionWrapper rawPathParams of
           Left x -> Left $ BadPathParams x
-          Right action -> Right action
+          Right action -> Right (stdmethod, action)
       Left x -> Left $ RouteNotFound x

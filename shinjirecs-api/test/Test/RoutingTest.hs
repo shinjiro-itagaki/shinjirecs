@@ -6,7 +6,7 @@ import Class.String(toStrings,toByteString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
 import Data.Maybe(fromJust)
 import Helper.ListHelper((\\))
-import Routing.Class(Route(..),RouteNotFound(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
+import Routing.Class(Route(..),RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 import Controller.Types(ActionWrapper(..))
 
 pathToPiecesTest :: Test
@@ -56,11 +56,11 @@ findRouteTest =
     ]
   where
     -- Either RouteNotFound (ActionWrapper, RawPathParams)
-    fromLeft' :: Routing.Class.Path -> StdMethod -> Either RouteNotFound (Route, RawPathParams) -> RouteNotFound
+    fromLeft' :: Routing.Class.Path -> StdMethod -> Either RouteNotFoundError (Route, RawPathParams) -> RouteNotFoundError
     fromLeft' path method (Left x)  = x
-    fromLeft' path method (Right ((MkRoute methods ptn _ ), params))  = error $ "expect is RouteNotFound but actual is that [" ++ (show method) ++ "] " ++ (show path) ++ " matches at [" ++ (show methods) ++ "] " ++ (show ptn)
-    fromRight' :: Routing.Class.Path -> StdMethod -> Either RouteNotFound (Route, RawPathParams) -> (Route, RawPathParams)
-    fromRight' path method (Left _)  = error $ "expect is some route but actual is RouteNotFound by [" ++ (show method) ++ "] " ++ (show path)
+    fromLeft' path method (Right ((MkRoute methods ptn _ ), params))  = error $ "expect is RouteNotFoundError but actual is that [" ++ (show method) ++ "] " ++ (show path) ++ " matches at [" ++ (show methods) ++ "] " ++ (show ptn)
+    fromRight' :: Routing.Class.Path -> StdMethod -> Either RouteNotFoundError (Route, RawPathParams) -> (Route, RawPathParams)
+    fromRight' path method (Left _)  = error $ "expect is some route but actual is RouteNotFoundError by [" ++ (show method) ++ "] " ++ (show path)
     fromRight' path method (Right x) = x
     toTest',toTest2' :: Routing.Class.Path -> RawPathParams -> StdMethod -> Test
     toTest'  path res_params method = (snd . fromRight' path method $ findRoute method (toByteString path)) ~?= res_params

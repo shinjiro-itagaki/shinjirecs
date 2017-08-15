@@ -7,9 +7,11 @@ module Routing.Class where
 import Data.Int(Int64)
 import Data.Map(Map(..), empty, fromList)
 import Data.ByteString(ByteString)
+import Data.Maybe(catMaybes)
 import Controller.Types(ActionWrapper(..), Action, ParamGivenAction)
 import Class.String(StringClass,toByteString,toString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH))
+import Text.Read(readMaybe)
 
 type Path = ByteString
 
@@ -59,44 +61,70 @@ class PathParamList a where
 toParamGivenAction :: ActionWrapper -> RawPathParams -> Either RawPathParamsError ParamGivenAction
 toParamGivenAction action params =
   case action of
-    Action_N    f -> impl' f params -- (ActionType ()                     )
-    Action_S    f -> impl' f params -- (ActionType String                 )
-    Action_I    f -> impl' f params -- (ActionType Int64                    )
-    Action_SMap f -> impl' f params -- (ActionType (Map String String)    )
-    Action_IMap f -> impl' f params -- (ActionType (Map String Int64)       )
-    Action_SS   f -> impl' f params -- (ActionType (String,String)        )
-    Action_II   f -> impl' f params -- (ActionType (Int64,Int64)              )
-    Action_IS   f -> impl' f params -- (ActionType (Int64,String)           )
-    Action_SI   f -> impl' f params -- (ActionType (String,Int64)           )
-    Action_III  f -> impl' f params -- (ActionType (Int64,Int64,Int64)          )
-    Action_SII  f -> impl' f params -- (ActionType (String,Int64,Int64)       )
-    Action_ISI  f -> impl' f params -- (ActionType (Int64,String,Int64)       )
-    Action_IIS  f -> impl' f params -- (ActionType (Int64,Int64,String)       )
-    Action_SSI  f -> impl' f params -- (ActionType (String,String,Int64)    )
-    Action_ISS  f -> impl' f params -- (ActionType (Int64,String,String)    )
-    Action_SIS  f -> impl' f params -- (ActionType (String,Int64,String)    )
-    Action_SSS  f -> impl' f params -- (ActionType (String,String,String) )
+    Action_N    f -> impl' f params -- (Action ()                     )
+    Action_S    f -> impl' f params -- (Action String                 )
+    Action_I    f -> impl' f params -- (Action Int64                    )
+    Action_SMap f -> impl' f params -- (Action (Map String String)    )
+    Action_IMap f -> impl' f params -- (Action (Map String Int64)       )
+    Action_SS   f -> impl' f params -- (Action (String,String)        )
+    Action_II   f -> impl' f params -- (Action (Int64,Int64)              )
+    Action_IS   f -> impl' f params -- (Action (Int64,String)           )
+    Action_SI   f -> impl' f params -- (Action (String,Int64)           )
+    Action_III  f -> impl' f params -- (Action (Int64,Int64,Int64)          )
+    Action_SII  f -> impl' f params -- (Action (String,Int64,Int64)       )
+    Action_ISI  f -> impl' f params -- (Action (Int64,String,Int64)       )
+    Action_IIS  f -> impl' f params -- (Action (Int64,Int64,String)       )
+    Action_SSI  f -> impl' f params -- (Action (String,String,Int64)    )
+    Action_ISS  f -> impl' f params -- (Action (Int64,String,String)    )
+    Action_SIS  f -> impl' f params -- (Action (String,Int64,String)    )
+    Action_SSS  f -> impl' f params -- (Action (String,String,String) )
   where
     impl' :: (PathParamList a) => Action a -> RawPathParams -> Either RawPathParamsError ParamGivenAction
     impl' f params = case rawPathParamsToArgs params of
-                       Right args -> Right (f args)
+                       Right args -> Right $ f args
                        Left x     -> Left x
     
 
 rawPathParamsToArg' :: (Read a) => RawPathParams -> Either RawPathParamsError a
-rawPathParamsToArg' (x:yy) = Right $ read $ snd x
-rawPathParamsToArg' _      = Left BadRouteDefinition
+rawPathParamsToArg' (x@(k,v):yy) = case readMaybe v of
+                               Just x -> Right x
+                               Nothing -> Left (BadParamTypes [k])
+rawPathParamsToArg' _ = Left BadRouteDefinition
+
+getReadMaybeFailedKey' :: (String,Maybe a) -> Maybe String
+getReadMaybeFailedKey' (k, (Just _)) = Nothing
+getReadMaybeFailedKey' (k,  Nothing) = Just k
 
 rawPathParamsToArgsXX' :: (Read a, Read b) => RawPathParams -> Either RawPathParamsError (a,b)
-rawPathParamsToArgsXX' (x0:x1:xx) = Right (read $ snd x0, read $ snd x1)
-rawPathParamsToArgsXX' _          = Left BadRouteDefinition
+rawPathParamsToArgsXX' ((k0,v0):(k1,v1):xx) =
+  case (readMaybe v0, readMaybe v1) of
+    (Just arg0, Just arg1) -> Right (arg0, arg1)
+    (marg0    , marg1    ) -> Left $ BadParamTypes $ catMaybes
+                              $ [ getReadMaybeFailedKey' (k0, marg0)
+                                , getReadMaybeFailedKey' (k1, marg1)
+                                ]
+rawPathParamsToArgsXX' _ = Left BadRouteDefinition
 
 rawPathParamsToArgsXXX' :: (Read a, Read b, Read c) => RawPathParams -> Either RawPathParamsError (a,b,c)
-rawPathParamsToArgsXXX' (x0:x1:x2:xx) = Right (read $ snd x0, read $ snd x1, read $ snd $ x2)
-rawPathParamsToArgsXXX' _             = Left BadRouteDefinition
+rawPathParamsToArgsXXX' ((k0,v0):(k1,v1):(k2,v2):xx) =
+  case (readMaybe v0, readMaybe v1, readMaybe v2) of
+    (Just arg0, Just arg1, Just arg2) -> Right (arg0, arg1, arg2)
+    (marg0    , marg1    , marg2    ) -> Left $ BadParamTypes $ catMaybes
+                                         $ [ getReadMaybeFailedKey' (k0, marg0)
+                                           , getReadMaybeFailedKey' (k1, marg1)
+                                           , getReadMaybeFailedKey' (k2, marg2)
+                                           ]
+rawPathParamsToArgsXXX' _ = Left BadRouteDefinition
 
 rawPathParamsToArgsMap' :: (Read a) => RawPathParams -> Either RawPathParamsError (Map String a)
-rawPathParamsToArgsMap' xs = Right $ fromList $ map (\(k,v) -> (k, read v)) xs
+rawPathParamsToArgsMap' xs = impl' xs [] []
+  where
+    impl' :: (Read a) => RawPathParams -> [String] -> [(String, a)] -> Either RawPathParamsError (Map String a)
+    impl' []               []          rightParams' = Right $ fromList rightParams'
+    impl' []               failedKeys' rightParams' = Left $ BadParamTypes failedKeys'
+    impl' (p'@(k',v'):ps') failedKeys' rightParams' = case readMaybe v' of
+      Just arg' -> impl' ps'  failedKeys'          (rightParams' ++ [(k',arg')])
+      Nothing   -> impl' ps' (failedKeys' ++ [k']) rightParams'
 
 instance PathParamList () where
   rawPathParamsToArgs = rawPathParamsToArg'
