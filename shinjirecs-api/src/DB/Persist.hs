@@ -35,20 +35,20 @@ module DB.Persist(
   ,Update__
   ,Unique__
   ,Filter__
-  ,Entity__
   ,SelectOpt__
+  ,keyToStrings
   ) where
 import qualified DB.Config
 import qualified Data.Text as Text --text
 import Data.Text (Text,pack) -- text
 import Database.Persist -- persistent
-import Database.Persist.Types -- persistent
+import Database.Persist.Types(Entity(Entity)) -- persistent
 import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool, runMigration) -- persistent
 import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
 import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
 import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Database.Persist.Class (BaseBackend, IsPersistBackend, PersistEntity(..), Key(..)) -- persistent
+import Database.Persist.Class (BaseBackend, IsPersistBackend, PersistEntity(..), Key(..), keyToValues) -- persistent
 import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl, MonadResource) -- resourcet
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
@@ -72,6 +72,7 @@ import qualified Data.Text as Text --text
 import Data.Conduit(Source)
 import DB.Status(ReservationState(..))
 import DB.Types(ChannelType(..))
+import qualified Data.Aeson as J
 
 -- type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
@@ -122,7 +123,6 @@ type Key__ = Key
 type Update__ = Update
 type Unique__ = Unique
 type Filter__ = Filter
-type Entity__ = Entity
 type SelectOpt__ = SelectOpt
 
 {-
@@ -166,8 +166,12 @@ instance Record Channel where
 insert :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Key record)
 insert connpool val = runSqlPool (Database.Persist.insert val) connpool
 
-insertBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Either (Entity record) (Key record))
-insertBy connpool val = runSqlPool (Database.Persist.insertBy val) connpool
+insertBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Either (Key record,record) (Key record))
+insertBy connpool val = do
+  res <- runSqlPool (Database.Persist.insertBy val) connpool
+  return $ case res of
+    Left (Entity k v) -> Left (k,v)
+    Right key         -> Right key
 
 update :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record ->  [Update record] -> m record
 update connpool key updates = runSqlPool (Database.Persist.updateGet key updates) connpool
@@ -187,21 +191,27 @@ deleteWhere connpool filters = runSqlPool (Database.Persist.deleteWhere filters)
 get :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m (Maybe record)
 get connpool key = runSqlPool (Database.Persist.get key) connpool
 
-find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe (Entity record))
+find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe (Key record, record))
 find connpool id =
   case keyFromValues [PersistInt64 id] of
     Left x -> return Nothing
     Right key -> do
       mval <- DB.Persist.get connpool key
       return $ case mval of
-        Just val -> Just $ Entity key val
+        Just val -> Just (key,val)
         Nothing  -> Nothing
 
-getBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m (Maybe (Entity record))
-getBy connpool unique = runSqlPool (Database.Persist.getBy unique) connpool
+getBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m (Maybe (Key record,record))
+getBy connpool unique = do
+  res <- runSqlPool (Database.Persist.getBy unique) connpool
+  return $ case res of
+    Just (Entity k v) -> Just (k,v)
+    Nothing -> Nothing
 
-select :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [SelectOpt record] -> m [Entity record]
-select connpool filters opts = runSqlPool (Database.Persist.selectList filters opts) connpool
+select :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [SelectOpt record] -> m [(Key record, record)]
+select connpool filters opts = do
+  res <- runSqlPool (Database.Persist.selectList filters opts) connpool
+  return $ Prelude.map (\(Entity k v) -> (k,v)) res
   
 selectKeys :: (MonadResource m, MonadBaseControl IO m, PersistEntity record, BaseBackend (BaseBackend SqlBackend) ~ PersistEntityBackend record, MonadReader SqlBackend m) => Connection__ -> [Filter record] -> [SelectOpt record] -> Source m (Key record)
 selectKeys connpool filters opts = Database.Persist.selectKeys filters opts
@@ -211,3 +221,6 @@ count connpool filters = runSqlPool (Database.Persist.count filters) connpool
 
 checkUnique :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Maybe (Unique record))
 checkUnique connpool record = runSqlPool (Database.Persist.checkUnique record) connpool
+
+keyToStrings :: (PersistEntity record) => Key record -> [String]
+keyToStrings key = Prelude.map show $ keyToValues key

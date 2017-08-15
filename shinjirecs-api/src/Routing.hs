@@ -86,8 +86,8 @@ routingMap = [
    ( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
   ,( _GET_,    "/channels/:id"      ) @>> ChannelsC.get
   ,( _PATCH_,  "/channels/:id"      ) @>> ChannelsC.modify
-  ,( _POST_,   "/channels"          ) @>> notFound -- ChannelsC.create
-  ,( _DELETE_, "/channels/:id"      ) @>> notFound -- ChannelsC.destroy
+  ,( _POST_,   "/channels"          ) @>> ChannelsC.create
+  ,( _DELETE_, "/channels/:id"      ) @>> ChannelsC.destroy
     
   ,( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
   ,( _GET_,    "/install/channels"  ) @>> notFound -- InstallC.resultDetectChannels

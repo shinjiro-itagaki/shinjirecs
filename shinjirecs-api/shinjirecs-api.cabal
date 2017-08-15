@@ -26,6 +26,7 @@ library
                      , DB.Config
                      , DB.Class
                      , DB.HDBC
+                     , DB.ORMLinker
                      , DB.Persist
                      , DB.Status
                      , DB.Types

@@ -13,66 +13,37 @@ import qualified DB
 import Models.Channel
 -- import Control.Monad.Reader(ReaderT) -- mtl
 import Controller.Types(ActionWrapper(..), Action, Symbol, ControllerResponse(..))
-import Controller(defaultControllerResponse,toBody)
+import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord)
 import Class.String(StringClass(..))
-import Data.Aeson(parseJSON,toJSON,ToJSON)
-import Data.Aeson.Types(parseMaybe)
 import Data.Text(Text)
 import Network.Wai(Request)
 import Data.Int(Int64)
 
--- data ChannelsController = ChannelsController { conn_ :: ConnectionPool }
-
-{-
-instance Controller ChannelsController where
-  new                 = ChannelsController
-  conn                = conn_
-  beforeAction List c = return (True, c)
-  beforeAction _    c = return (True, c)
--}
--- クラスに記載された関数を実行したら、インスタンスの候補が複数存在するとしてエラーになるので以下のように戻り値の型を明示した関数を作成した
--- toMaybeEntity' x = toMaybeEntity x :: Maybe (Entity DB.Channel)
-
-toJsonText' :: (ToJSON a) => Maybe a -> Text
-toJsonText' Nothing  = ""
-toJsonText' (Just x) = case parseMaybe (parseJSON . toJSON) x of
-                        Just x  -> x
-                        Nothing -> ""
-
 list :: Action () -- (() -> Connection -> StdMethod -> Request -> IO ControllerResponse)
-list _ method conn req = do
-  channels <- (DB.select $ DB.channelsTable conn) filters opts
-  return $ defaultControllerResponse {
-    body = toBody $ toJsonText' $ Just channels -- resText
-  }
+list _ method conn req = getRecords filters' opts' table' (map snd)
   where
-    filters = [] -- :: [DB.Filter DB.Channel]
-    opts    = [] -- :: [DB.SelectOpt DB.Channel]
+    table' = DB.readTable conn :: DB.Table DB.Channel
+    filters' = [] -- :: [DB.Filter DB.Channel]
+    opts'    = [] -- :: [DB.SelectOpt DB.Channel]
 
 get :: Action Int64
-get id method conn req = do
-  mchannel <- (DB.find $ DB.channelsTable conn) id
-  return $ defaultControllerResponse {
-    body = toBody $ toJsonText' mchannel -- resText
-  }
+get id method conn req = getRecord id table' snd
+  where
+    table' = DB.readTable conn :: DB.Table DB.Channel
 
 modify :: Action Int64
 modify id method conn req = do
   mchannel <- (DB.find $ DB.channelsTable conn) id
   return $ defaultControllerResponse {
-    body = toBody $ toJsonText' mchannel -- resText
-  }
+    body = toBody mchannel -- resText
+    }
 
 create :: Action ()
 create _ method conn req = do
-  mchannel <- (DB.find $ DB.channelsTable conn) 1
+  mchannel <- (DB.find $ DB.channelsTable conn) (1 :: Int64)
   return $ defaultControllerResponse {
-    body = toBody $ toJsonText' mchannel -- resText    
-  }
-
+    body = toBody mchannel -- resText
+    }
+    
 destroy :: Action Int64
-destroy id method conn req = do
---  x <- (DB.delete $ DB.channelsTable conn) id)
-  return $ defaultControllerResponse {
-    body = "" -- toBody $ toJsonText' mchannel -- resText    
-  }
+destroy id method conn req = destroyRecord id $ (DB.readTable conn :: DB.Table DB.Channel)
