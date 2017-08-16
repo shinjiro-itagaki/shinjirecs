@@ -5,7 +5,7 @@ import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import DB(Reservation(..),Channel(..))
 import Database.Persist.Sql(ConnectionPool)
 import DB.Status(ReservationState(..))
-import Model(ActiveRecord(..),runDB,findByKey)
+--import Model(ActiveRecord(..),runDB,findByKey)
 -- import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(toSqlKey)  --persistent
 import Data.Maybe(isJust,catMaybes)
@@ -25,7 +25,7 @@ import Database.Persist.Types (Entity(..))
 import Class.String(StringClass(..))
 
 
-instance ActiveRecord Reservation
+-- instance ActiveRecord Reservation
 
   -- delete
   -- deleteWhere
@@ -186,7 +186,7 @@ reservationToCommandArg r conn pconf ArgDestFilePath = return $ Just $ reservati
 
 -- ReaderT SqlBackend IO (Maybe (Entity entity))
 reservationChannel :: MonadIO m => Reservation -> ConnectionPool -> m (Maybe (Entity DB.Channel))
-reservationChannel r conn = runDB conn $ findByKey $ reservationChannelId r
+reservationChannel r conn = return Nothing -- runDB conn $ findByKey $ reservationChannelId r
 
 {-
   startTime UTCTime

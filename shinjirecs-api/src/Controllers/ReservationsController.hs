@@ -16,7 +16,7 @@ import qualified DB
 import qualified Database.Persist.Class as PS
 import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool)  --persistent
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Model (find, saveE,saveR ,ToMaybeEntity(..))
+-- import Model (find, saveE,saveR ,ToMaybeEntity(..))
 import qualified Model as M
 import Models.Program
 import Control.Monad.Reader(ReaderT) -- mtl

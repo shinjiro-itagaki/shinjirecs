@@ -9,6 +9,70 @@
 -- {-# LANGUAGE ConstraintKinds #-}
 
 module Model where
+import DB(Connection)
+
+data ValidationResult m = ValidationOK m | ValidationFailed
+data BeforeActionResult m = Go m | Stop
+data SaveResult m = Commit m | Rollback
+
+class (HookActionResult m) r where
+  -- ok
+  -- please implement at least 'go'
+  ok,go,continue :: m -> r
+  go       = ok
+  continue = ok
+  
+  -- failed
+  -- please implement at least 'failed'
+  failed,stop,cancel :: m -> r
+  stop   = failed
+  cancel = failed
+
+instance (HookActionResult m) (ValidationResult m) where
+  ok     x = ValidationOK x
+  failed x = ValidationFailed
+  
+
+-- data Model record = MkModel record
+class Model m where
+  afterFind :: Connection -> m -> IO m
+  afterFind conn x = return x
+  
+  beforeValidation :: Connection -> m -> IO m
+  beforeValidation conn x = return x
+  
+  validate :: Connection -> m -> IO (ValidationResult m)
+  validate conn x = return $ ValidationOK x
+
+  afterValidation :: Connection -> m -> IO m
+  afterValidation conn x = return x
+
+  afterValidationFailed :: Connection -> m -> IO m
+  afterValidationFailed conn x = return x
+
+--  beforeSave :: Connection -> m -> IO (BeforeActionResult m)
+--  beforeSave conn m = 
+  
+--  afterSaved :: Connection -> m -> IO m
+  
+  -- afterSaveFailed
+  -- afterModifyFailed
+  -- afterSaveFailed
+  -- beforeCreate
+  -- afterCreated
+  -- beforeModify
+  -- afterModified
+  -- afterCreateFailed
+  -- beforeDestroy
+  -- afterDestroyed
+  -- afterDestroyFailed
+  -- afterCommit
+  -- afterRollback
+  -- existOnDb
+  -- existOnDb
+  
+
+{-
 import Text.Read(readMaybe) -- !!!
 import Data.Maybe(fromMaybe, isJust, isNothing, fromJust) -- !!!
 import Data.Tuple(swap)
@@ -19,7 +83,6 @@ import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  
 import Database.Persist.Sql.Types.Internal (SqlBackend)
 import Database.Persist.Types (Update,Entity(..),Filter,SelectOpt)
 import qualified DB
--- import Server (ActionM)
 import Control.Monad.Trans.Resource(MonadResource) -- resourcet
 import Control.Monad.Reader(ReaderT) -- mtl
 import Control.Monad.Reader.Class(MonadReader) -- mtl
@@ -30,22 +93,6 @@ import Helper(OnResultFunc(..),(>>==))
 import qualified Database.Persist as P --persistent
 import Class.Castable
 
-
-
-
-runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
-runDB p action = liftIO $ runSqlPool action p
-
-{-
-let resevation = findById conn $ param "id"
-    time_year  = param "time_year"
-    time_mon   = param "time_mon"
-    time_day   = param "time_day"
-    time_hh    = param "time_hh"
-    time_mm    = param "time_mm"
-    time_ss    = param "time_ss"
-res <- save conn reservation [RerservationStart_time +=. ]
--}
 
 data SaveType = Modify | Create
 
@@ -430,3 +477,4 @@ save2 conn r =
 find2 :: (ActiveRecord2 r) => DBConn -> Key r -> Maybe r
 find2 conn key = Nothing
 
+-}
