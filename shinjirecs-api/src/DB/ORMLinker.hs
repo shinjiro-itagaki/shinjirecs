@@ -9,8 +9,11 @@ module DB.ORMLinker (
   , migrate
   , Key
   , ORM.Reservation(..)
+--  , Reservation(..)
   , ORM.Channel(..)
+--  , Channel(..)
   , ORM.Program(..)
+--  , Program(..)
   , Update
   , Unique
   , Filter
@@ -18,9 +21,6 @@ module DB.ORMLinker (
   , Entity
   , Table(..)
   , readTable
-  , ReservationsTable
-  , ChannelsTable
-  , ProgramsTable
   , reservationsTable
   , channelsTable
   , programsTable
@@ -49,6 +49,9 @@ type Unique = ORM.Unique__
 type Filter = ORM.Filter__
 type SelectOpt = ORM.SelectOpt__
 type Entity record = (Key record,record)
+type Reservation = ORM.Reservation
+type Channel     = ORM.Channel
+type Program     = ORM.Program
 
 data Table record = MkTable {
   connection :: Connection
@@ -66,6 +69,8 @@ data Table record = MkTable {
 --  ,selectKeys  :: [Filter record] -> [SelectOpt record] -> Source IO (Key record)
   ,count       :: [Filter record] -> IO Int
   ,checkUnique :: record -> IO (Maybe (Unique record))
+  ,keyToStrings :: Key record -> [String]
+  ,entityToJSON :: Entity record -> J.Value
 }
 
 -- readTable :: Connection -> Table record
@@ -84,36 +89,18 @@ readTable conn = MkTable {
   ,select      = ORM.select       conn
   ,count       = ORM.count        conn
   ,checkUnique = ORM.checkUnique  conn
+  ,keyToStrings = ORM.keyToStrings
+  ,entityToJSON = (\(k,v) -> J.toJSON $ fromList [("id", idToJSON $ ORM.keyToStrings k ),("values",J.toJSON v)])
   }
 
-type ReservationsTable = Table ORM.Reservation
-type ChannelsTable     = Table ORM.Channel
-type ProgramsTable     = Table ORM.Program
+idToJSON :: [String] -> J.Value
+idToJSON []     = J.Null
+idToJSON (x:[]) = J.toJSON x
+idToJSON xs     = J.toJSON xs
 
-reservationsTable conn = readTable conn :: ReservationsTable
-channelsTable     conn = readTable conn :: ChannelsTable
-programsTable     conn = readTable conn :: ProgramsTable
+reservationsTable conn = readTable conn :: Table ORM.Reservation
+channelsTable     conn = readTable conn :: Table ORM.Channel
+programsTable     conn = readTable conn :: Table ORM.Program
 
---keyToStrings :: Key record -> [String]
---keyToStrings key = ORM.keyToStrings key
-
--- entityToJSON :: Entity record -> (J.Value, J.Value)
--- entityToJSON = ORM.entityToJSON
-
-{-
-instance (J.ToJSON record) => J.ToJSON (Key record) where
-  toJSON k = id' $ keyToStrings k
-    where
-      id' :: [String] -> J.Value
-      id' []     = J.Null
-      id' (x:[]) = J.toJSON x
-      id' xs     = J.toJSON xs
-
-instance (J.ToJSON record) => J.ToJSON (Entity record) where
-  toJSON (k,v) = J.toJSON $ fromList [(pack "id") (id' $ keyToStrings k)), (pack "values", J.toJSON v)]
-    where
-      id' :: [String] -> J.Value
-      id' []     = J.Null
-      id' (x:[]) = J.toJSON x
-      id' xs     = J.toJSON xs
--}
+instance J.ToJSON (Table record, Entity record) where
+  toJSON (t, e) = (entityToJSON t) e

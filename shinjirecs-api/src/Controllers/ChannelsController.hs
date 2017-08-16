@@ -3,20 +3,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Controllers.ChannelsController where
-import Data.Bool(bool)
-import Data.Maybe(maybe, fromMaybe, isJust, isNothing, fromJust) -- !!!
-import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
--- import Control.Monad.IO.Class(MonadIO,liftIO) -- base
 import qualified DB
--- import Model (find, saveE,saveR ,ToMaybeEntity(..))
--- import qualified Model as M
 import Models.Channel
--- import Control.Monad.Reader(ReaderT) -- mtl
-import Controller.Types(ActionWrapper(..), Action, Symbol, ControllerResponse(..))
+import Controller.Types(Action, ControllerResponse(body))
 import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord)
-import Class.String(StringClass(..))
-import Data.Text(Text)
-import Network.Wai(Request)
 import Data.Int(Int64)
 
 list :: Action () -- (() -> Connection -> StdMethod -> Request -> IO ControllerResponse)

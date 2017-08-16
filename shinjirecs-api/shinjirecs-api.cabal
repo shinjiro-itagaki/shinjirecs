@@ -41,8 +41,9 @@ library
                      , Controllers.ProgramsController
                      , Controllers.ReservationsController
                      , Class.Castable
-                     , Class.String
                      , Class.DateTime
+                     , Class.Object
+                     , Class.String
                      , Helper
                      , Helper.DateTimeHelper
                      , Helper.EnumHelper

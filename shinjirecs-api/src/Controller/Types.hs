@@ -25,7 +25,6 @@ data ControllerResponse = MkControllerResponse {
   ,status     :: Status
   }
 
-type Symbol = String
 type ParamGivenAction = (StdMethod -> Connection -> Request -> IO ControllerResponse)
 type Action a    = (a -> ParamGivenAction)
 
