@@ -2,15 +2,12 @@
 module Models.Reservation where
 import System.Process(CreateProcess,createProcess)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
-import DB(Reservation(..),Channel(..))
-import Database.Persist.Sql(ConnectionPool)
+import DB(Reservation(..),Channel(..),Table,Entity)
 import DB.Status(ReservationState(..))
---import Model(ActiveRecord(..),runDB,findByKey)
--- import qualified Database.Persist.Class as PS
-import Database.Persist.Sql(toSqlKey)  --persistent
+import Model(ModelClass(..))
 import Data.Maybe(isJust,catMaybes)
 import Data.Foldable(all)
-import Data.Char
+import Data.Char(toLower)
 import Data.Time.Clock(UTCTime,getCurrentTime,utctDay)
 import Class.Castable(from)
 import Class.String(replace)
@@ -21,17 +18,11 @@ import Helper.NumHelper(pNum0xd)
 import Data.Dates(WeekDay(..),dateWeekDay,dayToDateTime) -- dates
 import Config(Config(..),PathsConfig(..),ReservationConfig(..),ReservationCommandArg(..),scriptArgs)
 import System.FilePath.Posix((</>),pathSeparators) -- filepath
-import Database.Persist.Types (Entity(..))
 import Class.String(StringClass(..))
 
 
--- instance ActiveRecord Reservation
+instance ModelClass DB.Reservation
 
-  -- delete
-  -- deleteWhere
-
--- select_label(lmap)
--- excluded?(wday)
 isEveryweek     :: Reservation -> Bool
 setEveryweek    :: Reservation -> Reservation
 setNotEveryweek :: Reservation -> Reservation
@@ -71,7 +62,7 @@ symbolKeyStr sym = "%{" ++ (map toLower $ show sym) ++ "}"
 
 symbolValue :: Reservation -> FormatSymbol -> String
 symbolValue r Counter = reservationCounterStr r
-symbolValue r (StartTime tipe) = impl' tipe
+symbolValue r (StartTime typ) = impl' typ
   where
     printf' :: (Integral a) => a -> String
     printf' = pNum0xd 2 . fromIntegral
@@ -105,7 +96,7 @@ symbolValue r ProgramName = toString $ reservationName r
 
 instance Show FormatSymbol where
   show Counter = "counter"
-  show (StartTime tipe) = "st." ++ (show tipe)
+  show (StartTime typ) = "st." ++ (show typ)
   show ProgramName = "name"
 
 allFormatSymbols :: [FormatSymbol]
@@ -114,7 +105,7 @@ allFormatSymbols = [Counter] ++ (map StartTime [minBound .. maxBound])
 reservationCounterStr :: Reservation -> String
 reservationCounterStr r = pNum0xd keta' counter'
   where
-    keta' = reservationKeta r
+    keta'    = reservationKeta    r
     counter' = reservationCounter r
 
 reservationFileName :: Reservation -> FilePath
@@ -168,9 +159,9 @@ calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
     rWeekDay'  = reservationWeekDay  r
     rWeekDays' = reservationWeekDays r
 
-reservationCommand :: MonadIO m => Reservation -> ConnectionPool -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
-reservationCommand r conn pconf rconf = liftIO $ do
-  argMStrs' <- from $ map (reservationToCommandArg r conn pconf) $ scriptArgs :: IO [Maybe String]
+reservationCommand :: MonadIO m => Reservation -> Table Reservation -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
+reservationCommand r t pconf rconf = liftIO $ do
+  argMStrs' <- from $ map (reservationToCommandArg r t pconf) $ scriptArgs :: IO [Maybe String]
   return (if all isJust argMStrs'
           then Just $ from (script',catMaybes argMStrs')
           else Nothing)
@@ -178,15 +169,14 @@ reservationCommand r conn pconf rconf = liftIO $ do
     script' = commandDir pconf </> scriptFilePath rconf
   
 -- MonadIO m => 
-reservationToCommandArg :: Reservation -> ConnectionPool -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)
-reservationToCommandArg r conn pconf ArgDevice       = return $ Just ""
-reservationToCommandArg r conn pconf ArgChannel      = reservationChannel r conn >>= return . (>>= return . channelNumber . entityVal)
-reservationToCommandArg r conn pconf ArgDurationSec  = return $ Just $ show $ reservationDuration r
-reservationToCommandArg r conn pconf ArgDestFilePath = return $ Just $ reservationFilePath pconf r
+reservationToCommandArg :: Reservation -> Table Reservation -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)
+reservationToCommandArg r t pconf ArgDevice       = return $ Just ""
+reservationToCommandArg r t pconf ArgChannel      = reservationChannel r t >>= return . (>>= return . channelNumber . snd)
+reservationToCommandArg r t pconf ArgDurationSec  = return $ Just $ show $ reservationDuration r
+reservationToCommandArg r t pconf ArgDestFilePath = return $ Just $ reservationFilePath pconf r
 
--- ReaderT SqlBackend IO (Maybe (Entity entity))
-reservationChannel :: MonadIO m => Reservation -> ConnectionPool -> m (Maybe (Entity DB.Channel))
-reservationChannel r conn = return Nothing -- runDB conn $ findByKey $ reservationChannelId r
+reservationChannel :: MonadIO m => Reservation -> Table Reservation -> m (Maybe (DB.Entity DB.Channel))
+reservationChannel r t = return Nothing -- runDB conn $ findByKey $ reservationChannelId r
 
 {-
   startTime UTCTime

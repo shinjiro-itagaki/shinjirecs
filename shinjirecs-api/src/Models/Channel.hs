@@ -1,10 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Models.Channel where
 import DB(Channel)
--- import Model(ActiveRecord(..))
--- import DB.Class(Record)
+import Model(ModelClass(..))
 
--- instance UniqueReplaceableModel Channel
--- instance CascadeDeletableModel Channel
-
-
+instance ModelClass DB.Channel
