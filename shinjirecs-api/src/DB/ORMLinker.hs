@@ -24,7 +24,12 @@ module DB.ORMLinker (
   , reservationsTable
   , channelsTable
   , programsTable
---  , keyToStrings
+  , mkAsc, mkDesc, mkOffset, mkLimit
+  , mkAndFilter, mkOrFilter
+  , (.==), (.!=), (.<), (.>), (.<=), (.>=), (.||)
+  , eq, neq, lt, gt, lte, gte, DB.ORMLinker.or
+  , in_, notIn
+  , EntityField
   ) where
 import qualified DB.Persist as ORM
 import Data.Int(Int64)
@@ -48,10 +53,45 @@ type Update = ORM.Update__
 type Unique = ORM.Unique__
 type Filter = ORM.Filter__
 type SelectOpt = ORM.SelectOpt__
+mkAsc    = ORM.mkAsc
+mkDesc   = ORM.mkDesc
+mkOffset = ORM.mkOffsetBy
+mkLimit  = ORM.mkLimitTo
+mkAndFilter = ORM.mkAndFilter
+mkOrFilter = ORM.mkOrFilter
+type EntityField = ORM.EntityField__
 type Entity record = (Key record,record)
 type Reservation = ORM.Reservation
 type Channel     = ORM.Channel
 type Program     = ORM.Program
+
+(.==) l r = (ORM.==.) l r
+eq    l r = l .== r
+
+(.!=) l r = (ORM.!=.) l r
+neq   l r = l .!= r
+
+(.<)  l r = (ORM.<.)  l r
+lt    l r = l .< r
+
+(.>)  l r = (ORM.>.)  l r
+gt    l r = l .> r
+
+(.<=) l r = (ORM.<=.) l r
+lte   l r = l (.<=) r
+
+(.>=) l r = (ORM.>=.) l r
+gte   l r = l (.>=) r
+
+infix 4 .==, .!=, .<, .>, .<=, .>=, `eq`, `neq`, `lt`, `gt`, `lte`, `gte`
+
+in_    l r = (ORM.<-.)  l r
+notIn  l r = (ORM./<-.) l r
+infix 4 `in_`, `notIn`
+
+(.||) l r = (ORM.||.) l r
+or    l r = l .|| r
+infixl 3 .||, `or`
 
 data Table record = MkTable {
   connection :: Connection
@@ -59,13 +99,14 @@ data Table record = MkTable {
   ,update :: Key record -> [Update record] -> IO record
   ,insertBy :: record -> IO (Either (Entity record) (Key record))
   ,updateWhere :: [Filter record] -> [Update record] -> IO ()
+  ,repsert     :: Key record -> record -> IO ()
   ,delete      :: Key record -> IO ()
   ,deleteBy    :: Unique record -> IO ()
   ,deleteWhere :: [Filter record] -> IO ()
   ,get         :: Key record -> IO (Maybe record)
   ,find        :: Int64 -> IO (Maybe (Entity record))
   ,getBy       :: Unique record -> IO (Maybe (Entity record))
-  ,select      :: [Filter record] -> [SelectOpt record] -> IO [(Key record, record)]
+  ,select      :: [Filter record] -> [SelectOpt record] -> IO [Entity record]
 --  ,selectKeys  :: [Filter record] -> [SelectOpt record] -> Source IO (Key record)
   ,count       :: [Filter record] -> IO Int
   ,checkUnique :: record -> IO (Maybe (Unique record))
@@ -80,6 +121,7 @@ readTable conn = MkTable {
   ,update      = ORM.update       conn
   ,insertBy    = ORM.insertBy     conn
   ,updateWhere = ORM.updateWhere  conn
+  ,repsert     = ORM.repsert      conn
   ,delete      = ORM.delete       conn
   ,deleteBy    = ORM.deleteBy     conn
   ,deleteWhere = ORM.deleteWhere  conn

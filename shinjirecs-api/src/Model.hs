@@ -9,68 +9,172 @@
 -- {-# LANGUAGE ConstraintKinds #-}
 
 module Model where
-import DB(Connection)
+import qualified DB
+import Data.Int(Int64)
+import Data.Maybe(maybe)
+import Control.Monad(sequence)
 
-data ValidationResult m = ValidationOK m | ValidationFailed
-data BeforeActionResult m = Go m | Stop
-data SaveResult m = Commit m | Rollback
+type ColumnName = String
+data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
 
-class (HookActionResult m) r where
-  -- ok
-  -- please implement at least 'go'
-  ok,go,continue :: m -> r
-  go       = ok
-  continue = ok
-  
-  -- failed
-  -- please implement at least 'failed'
-  failed,stop,cancel :: m -> r
-  stop   = failed
-  cancel = failed
+data ValidationResult   a = Valid   a | Invalid [(ColumnName, FailedReason)]
+data BeforeActionResult a = Go      a | Cancel
+data AfterActionResult  a = Commit  a | Rollback
 
-instance (HookActionResult m) (ValidationResult m) where
-  ok     x = ValidationOK x
-  failed x = ValidationFailed
-  
+data SaveResult  a = Success a | Failed [(ColumnName, FailedReason)] | CauseUnknownFailure
+type CreateResult  = SaveResult
+type ModifyResult  = SaveResult
+data DestroyResult = DeleteSuccess | RecordNotFound | DeleteFailed
 
--- data Model record = MkModel record
-class Model m where
-  afterFind :: Connection -> m -> IO m
-  afterFind conn x = return x
-  
-  beforeValidation :: Connection -> m -> IO m
-  beforeValidation conn x = return x
-  
-  validate :: Connection -> m -> IO (ValidationResult m)
-  validate conn x = return $ ValidationOK x
+valid :: a -> IO (ValidationResult a)
+valid = return . Valid
 
-  afterValidation :: Connection -> m -> IO m
-  afterValidation conn x = return x
+invalid :: a -> [(ColumnName, FailedReason)] -> IO (ValidationResult a)
+invalid x reasons = return $ Invalid reasons
 
-  afterValidationFailed :: Connection -> m -> IO m
-  afterValidationFailed conn x = return x
+go :: a -> IO (BeforeActionResult a)
+go = return . Go
 
---  beforeSave :: Connection -> m -> IO (BeforeActionResult m)
---  beforeSave conn m = 
+cancel :: a -> IO (BeforeActionResult a)
+cancel x = return Cancel
+
+commit :: a -> IO (AfterActionResult a)
+commit = return . Commit
+
+rollback :: a -> IO (AfterActionResult a)
+rollback x = return Rollback
+
+class (GetKey m) a where
+  getKey :: a -> Maybe (DB.Key m)
+
+instance (GetKey r) (DB.Entity r) where
+  getKey (k,v) = Just k
+
+doNothing' :: a -> b -> IO b
+doNothing' x y = return y
+
+class ModelClass m where
   
---  afterSaved :: Connection -> m -> IO m
+  afterFind :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterFind = doNothing'
   
-  -- afterSaveFailed
-  -- afterModifyFailed
-  -- afterSaveFailed
-  -- beforeCreate
-  -- afterCreated
-  -- beforeModify
-  -- afterModified
-  -- afterCreateFailed
-  -- beforeDestroy
-  -- afterDestroyed
-  -- afterDestroyFailed
-  -- afterCommit
-  -- afterRollback
-  -- existOnDb
-  -- existOnDb
+  beforeValidation :: DB.Table m -> m -> IO m
+  beforeValidation = doNothing'
   
+  validate :: DB.Table m -> m -> IO (ValidationResult m)
+  validate table x = valid x
+
+  afterValidation :: DB.Table m -> m -> IO m
+  afterValidation = doNothing'
+
+  afterValidationFailed :: DB.Table m -> m -> IO m
+  afterValidationFailed = doNothing'
+
+  beforeSave :: DB.Table m -> m -> IO (BeforeActionResult m)
+  beforeSave table x = go x
+
+  beforeCreate :: DB.Table m -> m -> IO (BeforeActionResult m)
+  beforeCreate table x = go x
+
+  beforeModify :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult (DB.Entity m))
+  beforeModify table x = go x
+  
+  afterCreated :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterCreated = doNothing'
+
+  afterModified :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterModified = doNothing'
+    
+  afterSaved :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterSaved = doNothing'
+  
+  afterSaveFailed :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterSaveFailed = doNothing'
+
+  afterModifyFailed :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterModifyFailed = doNothing'
+
+  afterCreateFailed :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterCreateFailed = doNothing'
+  
+  beforeDestroy :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult (DB.Entity m))
+  beforeDestroy table x = go x
+  
+  afterDestroyed :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterDestroyed = doNothing'
+  
+  afterDestroyFailed :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterDestroyFailed = doNothing'
+  
+  afterCommit :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterCommit = doNothing'
+  
+  afterRollback :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterRollback = doNothing'
+
+data (ModelClass m) => SelectQuery m = MkSelectQuery [DB.Filter m] [DB.SelectOpt m]
+
+fireAfterFindME :: (ModelClass m) => DB.Table m -> Maybe (DB.Entity m) -> IO (Maybe (DB.Entity m))
+fireAfterFindME _ Nothing  = return Nothing
+fireAfterFindME t (Just e) = fireAfterFind t e >>= return . Just 
+
+fireAfterFind :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (DB.Entity m)
+fireAfterFind t e = afterFind t e
+
+fireAfterFindMKMV :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> Maybe m -> IO (Maybe (DB.Entity m))
+fireAfterFindMKMV t (Just k) (Just v) = fireAfterFind t (k,v) >>= return . Just 
+fireAfterFindMKMV _ _ _ = return Nothing
+
+find :: (ModelClass m) => DB.Table m -> Int64 -> IO (Maybe (DB.Entity m))
+find t id = DB.find t id >>= fireAfterFindME t
+
+get :: (ModelClass m) => DB.Table m -> DB.Key m -> IO (Maybe m)
+get t k = DB.get t k >>= (\mv -> fireAfterFindMKMV t (Just k) mv) >>= return . maybe Nothing (Just . snd)
+
+select :: (ModelClass m) => DB.Table m -> SelectQuery m -> IO [(DB.Entity m)]
+select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . map (fireAfterFind t)
+
+save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (SaveResult m)
+save table mkey val = maybe doInsert' doUpdate' mkey
+  where
+    get'    = DB.get     table
+    update' = DB.repsert table
+    insert' = DB.insert  table
+    doUpdate' key = update' key val >> get' key >>= return . maybe CauseUnknownFailure Success
+    doInsert'     = insert' val    >>= get'     >>= return . maybe CauseUnknownFailure Success
+
+destroy :: (ModelClass m) => DB.Table m -> DB.Key m -> IO DestroyResult
+destroy table key = get' key >>= maybe (return RecordNotFound) doDelete'
+  where
+    get'    = DB.get    table
+    delete' = DB.delete table
+    doDelete' _ = delete' key >> get' key >>= return . maybe DeleteSuccess (\_ -> DeleteFailed)
+    
+-- res <- select table $ asc ChannelHoge $ where [channelHoge .== 1, channelFoo .== 2] $ where [channelAaa .== 22 , channelName .== "hoge"] $ rec
+-- return $ toJSON res
+class (ToSelectQuery m) a where
+  where_  :: [DB.Filter m]  -> a -> SelectQuery m
+  whereOr :: [DB.Filter m]  -> a -> SelectQuery m
+  limit   :: Int         -> a -> SelectQuery m
+  offset  :: Int         -> a -> SelectQuery m
+  asc     :: DB.EntityField m typ -> a -> SelectQuery m
+  desc    :: DB.EntityField m typ -> a -> SelectQuery m
+
+instance (ModelClass m) => (ToSelectQuery m) m where
+  where_  fs x = MkSelectQuery fs []
+  whereOr      = where_
+  limit   i  x = MkSelectQuery [] [DB.mkLimit  i]
+  offset  i  x = MkSelectQuery [] [DB.mkOffset i]
+  asc     f  x = MkSelectQuery [] [DB.mkAsc    f]
+  desc    f  x = MkSelectQuery [] [DB.mkDesc   f]
+  
+instance (ModelClass m) => (ToSelectQuery m) (SelectQuery m) where
+  where_  fs (MkSelectQuery xs ys) = MkSelectQuery (xs ++ fs) ys
+  whereOr fs (MkSelectQuery xs ys) = MkSelectQuery (fs `DB.or` xs) ys
+  limit   i  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkLimit  i])
+  offset  i  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkOffset i])
+  asc     f  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkAsc    f])
+  desc    f  (MkSelectQuery ys zs) = MkSelectQuery ys (zs ++ [DB.mkDesc   f])
 
 {-
 import Text.Read(readMaybe) -- !!!

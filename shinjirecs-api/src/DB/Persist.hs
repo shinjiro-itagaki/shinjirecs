@@ -6,7 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
--- {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 
 module DB.Persist(
   migrate
@@ -20,6 +20,7 @@ module DB.Persist(
   ,DB.Persist.insertBy
   ,DB.Persist.update
   ,DB.Persist.updateWhere
+  ,DB.Persist.repsert
   ,DB.Persist.delete
   ,DB.Persist.deleteBy
   ,DB.Persist.deleteWhere
@@ -36,13 +37,29 @@ module DB.Persist(
   ,Unique__
   ,Filter__
   ,SelectOpt__
+  ,EntityField__
+  ,mkAsc
+  ,mkDesc
+  ,mkOffsetBy
+  ,mkLimitTo
+  ,(==.)
+  ,(!=.)
+  ,(<.)
+  ,(>.)
+  ,(<=.)
+  ,(>=.)
+  ,(<-.)
+  ,(/<-.)
+  ,(||.)
+  ,mkAndFilter
+  ,mkOrFilter
   ,keyToStrings
   ) where
 import qualified DB.Config
 import qualified Data.Text as Text --text
 import Data.Text (Text,pack) -- text
-import Database.Persist -- persistent
-import Database.Persist.Types(Entity(Entity)) -- persistent
+import Database.Persist(PersistField, PersistValue(PersistInt64), checkUnique, count, getBy, get, deleteWhere, deleteBy, selectKeys, selectList, delete, updateWhere, repsert, insertBy, updateGet, insert, PersistRecordBackend, Filter(Filter,FilterOr,FilterAnd), Update(..),PersistFilter(..),(==.),(!=.),(<.),(>.),(<=.),(>=.),(<-.),(/<-.),(||.)) -- persistent
+import Database.Persist.Types(Entity(Entity), SelectOpt(..)) -- persistent
 import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool, runMigration) -- persistent
 import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
 import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
@@ -124,6 +141,31 @@ type Update__ = Update
 type Unique__ = Unique
 type Filter__ = Filter
 type SelectOpt__ = SelectOpt
+type EntityField__ = EntityField
+
+mkAsc      = Asc
+mkDesc     = Desc
+mkOffsetBy = OffsetBy
+mkLimitTo  = LimitTo
+--mkFilter :: forall v typ. PersistField typ => EntityField v typ -> typ -> Filter v
+--mkFilter   = Filter
+
+--type FilterOperatorType1 = ((forall v typ.  PersistField typ) => EntityField v typ ->  typ  -> Filter v)
+--type FilterOperatorTypeN = ((forall v typ.  PersistField typ) => EntityField v typ -> [typ] -> Filter v)
+
+--(|==|),(|!=|),(|<|),(|>|),(|<=|),(|>=|) :: (forall v typ.  PersistField typ) => EntityField v typ ->  typ  -> Filter v -- FilterOperatorType1
+--in_, notIn :: (forall v typ.  PersistField typ) => EntityField v typ -> [typ] -> Filter v -- FilterOperatorTypeN
+-- (|==|) = (==.)
+-- (|!=|) = (!=.)
+-- (|<|)  = (<.)
+-- (|>|)  = (>.)
+-- (|<=|) = (<=.)
+-- (|>=|) = (>=.)
+-- in_    = (<-.)
+-- notIn  = (/<-.)
+  
+mkAndFilter = FilterAnd
+mkOrFilter = FilterOr
 
 {-
 instance Record Reservation where
@@ -178,6 +220,9 @@ update connpool key updates = runSqlPool (Database.Persist.updateGet key updates
 
 updateWhere :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [Update record] -> m ()
 updateWhere connpool filters updates = runSqlPool (Database.Persist.updateWhere filters updates) connpool
+
+repsert :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> record -> m ()
+repsert connpool key val = runSqlPool (Database.Persist.repsert key val) connpool
 
 delete :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m ()
 delete connpool key = runSqlPool (Database.Persist.delete key) connpool
