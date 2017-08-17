@@ -17,14 +17,16 @@ import Control.Monad(sequence)
 type ColumnName = String
 data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
 
+data BeforeActionStep = Validation | Create | Modify | Save
+
 data ValidationResult   a = Valid   a | Invalid [(ColumnName, FailedReason)]
 data BeforeActionResult a = Go      a | Cancel
 data AfterActionResult  a = Commit  a | Rollback
 
-data SaveResult  a = Success a | Failed [(ColumnName, FailedReason)] | CauseUnknownFailure
+data SaveResult  a = Success a | Failed [(ColumnName, FailedReason)] | CauseUnknownFailure | SaveCanceled BeforeActionStep
 type CreateResult  = SaveResult
 type ModifyResult  = SaveResult
-data DestroyResult = DeleteSuccess | RecordNotFound | DeleteFailed
+data DestroyResult = DeleteSuccess | RecordNotFound | DeleteFailed | DeleteCanceled
 
 valid :: a -> IO (ValidationResult a)
 valid = return . Valid
