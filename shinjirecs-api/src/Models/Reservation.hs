@@ -2,7 +2,8 @@
 module Models.Reservation where
 import System.Process(CreateProcess,createProcess)
 import Control.Monad.IO.Class(MonadIO,liftIO) -- base
-import DB(Reservation(..),Channel(..),Table,Entity)
+import DB(Reservation(..))
+import qualified DB
 import DB.Status(ReservationState(..))
 import Model(ModelClass(..))
 import Data.Maybe(isJust,catMaybes)
@@ -159,7 +160,7 @@ calcNext r = (*) (24 * 3600) $ nearestWeekDayInterval rWeekDay' rWeekDays'
     rWeekDay'  = reservationWeekDay  r
     rWeekDays' = reservationWeekDays r
 
-reservationCommand :: MonadIO m => Reservation -> Table Reservation -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
+reservationCommand :: MonadIO m => DB.Reservation -> DB.Table DB.Reservation -> PathsConfig -> ReservationConfig -> m (Maybe CreateProcess)
 reservationCommand r t pconf rconf = liftIO $ do
   argMStrs' <- from $ map (reservationToCommandArg r t pconf) $ scriptArgs :: IO [Maybe String]
   return (if all isJust argMStrs'
@@ -169,14 +170,18 @@ reservationCommand r t pconf rconf = liftIO $ do
     script' = commandDir pconf </> scriptFilePath rconf
   
 -- MonadIO m => 
-reservationToCommandArg :: Reservation -> Table Reservation -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)
+reservationToCommandArg :: Reservation -> DB.Table Reservation -> PathsConfig -> ReservationCommandArg -> IO (Maybe String)
 reservationToCommandArg r t pconf ArgDevice       = return $ Just ""
-reservationToCommandArg r t pconf ArgChannel      = reservationChannel r t >>= return . (>>= return . channelNumber . snd)
+reservationToCommandArg r t pconf ArgChannel      = reservationChannel r t >>= return . (>>= return . DB.channelNumber . snd)
 reservationToCommandArg r t pconf ArgDurationSec  = return $ Just $ show $ reservationDuration r
 reservationToCommandArg r t pconf ArgDestFilePath = return $ Just $ reservationFilePath pconf r
 
-reservationChannel :: MonadIO m => Reservation -> Table Reservation -> m (Maybe (DB.Entity DB.Channel))
-reservationChannel r t = return Nothing -- runDB conn $ findByKey $ reservationChannelId r
+reservationChannel :: DB.Reservation -> DB.Table Reservation -> IO (Maybe (DB.Entity DB.Channel))
+reservationChannel r t = getChannel' (reservationChannelId r) -- error "not implemented" -- return Nothing -- runDB conn $ findByKey $ reservationChannelId r
+  where
+    getChannel' :: DB.Key DB.Channel -> IO (Maybe (DB.Entity DB.Channel))
+    getChannel' key = DB.get chtable' key
+    chtable' = (DB.readTable $ DB.connection t) :: DB.Table DB.Channel
 
 {-
   startTime UTCTime

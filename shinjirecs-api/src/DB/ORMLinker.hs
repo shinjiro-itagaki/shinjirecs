@@ -103,7 +103,7 @@ data Table record = MkTable {
   ,delete      :: Key record -> IO ()
   ,deleteBy    :: Unique record -> IO ()
   ,deleteWhere :: [Filter record] -> IO ()
-  ,get         :: Key record -> IO (Maybe record)
+  ,get         :: Key record -> IO (Maybe (Entity record))
   ,find        :: Int64 -> IO (Maybe (Entity record))
   ,getBy       :: Unique record -> IO (Maybe (Entity record))
   ,select      :: [Filter record] -> [SelectOpt record] -> IO [Entity record]
