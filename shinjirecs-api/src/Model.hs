@@ -23,7 +23,7 @@ data ValidationResult   a = Valid   a | Invalid [(ColumnName, FailedReason)]
 data BeforeActionResult a = Go      a | Cancel a
 data AfterActionResult  a = Commit  a | Rollback
 
-data BeforeActionStep a = OnValidation | OnBeforeSave | On a
+data BeforeActionStep a = OnBeforeValidation | OnValidation | OnBeforeSave | On a
 
 data SaveResult s f c on_x = SaveSuccess s | SaveFailed f [(ColumnName, FailedReason)] | Canceled (BeforeActionStep on_x) c
 
@@ -69,8 +69,8 @@ class ModelClass m where
   afterFind :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
   afterFind _ = doNothing'
   
-  beforeValidation :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
-  beforeValidation _ _ = doNothing'
+  beforeValidation :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (BeforeActionResult m)
+  beforeValidation _ _ = go
   
   validate :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (ValidationResult m)
   validate _ _ = valid
@@ -141,8 +141,33 @@ get t k = DB.get t k >>= fireAfterFindME t
 select :: (ModelClass m) => DB.Table m -> SelectQuery m -> IO [(DB.Entity m)]
 select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . map (fireAfterFind t)
 
+create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
+create t v = save' t v (\k v -> v) beforeCreate (\x -> Nothing) (\x -> x) (\x -> Nothing) (\t k v -> DB.insert t v) BeforeCreate
+
+modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
+modify t e = save' t e (\k v -> (k,v)) beforeModify (\(k,v) -> k) (\(k,v) -> v) (\(k,v) -> Just k) (\t k v -> DB.repsert t k v >> return k) BeforeModify
+
+type HookAndOnCancelActionsPair m end = ((m -> IO end) , (m -> IO (BeforeActionResult m)))
+
+(>>==) :: [HookAndOnCancelActionsPair m end] -- next hook actions
+       -> (m -> IO end) -- tail action
+       -> (m -> IO end) -- function :: initial argument -> last action result
+(>>==) cancel_go_pairs tailf = impl' cancel_go_pairs
+  where
+    -- impl' :: [HookAndOnCancelActionsPair m end] -> m -> IO end
+    impl' []           m = tailf m
+    impl' ((onError,hook):xs) m = hook m
+      >>= (\res -> case res of
+            Go     m2 -> impl' xs m2
+            Cancel m2 -> onError  m2)
+            
+(|||) :: (m -> IO end) -> (m -> IO (BeforeActionResult m)) -> ((m -> IO end), (m -> IO (BeforeActionResult m)))
+(|||) f_if_cancel f_if_go = (f_if_cancel, f_if_go)
+
+onCancel l r = r ||| l
+do' x = x
+
 {-
-  beforeValidation :: DB.Table m -> m -> IO m
   validate :: DB.Table m -> m -> IO (ValidationResult m)
   afterValidation :: DB.Table m -> m -> IO m
   afterValidationFailed :: DB.Table m -> m -> IO m
@@ -158,102 +183,29 @@ select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . 
   afterCommit :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
   afterRollback :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
 -}
-
-create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
-create t v = do
-  bsr <- beforeSave' t Nothing v
-  case bsr of
-    Cancel v2 -> return $ Canceled OnBeforeSave $ kv_to_arg' k' v2
-    Go     v2 -> do
-      bar <- beforeCreate t v2
-      case bar of
-        Cancel v3 -> return $ Canceled (On beforeCreateOrModify') $ kv_to_arg' k' v3
-        Go     v3 -> doImpl' v3
-  where
-    kv_to_arg' k' v' = v'
-    k_getter' x = Nothing
-    v_getter' x = x
-    k' = k_getter' v
-    v' = v_getter' v
-    beforeSave' t' mk' v' = beforeSave t' mk' v'
-    get'         = DB.get    t -- same
-    insert'      = DB.insert t
-    beforeCreateOrModify' = BeforeCreate
-    --doImpl' = doInsert'
-    --doInsert' v2 = insert' v2 >>= get' >>= return . maybe (SaveFailed v2 []) SaveSuccess
-    doFirst' k' v' = insert' v'
-    -- doImpl' v3 = insert' v3 >>= get' >>= return . maybe (SaveFailed (kv_to_arg' k v3) []) SaveSuccess
-    doImpl' v3 = doFirst' k' v3 >>= get' >>= return . maybe (SaveFailed (kv_to_arg' k' v3) []) SaveSuccess
-
-modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
-modify t e = do
-  bsr <- beforeSave' t (Just k') v'
-  case bsr of
-    Cancel v2 -> return $ Canceled OnBeforeSave $ kv_to_arg' k' v2
-    Go     v2 -> do
-      bar <- beforeModify t e
-      case bar of
-        Cancel v3 -> return $ Canceled (On beforeCreateOrModify') $ kv_to_arg' k' v3
-        Go     v3 -> doImpl' v3
-  where
-    kv_to_arg' k' v' = (k',v')
-    k_getter' x = fst x
-    v_getter' x = snd x
-    k' = k_getter' e
-    v' = v_getter' e
-    beforeSave' t' mk' v' = beforeSave t' mk' v'    
-    get'         = DB.get t -- same
-    update'      = DB.repsert t
-    beforeCreateOrModify' = BeforeModify
---    doImpl' = doUpdate'    
---    doUpdate' v3 = update' k v3 >> get' k >>= return . maybe (SaveFailed (k,v3) []) SaveSuccess
-    doFirst' k' v' = update' k' v' >> return k'
-    -- doImpl' v3 = update' k v3 >> get' k >>= return . maybe (SaveFailed (kv_to_arg' k v3) []) SaveSuccess
-    doImpl' v3 = doFirst' k' v3 >>= get' >>= return . maybe (SaveFailed (kv_to_arg' k' v3) []) SaveSuccess
-
--- create :: (ModelClass m) => DB.Table m ->            m  -> IO (CreateResult m)
--- modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
-
--- argtype :: v or Entity v
--- keytype ::
-{-
 save' :: (ModelClass m) =>
-  DB.Table m
-  -> argtype -- v or Entity v
-  -> (argtype -> k) -- arg_to_maybe_k  :: (\(k,v) -> k) or (\v -> Nothing)
-  -> (argtype -> k)
-  -> (argtype -> v)
-  -> (k -> v -> argtype) -- v or Entity v
-  -> (Table m -> k -> v -> BeforeActionResult m) -- beforeCreate or beforeModify
-  -> IO (result m)
-save' t arg arg_to_maybe_k k_getter v_getter f_canceled_on_before_save f_before_action = do
--- bsr <- beforeSave t Nothing  v -- create 
--- bsr <- beforeSave t (Just k) v -- modify
-  case bsr of
---    Cancel v2 -> return $ Canceled OnBeforeSave v2 -- create
---    Cancel v2 -> return $ Canceled OnBeforeSave (k,v2) -- modify
-    Cancel v2 -> return $ Canceled OnBeforeSave (k,v2)
---    Go     v2 -> do -- create
---    Go     v2 -> do -- modify
---      bar <- beforeCreate t v2 -- create
---      bar <- beforeModify t e -- modify
---      case bar of -- create
---      case bar of -- modify        
---        Cancel v3 -> return $ Canceled (On BeforeCreate) v3 -- create
---        Cancel v3 -> return $ Canceled (On BeforeModify) (k,v3) -- modify
---        Go     v3 -> doInsert' v3 -- create
---        Go     v3 -> doUpdate' v3 -- modify
-  
+  DB.Table m -- table
+  -> arg     -- record or (Entity record)
+  -> (argk -> m -> arg) -- cast k v to arg
+  -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -- hook action
+  -> (arg -> argk) -- function to get key from arg
+  -> (arg -> m)    -- function to get val from arg
+  -> (arg -> Maybe (DB.Key m)) --  function to get Maybe key from arg
+  -> (DB.Table m -> argk -> m -> IO (DB.Key m)) -- function to do insert or update
+  -> canceled_on_before_create_or_modify -- value on canceled
+  -> IO (SaveResult (DB.Entity m) arg arg canceled_on_before_create_or_modify)
+save' t e kv_to_arg' beforeCreateOrUpdate' k_getter' v_getter' arg_to_mkey' insert_or_update' beforeStepFlag' = do
+    (return ev')
+      >>= ([ do' (beforeValidation      t (arg_to_mkey' e)) `onCancel` (return . Canceled OnBeforeValidation   . kv_to_arg' ek')
+           , do' (beforeSave            t (arg_to_mkey' e)) `onCancel` (return . Canceled OnBeforeSave         . kv_to_arg' ek')
+           , do' (beforeCreateOrUpdate' t . kv_to_arg' ek') `onCancel` (return . Canceled (On beforeStepFlag') . kv_to_arg' ek')
+           ] >>== doImpl')
   where
-    k = k_getter arg
-    v = v_getter arg
+    ek' = k_getter' e
+    ev' = v_getter' e
     get'         = DB.get t
---    update'      = DB.repsert t
---    doUpdate' v2 = update' k v2 >> get' k >>= return . maybe (SaveFailed (k,v2) []) SaveSuccess
---    insert'      = DB.insert t
---    doInsert' v2 = insert' v2 >>= get' >>= return . maybe (SaveFailed v2 []) SaveSuccess
-
--}
+    doFirst' v' = insert_or_update' t ek' v'
+    doImpl'  v' = doFirst' v' >>= get' >>= return . maybe (SaveFailed (kv_to_arg' ek' v') []) SaveSuccess
 
 save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
 save t Nothing  v = create t    v  >>= return . Left
