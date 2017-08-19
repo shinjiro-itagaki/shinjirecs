@@ -8,7 +8,41 @@
 -- {-# LANGUAGE FunctionalDependencies #-}
 -- {-# LANGUAGE ConstraintKinds #-}
 
-module Model where
+module Model (
+  ColumnName(..)
+  ,FailedReason(..)
+  ,ValidationResult(..)
+  ,BeforeActionResult(..)
+  ,AfterActionResult(..)
+  ,BeforeActionStep(..)
+  ,SaveResult(..)
+  ,BeforeCreate(..)
+  ,BeforeModify(..)
+  ,CreateResult(..)
+  ,ModifyResult(..)
+  ,DestroyResult(..)
+  ,valid
+  ,invalid
+  ,go
+  ,cancel
+  ,commit
+  ,rollback
+  ,ModelClass(..)
+  ,SelectQuery(..)
+  ,fireAfterFindME
+  ,fireAfterFind
+  ,find
+  ,get
+  ,select
+  ,create
+  ,modify
+  ,HookAndOnCancelActionsPair(..)
+  ,(>>==)
+  ,(|||)
+  ,onCancel
+  ,save
+  ,destroy
+  ) where
 import qualified DB
 import Data.Int(Int64)
 import Data.Maybe(isNothing)
@@ -17,11 +51,11 @@ import Control.Monad(sequence)
 type ColumnName = String
 data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
 
-data CommonBeforeAction = Validation | BeforeSave
-
-data ValidationResult   a = Valid   a | Invalid [(ColumnName, FailedReason)]
+data ValidationResult   a = Valid   a | Invalid a [(ColumnName, FailedReason)]
 data BeforeActionResult a = Go      a | Cancel a
-data AfterActionResult  a = Commit  a | Rollback
+data AfterActionResult  a = Commit  a | Rollback a
+
+data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
 
 data BeforeActionStep a = OnBeforeValidation | OnValidation | OnBeforeSave | On a
 
@@ -41,7 +75,7 @@ valid :: a -> IO (ValidationResult a)
 valid = return . Valid
 
 invalid :: a -> [(ColumnName, FailedReason)] -> IO (ValidationResult a)
-invalid x reasons = return $ Invalid reasons
+invalid x ys = return $ Invalid x ys
 
 go :: a -> IO (BeforeActionResult a)
 go = return . Go
@@ -53,7 +87,7 @@ commit :: a -> IO (AfterActionResult a)
 commit = return . Commit
 
 rollback :: a -> IO (AfterActionResult a)
-rollback x = return Rollback
+rollback = return . Rollback
 
 class (GetKey m) a where
   getKey :: a -> Maybe (DB.Key m)
@@ -147,21 +181,25 @@ create t v = save' t v (\k v -> v) beforeCreate (\x -> Nothing) (\x -> x) (\x ->
 modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
 modify t e = save' t e (\k v -> (k,v)) beforeModify (\(k,v) -> k) (\(k,v) -> v) (\(k,v) -> Just k) (\t k v -> DB.repsert t k v >> return k) BeforeModify
 
-type HookAndOnCancelActionsPair m end = ((m -> IO end) , (m -> IO (BeforeActionResult m)))
-
+type HookAndOnCancelActionsPair m end = ((m -> IO end) , (m -> IO (HookResult m)))
+-- HookResult
 (>>==) :: [HookAndOnCancelActionsPair m end] -- next hook actions
        -> (m -> IO end) -- tail action
        -> (m -> IO end) -- function :: initial argument -> last action result
 (>>==) cancel_go_pairs tailf = impl' cancel_go_pairs
   where
     -- impl' :: [HookAndOnCancelActionsPair m end] -> m -> IO end
-    impl' []           m = tailf m
-    impl' ((onError,hook):xs) m = hook m
+    impl' []                   m = tailf m
+    impl' ((onCancel,hook):xs) m = hook  m
       >>= (\res -> case res of
-            Go     m2 -> impl' xs m2
-            Cancel m2 -> onError  m2)
+            Validation   (Valid    m2)    -> impl' xs m2
+            Validation   (Invalid  m2 rs) -> onCancel m2
+            BeforeAction (Go       m2)    -> impl' xs m2
+            BeforeAction (Cancel   m2)    -> onCancel m2
+            AfterAction  (Commit   m2)    -> impl' xs m2
+            AfterAction  (Rollback m2)    -> onCancel m2)
             
-(|||) :: (m -> IO end) -> (m -> IO (BeforeActionResult m)) -> ((m -> IO end), (m -> IO (BeforeActionResult m)))
+(|||) :: (m -> IO end) -> (m -> IO (HookResult m)) -> ((m -> IO end), (m -> IO (HookResult m)))
 (|||) f_if_cancel f_if_go = (f_if_cancel, f_if_go)
 
 onCancel l r = r ||| l
@@ -187,7 +225,7 @@ save' :: (ModelClass m) =>
   DB.Table m -- table
   -> arg     -- record or (Entity record)
   -> (argk -> m -> arg) -- cast k v to arg
-  -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -- hook action
+  -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -- before hook action
   -> (arg -> argk) -- function to get key from arg
   -> (arg -> m)    -- function to get val from arg
   -> (arg -> Maybe (DB.Key m)) --  function to get Maybe key from arg
@@ -195,10 +233,15 @@ save' :: (ModelClass m) =>
   -> canceled_on_before_create_or_modify -- value on canceled
   -> IO (SaveResult (DB.Entity m) arg arg canceled_on_before_create_or_modify)
 save' t e kv_to_arg' beforeCreateOrUpdate' k_getter' v_getter' arg_to_mkey' insert_or_update' beforeStepFlag' = do
+  -- data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
+--data ValidationResult   a = Valid   a | Invalid [(ColumnName, FailedReason)]
+--data BeforeActionResult a = Go      a | Cancel a
+--data AfterActionResult  a = Commit  a | Rollback
+--data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
     (return ev')
-      >>= ([ do' (beforeValidation      t (arg_to_mkey' e)) `onCancel` (return . Canceled OnBeforeValidation   . kv_to_arg' ek')
-           , do' (beforeSave            t (arg_to_mkey' e)) `onCancel` (return . Canceled OnBeforeSave         . kv_to_arg' ek')
-           , do' (beforeCreateOrUpdate' t . kv_to_arg' ek') `onCancel` (return . Canceled (On beforeStepFlag') . kv_to_arg' ek')
+      >>= ([ do' ((return . BeforeAction =<<) . beforeValidation      t (arg_to_mkey' e) ) `onCancel` (return . Canceled OnBeforeValidation   . kv_to_arg' ek')
+           , do' ((return . BeforeAction =<<) . beforeSave            t (arg_to_mkey' e) ) `onCancel` (return . Canceled OnBeforeSave         . kv_to_arg' ek')
+           , do' ((return . BeforeAction =<<) . beforeCreateOrUpdate' t . kv_to_arg' ek') `onCancel` (return . Canceled (On beforeStepFlag') . kv_to_arg' ek')
            ] >>== doImpl')
   where
     ek' = k_getter' e
