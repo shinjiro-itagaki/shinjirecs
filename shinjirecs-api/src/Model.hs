@@ -334,6 +334,67 @@ modify t e@(k,v) =
     doCommitAfterFailed'            v = afterCommit   t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] True)
     doRollbackAfterFailed'          v = afterRollback t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] False)
 
+-- save' :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
+-- SaveResult v a ba_step
+{-
+save' :: (ModelClass m) => DB.Table m -> arg -> (arg -> Maybe (DB.Key m)) -> ba_step-> IO (SaveResult m arg ba_step)
+save' t e@(k,v) =
+  doBeforeValidation'
+  .>>== doValidation'
+  .>>== doAfterValidation'
+  .>>== doBeforeSave'
+  .>>== doBeforeModify'
+  .>>== doModify'
+  `finish` doAllAfterActions' $ v
+  where
+    toE' x' = (k,x')
+    toK'    = Just k
+    step' = BeforeModify
+--    beforeCreateOrModify' = 
+    
+    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
+    doValidation'         (Go      x) = return . Right =<< validate t toK' x
+    doValidation'         (Cancel  x) = return $ Left $ Canceled OnBeforeValidation $ toE' x
+    
+    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
+    doAfterValidation'    (Invalid x _) = return . Left . Canceled OnValidation . toE' =<< afterValidationFailed t toK' x
+    
+    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
+
+--    doBeforeCreate'        (Go     x) = return . Right =<< beforeCreate t x
+--    doBeforeCreate'        (Cancel x) = return $ Left $ Canceled OnBeforeSave $ toE' x
+    
+    doBeforeModify'        (Go     x) = return . Right =<< beforeModify t (toE' x)
+    doBeforeModify'        (Cancel x) = return $ Left $ Canceled OnBeforeSave $ toE' x
+
+    doModify'              (Go     x) = return . Right . maybe2FindResult' x (\y -> y) =<< (\_ -> DB.get t k) =<< DB.repsert t k x
+    doModify'              (Cancel x) = return $ Left  $ Canceled (On step') $ toE' x
+
+    doAllAfterActions' (NotFound    v) = doAfterModifyFailed' v >>= doAfterSaveFailed'
+    doAllAfterActions' (Found e@(k,v)) = doAfterModify'       e >>= doAfterSave' k
+
+    doAfterModify'            e@(k,v) = afterModified t e
+    doAfterModifyFailed'           v  = afterModifyFailed t (k,v)
+    doAfterSave'       k (Rollback v) = doRollback' k v
+    doAfterSave'       k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k
+    doCommitOrRollback' k (Rollback v) = doRollback' k v
+    doCommitOrRollback' k (Commit   v) = doCommit'   k v
+
+    doCommitOrRollbackAfterFailed' (Rollback v) = do
+      doRollbackAfterFailed' v
+      return $ SaveFailed (toE' v) [] False
+    doCommitOrRollbackAfterFailed' (Commit   v) = do
+      doCommitAfterFailed'   v
+      return $ SaveFailed (toE' v) [] True
+      
+    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
+    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
+    
+    doCommit'                     k v = afterCommit   t (Just k) v >>= return . SaveSuccess . (,) k
+    doRollback'                   k v = afterRollback t (Just k) v >>= return . Rollbacked . toE'
+    doCommitAfterFailed'            v = afterCommit   t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] True)
+    doRollbackAfterFailed'          v = afterRollback t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] False)
+-}
   
 save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
 save t Nothing  v = create t    v  >>= return . Left

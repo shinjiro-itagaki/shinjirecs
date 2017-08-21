@@ -93,6 +93,8 @@ infix 4 `in_`, `notIn`
 or    l r = l .|| r
 infixl 3 .||, `or`
 
+type Query m a = ORM.Query m a
+  
 data Table record = MkTable {
   connection :: Connection
   ,insert :: record -> IO (Key record)
@@ -112,6 +114,20 @@ data Table record = MkTable {
   ,checkUnique :: record -> IO (Maybe (Unique record))
   ,keyToStrings :: Key record -> [String]
   ,entityToJSON :: Entity record -> J.Value
+  ,insertQuery      :: record -> Query IO (Key record)    
+  ,updateQuery      :: Key record -> [Update record] -> Query IO record    
+  ,insertByQuery    :: record -> Query IO (Either (Entity record) (Key record))    
+  ,updateWhereQuery :: [Filter record] -> [Update record] -> Query IO ()    
+  ,repsertQuery     :: Key record -> record -> Query IO ()    
+  ,deleteQuery      :: Key record -> Query IO ()    
+  ,deleteByQuery    :: Unique record -> Query IO ()    
+  ,deleteWhereQuery :: [Filter record] -> Query IO ()    
+  ,getQuery         :: Key record -> Query IO (Maybe (Entity record))    
+  ,findQuery        :: Int64 -> Query IO (Maybe (Entity record))    
+  ,getByQuery       :: Unique record -> Query IO (Maybe (Entity record))    
+  ,selectQuery      :: [Filter record] -> [SelectOpt record] -> Query IO [Entity record]    
+  ,countQuery       :: [Filter record] -> Query IO Int    
+  ,checkUniqueQuery :: record -> Query IO (Maybe (Unique record))
 }
 
 -- readTable :: Connection -> Table record
@@ -133,6 +149,20 @@ readTable conn = MkTable {
   ,checkUnique = ORM.checkUnique  conn
   ,keyToStrings = ORM.keyToStrings
   ,entityToJSON = (\(k,v) -> J.toJSON $ fromList [("id", idToJSON $ ORM.keyToStrings k ),("values",J.toJSON v)])
+  ,insertQuery      = ORM.insertQuery
+  ,updateQuery      = ORM.updateQuery
+  ,insertByQuery    = ORM.insertByQuery
+  ,updateWhereQuery = ORM.updateWhereQuery
+  ,repsertQuery     = ORM.repsertQuery
+  ,deleteQuery      = ORM.deleteQuery
+  ,deleteByQuery    = ORM.deleteByQuery
+  ,deleteWhereQuery = ORM.deleteWhereQuery
+  ,getQuery         = ORM.getQuery
+  ,findQuery        = ORM.findQuery
+  ,getByQuery       = ORM.getByQuery
+  ,selectQuery      = ORM.selectQuery
+  ,countQuery       = ORM.countQuery
+  ,checkUniqueQuery = ORM.checkUniqueQuery
   }
 
 idToJSON :: [String] -> J.Value
