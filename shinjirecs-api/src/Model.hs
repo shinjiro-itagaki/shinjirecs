@@ -36,11 +36,11 @@ module Model (
   ,select
   ,create
   ,modify
-  ,HookAction(..)
-  ,(>>==)
-  ,(|||)
-  ,ifCancel
-  ,ifInvalid
+--  ,HookAction(..)
+--  ,(>>==)
+--  ,(|||)
+--  ,ifCancel
+--  ,ifInvalid
   ,save
   ,destroy
   ) where
@@ -56,20 +56,26 @@ data ValidationResult   a = Valid   a | Invalid a [(ColumnName, FailedReason)]
 data BeforeActionResult a = Go      a | Cancel a
 data AfterActionResult  a = Commit  a | Rollback a
 
-data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
+--data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
+--data ValidationResult   a = ValidationResult   a
+--data BeforeActionResult a = BeforeActionResult a
+--data AfterActionResult  a = AfterActionResult  a
 
 data BeforeActionStep a = OnBeforeValidation | OnValidation | OnBeforeSave | On a
 
-data SaveResult s f c on_x = SaveSuccess s | SaveFailed f [(ColumnName, FailedReason)] | Canceled (BeforeActionStep on_x) c
+-- data SaveResult s f c on_x rl = SaveSuccess s | SaveFailed f [(ColumnName, FailedReason)] | Canceled (BeforeActionStep on_x) c | Rollbacked rl
+data SaveResult v a ba_step = SaveSuccess (DB.Entity v) | SaveFailed a [(ColumnName, FailedReason)] Bool | Canceled (BeforeActionStep ba_step) a | Rollbacked a
 
 data BeforeCreate = BeforeCreate
 data BeforeModify = BeforeModify
 
--- SaveSuccess (DB.Entity a) | SaveFailed a [(ColumnName, FailedReason)] | Canceled (OnValidation | OnBeforeSave | On BeforeCreate) a
-type CreateResult a = SaveResult (DB.Entity a)            a             a  BeforeCreate
+-- SaveSuccess (DB.Entity a) | SaveFailed a [(ColumnName, FailedReason)] | Canceled (OnValidation | OnBeforeSave | On BeforeCreate) a | Rollbacked
+-- type CreateResult a = SaveResult (DB.Entity a)            a             a  BeforeCreate            a
+type CreateResult a = SaveResult a            a  BeforeCreate
 
 -- SaveSuccess (DB.Entity a) | SaveFailed (DB.Entity a) [(ColumnName, FailedReason)] | Canceled (OnValidation | OnBeforeSave | On BeforeModify) (DB.Entity a)
-type ModifyResult a = SaveResult (DB.Entity a) (DB.Entity a) (DB.Entity a) BeforeModify
+-- type ModifyResult a = SaveResult (DB.Entity a) (DB.Entity a) (DB.Entity a) BeforeModify (DB.Entity a)
+type ModifyResult a = SaveResult a (DB.Entity a) BeforeModify
 data DestroyResult a = DeleteSuccess a | RecordNotFound | DeleteFailed a | DeleteCanceled a
 
 valid :: a -> IO (ValidationResult a)
@@ -125,38 +131,38 @@ class ModelClass m where
   beforeModify :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult m)
   beforeModify _ = go . snd 
   
-  afterCreated :: DB.Table m -> DB.Entity m -> IO m
-  afterCreated _ = doNothing' . snd
+  afterCreated :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterCreated _ = commit . snd
 
-  afterModified :: DB.Table m -> DB.Entity m -> IO m
-  afterModified _ = doNothing' . snd
+  afterModified :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterModified _ = commit . snd
     
-  afterSaved :: DB.Table m -> DB.Entity m -> IO m
-  afterSaved _ = doNothing' . snd
+  afterSaved :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterSaved _ = commit . snd
   
-  afterSaveFailed :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
-  afterSaveFailed _ _ = doNothing'
+  afterSaveFailed :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (AfterActionResult m)
+  afterSaveFailed _ _ = rollback
 
-  afterModifyFailed :: DB.Table m -> DB.Entity m -> IO m
-  afterModifyFailed _ = doNothing' . snd
+  afterModifyFailed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterModifyFailed _ = rollback . snd
 
-  afterCreateFailed :: DB.Table m -> m -> IO m
-  afterCreateFailed _ = doNothing'
+  afterCreateFailed :: DB.Table m -> m -> IO (AfterActionResult m)
+  afterCreateFailed _ = rollback
   
   beforeDestroy :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult m)
   beforeDestroy _ = go . snd
   
-  afterDestroyed :: DB.Table m -> DB.Entity m -> IO m
-  afterDestroyed _ = doNothing' . snd
+  afterDestroyed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterDestroyed _ = commit . snd
   
-  afterDestroyFailed :: DB.Table m -> DB.Entity m -> IO m
-  afterDestroyFailed _ = doNothing' . snd
+  afterDestroyFailed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterDestroyFailed _ = rollback . snd
   
-  afterCommit :: DB.Table m -> DB.Entity m -> IO m
-  afterCommit _ = doNothing' . snd
+  afterCommit :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterCommit _ _ = doNothing'
   
-  afterRollback :: DB.Table m -> DB.Entity m -> IO m
-  afterRollback _ = doNothing' . snd
+  afterRollback :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterRollback _ _ = doNothing'
 
 data (ModelClass m) => SelectQuery m = MkSelectQuery [DB.Filter m] [DB.SelectOpt m]
 
@@ -176,85 +182,159 @@ get t k = DB.get t k >>= fireAfterFindME t
 select :: (ModelClass m) => DB.Table m -> SelectQuery m -> IO [(DB.Entity m)]
 select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . map (fireAfterFind t)
 
+--(>>==) :: Either (IO end) (IO next) -> (next -> Either (IO end) (IO next2))  -> Either (IO end) (IO next2)
+--(>>==) earg f = impl' earg
+--  where
+--    impl' (Left  ioarg) = Left ioarg
+--    impl' (Right ioarg) = do
+--      arg <- ioargf
+--      f arg
+
+--(>>==) (Left  ioarg) f = Left ioarg
+--(>>==) (Right ioarg) f = ioarg >>= (\arg -> f arg)
+--infixl 7 >>==
+
+(.>>==) :: (arg -> IO (Either end next)) -> (next -> IO (Either end next2)) -> (arg -> IO (Either end next2))
+(.>>==) f fnext = impl'
+  where
+    impl' arg = f arg
+      >>= (\x -> case x of
+              Right next -> fnext next
+              Left  y    -> return $ Left y)
+
+infixl 7 .>>==
+
+data FindResult a b = Found a | NotFound b
+
+maybe2FindResult' :: b -> (z -> a) -> Maybe z -> FindResult a b
+maybe2FindResult' ifNothing f Nothing  = NotFound ifNothing
+maybe2FindResult' ifNothing f (Just x) = Found $ f x
+
+finish :: (arg -> IO (Either end next)) -> (next -> IO end) -> (arg -> IO end)
+finish f tailf = impl'
+  where
+    impl' arg = do
+      x <- f arg
+      case x of
+        Left  y -> return y
+        Right y -> tailf  y
+
+infixl 6 `finish`
+
+ 
 create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
-create t v = save' t v (\k v -> v) beforeCreate afterCreateFailed (\x -> Nothing) (\x -> x) (\x -> Nothing) (\t k v -> DB.insert t v) BeforeCreate
+create t v =
+  doBeforeValidation'
+  .>>== doValidation'
+  .>>== doAfterValidation'
+  .>>== doBeforeSave'
+  .>>== doBeforeCreate'
+  .>>== doCreate'
+  `finish` doAllAfterActions' $ v
+  where
+    toE' x' = x'
+    toK'    = Nothing
+    step' = BeforeCreate
+
+    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
+    doValidation'         (Go      x) = return . Right =<< validate t toK' x
+    doValidation'         (Cancel  x) = return $ Left $ Canceled OnBeforeValidation $ toE' x
+    
+    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
+    doAfterValidation'    (Invalid x _) = return . Left . Canceled OnValidation . toE' =<< afterValidationFailed t toK' x
+    
+    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
+    
+    doBeforeCreate'        (Go     x) = return . Right =<< beforeCreate t (toE' x)
+    doBeforeCreate'        (Cancel x) = return $ Left $ Canceled OnBeforeSave $ toE' x
+
+    doCreate'              (Go     x) = return . Right . maybe2FindResult' x (\y -> y) =<< DB.get t =<< DB.insert t x
+    doCreate'              (Cancel x) = return $ Left  $ Canceled (On step') $ toE' x
+
+    doAllAfterActions' (NotFound    v) = doAfterCreateFailed' v >>= doAfterSaveFailed'
+    doAllAfterActions' (Found e@(k,v)) = doAfterCreate'       e >>= doAfterSave' k
+
+    doAfterCreate'            e@(k,v) = afterCreated t e
+    doAfterCreateFailed'     v = afterCreateFailed t v
+    doAfterSave'       k (Rollback v) = doRollback' k v
+    doAfterSave'       k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k
+    doCommitOrRollback' k (Rollback v) = doRollback' k v
+    doCommitOrRollback' k (Commit   v) = doCommit'   k v
+
+    doCommitOrRollbackAfterFailed' (Rollback v) = do
+      doRollbackAfterFailed' v
+      return $ SaveFailed (toE' v) [] False
+    doCommitOrRollbackAfterFailed' (Commit   v) = do
+      doCommitAfterFailed'   v
+      return $ SaveFailed (toE' v) [] True
+      
+    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
+    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
+    
+    doCommit'                     k v = afterCommit   t (Just k) v >>= return . SaveSuccess . (,) k
+    doRollback'                   k v = afterRollback t (Just k) v >>= return . Rollbacked . toE'
+    doCommitAfterFailed'            v = afterCommit   t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] True)
+    doRollbackAfterFailed'          v = afterRollback t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] False)
 
 modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
-modify t e = save' t e (\k v -> (k,v)) beforeModify afterModifyFailed (\(k,v) -> k) (\(k,v) -> v) (\(k,v) -> Just k) (\t k v -> DB.repsert t k v >> return k) BeforeModify
-
-data HookAction m end = ActionAndCanceled (m -> IO end) (m -> IO (HookResult m)) | DoAlways (m -> IO m)
-(>>==) :: [HookAction m end] -- next hook actions
-       -> (m -> IO end) -- tail action
-       -> (m -> IO end) -- function :: initial argument -> last action result
-(>>==) cancel_go_pairs tailf = impl' cancel_go_pairs
+modify t e@(k,v) =
+  doBeforeValidation'
+  .>>== doValidation'
+  .>>== doAfterValidation'
+  .>>== doBeforeSave'
+  .>>== doBeforeModify'
+  .>>== doModify'
+  `finish` doAllAfterActions' $ v
   where
-    impl' []     m = tailf m
-    impl' (x:xs) m = case x of
-      DoAlways                     action -> action m >>= impl' xs
-      ActionAndCanceled  if_cancel action -> action m
-        >>= (\res -> case res of
-                Validation   (Valid    m2)    -> impl' xs m2
-                Validation   (Invalid  m2 rs) -> if_cancel m2
-                BeforeAction (Go       m2)    -> impl' xs m2
-                BeforeAction (Cancel   m2)    -> if_cancel m2
-                AfterAction  (Commit   m2)    -> impl' xs m2
-                AfterAction  (Rollback m2)    -> if_cancel m2)
-            
-(|||) :: (m -> IO end) -> (m -> IO (HookResult m)) -> HookAction m end
-(|||) f_if_cancel f = ActionAndCanceled f_if_cancel f
+    toE' x' = (k,x')
+    toK'    = Just k
+    step' = BeforeModify
+--    beforeCreateOrModify' = 
+    
+    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
+    doValidation'         (Go      x) = return . Right =<< validate t toK' x
+    doValidation'         (Cancel  x) = return $ Left $ Canceled OnBeforeValidation $ toE' x
+    
+    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
+    doAfterValidation'    (Invalid x _) = return . Left . Canceled OnValidation . toE' =<< afterValidationFailed t toK' x
+    
+    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
 
-ifCancel l r = r ||| l
-ifInvalid = ifCancel
-do' x = x
+--    doBeforeCreate'        (Go     x) = return . Right =<< beforeCreate t x
+--    doBeforeCreate'        (Cancel x) = return $ Left $ Canceled OnBeforeSave $ toE' x
+    
+    doBeforeModify'        (Go     x) = return . Right =<< beforeModify t (toE' x)
+    doBeforeModify'        (Cancel x) = return $ Left $ Canceled OnBeforeSave $ toE' x
 
-doAlways :: (a -> IO a) -> HookAction a b
-doAlways f = DoAlways f
+    doModify'              (Go     x) = return . Right . maybe2FindResult' x (\y -> y) =<< (\_ -> DB.get t k) =<< DB.repsert t k x
+    doModify'              (Cancel x) = return $ Left  $ Canceled (On step') $ toE' x
 
-save' :: (ModelClass m) =>
-  DB.Table m -- table
-  -> arg     -- record or (Entity record)
-  -> (argk -> m -> arg) -- cast k v to arg
-  -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -- beforeCreate      or beforeModify
-  -> (DB.Table m -> arg -> IO m)                      -- afterCreateFailed or afterModifyFailed
-  -> (arg -> argk) -- function to get key from arg
-  -> (arg -> m)    -- function to get val from arg
-  -> (arg -> Maybe (DB.Key m)) --  function to get Maybe key from arg
-  -> (DB.Table m -> argk -> m -> IO (DB.Key m)) -- function to do insert or update
-  -> canceled_on_before_create_or_modify -- value on canceled
-  -> IO (SaveResult (DB.Entity m) arg arg canceled_on_before_create_or_modify)
-save' t e kv_to_arg' beforeCorM' afterCorMFailed' k_getter' v_getter' arg_to_mkey' insert_or_update' beforeStepFlag' = do
-    save_result <- (return ev')
-      >>= ([ (do' beforeValidation') `ifCancel` (cancelRtn' OnBeforeValidation  )
-           , do' (va' . validate              t   mkey') `ifCancel` (\x -> afterValidationFailed t mkey' x >>= cancelRtn' OnValidation)
-           , doAlways $ afterValidation       t   mkey'
-           , do' (ba' . beforeSave            t   mkey') `ifCancel` (cancelRtn' OnBeforeSave        )
-           , do' (ba' . beforeCorM' t .           arg' ) `ifCancel` (cancelRtn' $ On beforeStepFlag')
-           ] >>== doImpl')
-{-
-  afterCommit :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
-  afterRollback :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
--}                   
-    case save_result of
-      SaveSuccess e@(k,v) -> (if isNothing mkey' then afterCreated else afterModified) t e
-        >>= afterSaved t . (,) k
-        >>= return . SaveSuccess . (,) k
-      SaveFailed v results -> afterCorMFailed' t v
-        >>= afterSaveFailed t mkey'
-        >>= (\v -> return $ SaveFailed (arg' v) results)
-      Canceled _ _         -> return save_result
-  where
-    beforeValidation' = ba' . beforeValidation t mkey'
-    cancelRtn' on = (return . Canceled on . arg') -- :: BeforeActionStep m -> (v -> IO SaveResult (BeforeActionStep (BeforeModify | BeforeCreate)) (DB.Entity m | m))
-    ba' = (return . BeforeAction =<<) -- :: (IO BeforeActionResult -> IO HookResult)
-    va' = (return . Validation   =<<) -- :: (IO ValidationResult   -> IO HookResult)
-    arg' = kv_to_arg' ek'  -- :: (v -> arg)
-    mkey' = arg_to_mkey' e -- :: Maybe argk
-    ek' = k_getter' e -- :: argk
-    ev' = v_getter' e -- :: arg
-    get'        = DB.get t -- :: (DB.Key m -> DB.Enitity m)
-    doFirst' v' = insert_or_update' t ek' v' -- :: (m -> IO (DB.Key m))
-    doImpl'  v' = doFirst' v' >>= get' >>= return . maybe (SaveFailed (kv_to_arg' ek' v') []) SaveSuccess -- :: (m -> IO SaveResult)
+    doAllAfterActions' (NotFound    v) = doAfterModifyFailed' v >>= doAfterSaveFailed'
+    doAllAfterActions' (Found e@(k,v)) = doAfterModify'       e >>= doAfterSave' k
 
+    doAfterModify'            e@(k,v) = afterModified t e
+    doAfterModifyFailed'           v  = afterModifyFailed t (k,v)
+    doAfterSave'       k (Rollback v) = doRollback' k v
+    doAfterSave'       k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k
+    doCommitOrRollback' k (Rollback v) = doRollback' k v
+    doCommitOrRollback' k (Commit   v) = doCommit'   k v
+
+    doCommitOrRollbackAfterFailed' (Rollback v) = do
+      doRollbackAfterFailed' v
+      return $ SaveFailed (toE' v) [] False
+    doCommitOrRollbackAfterFailed' (Commit   v) = do
+      doCommitAfterFailed'   v
+      return $ SaveFailed (toE' v) [] True
+      
+    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
+    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
+    
+    doCommit'                     k v = afterCommit   t (Just k) v >>= return . SaveSuccess . (,) k
+    doRollback'                   k v = afterRollback t (Just k) v >>= return . Rollbacked . toE'
+    doCommitAfterFailed'            v = afterCommit   t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] True)
+    doRollbackAfterFailed'          v = afterRollback t toK' v >>= (\x -> return $ SaveFailed (toE' x) [] False)
+
+  
 save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
 save t Nothing  v = create t    v  >>= return . Left
 save t (Just k) v = modify t (k,v) >>= return . Right
@@ -264,17 +344,19 @@ destroy table e@(key, v) = do
   me <- get' key
   case me of
     Nothing -> return RecordNotFound -- maybe already deleted
-    Just _ -> do
-      bar <- beforeDestroy table e
-      case bar of
-        Cancel v2 -> return $ DeleteCanceled (key, v2)
-        Go     v2 -> doDelete' v2
+    Just _ -> delete' key >> get' key >>= afterDelete' v
   where
     get'    = DB.get    table
     delete' = DB.delete table
-    doDelete' v2 = delete' key >> get' key >>= (\x -> (if isNothing x then afterSuccess' else afterFailed') v2)
-    afterSuccess' v2 = afterDestroyed     table (key,v2) >>= return . DeleteSuccess . (,) key
-    afterFailed'  v2 = afterDestroyFailed table (key,v2) >>= return . DeleteFailed  . (,) key
+    afterDelete' v' Nothing  = afterSuccess' v'
+    afterDelete' v' (Just _) = afterFailed'  v'
+    afterSuccess' e' = afterDestroyed     table (key,e') >>= afterHookCommon' >>= return . DeleteSuccess . (,) key
+    afterFailed'  e' = afterDestroyFailed table (key,e') >>= afterHookCommon' >>= return . DeleteFailed  . (,) key
+    doCommit'   = return ()
+    doRollback' = return ()
+    afterHookCommon' (Commit   v') = doCommit'   >> return v'
+    afterHookCommon' (Rollback v') = doRollback' >> return v'
+    
     
 -- res <- select table $ asc ChannelHoge $ where [channelHoge .== 1, channelFoo .== 2] $ where [channelAaa .== 22 , channelName .== "hoge"] $ rec
 -- return $ toJSON res
