@@ -40,7 +40,7 @@ module DB.Persist(
   ,findQuery
   ,DB.Persist.select
   ,selectQuery
-  ,DB.Persist.selectKeys
+--  ,DB.Persist.selectKeys
   ,DB.Persist.count
   ,countQuery
   ,DB.Persist.checkUnique
@@ -69,6 +69,8 @@ module DB.Persist(
   ,mkOrFilter
   ,keyToStrings
   ,Query
+  ,runQuery
+--  ,transaction
   ) where
 import qualified DB.Config
 import qualified Data.Text as Text --text
@@ -105,7 +107,6 @@ import Data.Conduit(Source)
 import DB.Status(ReservationState(..))
 import DB.Types(ChannelType(..))
 import qualified Data.Aeson as J
-
 -- type Sql = SqlPersistT (ResourceT (NoLoggingT IO))
 
 getSQLActionRunner' :: (BaseBackend backend ~ SqlBackend, IsPersistBackend backend, MonadBaseControl IO m1, MonadBaseControl IO m) =>
@@ -220,115 +221,117 @@ instance Record Channel where
 
 -}
 
-data TransactionResult = Commit | Rollback
-type Query m a = ReaderT SqlBackend m a
+type Query a = ReaderT SqlBackend IO a
 
---  runSqlPool :: (MonadBaseControl IO m, IsSqlBackend backend) => ReaderT backend m a -> Pool backend -> m a
--- get :: (MonadIO m, PersistRecordBackend record backend) => Key record -> ReaderT backend m (Maybe record)
-transaction :: (MonadBaseControl IO m, MonadIO m) => Connection__ -> ReaderT SqlBackend m TransactionResult -> m TransactionResult
-transaction conn act = runSqlPool act conn
+--runQuery :: (MonadBaseControl IO m, MonadIO m) => Connection__ -> Query a -> a
+runQuery :: Connection__ -> Query a -> IO a
+runQuery conn act = runSqlPool act conn
 
-insertQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => record -> Query m (Key record)
+--transaction :: (MonadBaseControl IO m, MonadIO m) => Connection__ -> Query m TransactionResult -> m TransactionResult
+--transaction conn act = runSqlPool act conn
+
+insertQuery :: (PersistRecordBackend record SqlBackend) => record -> Query (Key record)
 insertQuery = Database.Persist.insert
 
-insert :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Key record)
+insert :: (PersistRecordBackend record SqlBackend) => Connection__ -> record -> IO (Key record)
 insert connpool val = runSqlPool (insertQuery val) connpool
 
-insertByQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => record -> Query m (Either (Key record,record) (Key record))
+insertByQuery :: (PersistRecordBackend record SqlBackend) => record -> Query (Either (Key record,record) (Key record))
 insertByQuery val = do
   res <- Database.Persist.insertBy val
   return $ case res of
     Left (Entity k v) -> Left (k,v)
     Right key         -> Right key  
 
-insertBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Either (Key record,record) (Key record))
+insertBy :: (PersistRecordBackend record SqlBackend) => Connection__ -> record -> IO (Either (Key record,record) (Key record))
 insertBy connpool val = runSqlPool (insertByQuery val) connpool
 
-updateQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Key record ->  [Update record] -> Query m record
+updateQuery :: (PersistRecordBackend record SqlBackend) => Key record ->  [Update record] -> Query record
 updateQuery key updates = Database.Persist.updateGet key updates
 
-update :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record ->  [Update record] -> m record
+update :: (PersistRecordBackend record SqlBackend) => Connection__ -> Key record ->  [Update record] -> IO record
 update connpool key updates = runSqlPool (updateQuery key updates) connpool
 
-updateWhereQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => [Filter record] -> [Update record] -> Query m ()
+updateWhereQuery :: (PersistRecordBackend record SqlBackend) => [Filter record] -> [Update record] -> Query ()
 updateWhereQuery filters updates = Database.Persist.updateWhere filters updates
 
 --
-updateWhere :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [Update record] -> m ()
+updateWhere :: (PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [Update record] -> IO ()
 updateWhere connpool filters updates = runSqlPool (Database.Persist.updateWhere filters updates) connpool
 
-repsertQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Key record -> record -> Query m ()
+repsertQuery :: (PersistRecordBackend record SqlBackend) => Key record -> record -> Query ()
 repsertQuery key val = Database.Persist.repsert key val
 
-repsert :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> record -> m ()
+repsert :: (PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> record -> IO ()
 repsert connpool key val = runSqlPool (repsertQuery key val) connpool
 
-deleteQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Key record -> Query m ()
+deleteQuery :: (PersistRecordBackend record SqlBackend) => Key record -> Query ()
 deleteQuery key = Database.Persist.delete key
 
-delete :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m ()
+delete :: (PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> IO ()
 delete connpool key = runSqlPool (deleteQuery key) connpool
 
-deleteByQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Unique record -> Query m ()
+deleteByQuery :: (PersistRecordBackend record SqlBackend) => Unique record -> Query ()
 deleteByQuery unique = Database.Persist.deleteBy unique
 
-deleteBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m ()
+deleteBy :: (PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> IO ()
 deleteBy connpool unique = runSqlPool (deleteByQuery unique) connpool
 
-deleteWhereQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => [Filter record] -> Query m ()
+deleteWhereQuery :: (PersistRecordBackend record SqlBackend) => [Filter record] -> Query ()
 deleteWhereQuery filters = Database.Persist.deleteWhere filters
 
-deleteWhere :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> m ()
+deleteWhere :: (PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> IO ()
 deleteWhere connpool filters = runSqlPool (deleteWhereQuery filters) connpool
 
-getQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Key record -> Query m (Maybe (Key record, record))
+--getQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Key record -> Query m (Maybe (Key record, record))
+getQuery :: (PersistRecordBackend record SqlBackend) => Key record -> Query (Maybe (Key record, record))
 getQuery key = Database.Persist.get key >>= return . (\mrec -> case mrec of
                                                                  Just r  -> Just (key, r)
                                                                  Nothing -> Nothing)
 
-get :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> m (Maybe (Key record, record))
+get :: (PersistRecordBackend record SqlBackend) => Connection__ -> Key record -> IO (Maybe (Key record, record))
 get connpool key = runSqlPool (getQuery key) connpool
 
-findQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Int64 -> Query m (Maybe (Key record, record))
+findQuery :: (PersistRecordBackend record SqlBackend) => Int64 -> Query (Maybe (Key record, record))
 findQuery id =
   case keyFromValues [PersistInt64 id] of
     Left x -> return Nothing
     Right key -> DB.Persist.getQuery key
 
-find :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> m (Maybe (Key record, record))
+find :: (PersistRecordBackend record SqlBackend) => Connection__ -> Int64 -> IO (Maybe (Key record, record))
 find connpool id = runSqlPool (findQuery id) connpool
 
-getByQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Unique record -> Query m (Maybe (Key record,record))
+getByQuery :: (PersistRecordBackend record SqlBackend) => Unique record -> Query (Maybe (Key record,record))
 getByQuery unique = do
   res <- Database.Persist.getBy unique
   return $ case res of
     Just (Entity k v) -> Just (k,v)
     Nothing -> Nothing
 
-getBy :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> m (Maybe (Key record,record))
+getBy :: (PersistRecordBackend record SqlBackend) => Connection__ -> Unique record -> IO (Maybe (Key record,record))
 getBy connpool unique = runSqlPool (getByQuery unique) connpool
 
-selectQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => [Filter record] -> [SelectOpt record] -> Query m [(Key record, record)]
+selectQuery :: (PersistRecordBackend record SqlBackend) => [Filter record] -> [SelectOpt record] -> Query [(Key record, record)]
 selectQuery filters opts = do
   res <- Database.Persist.selectList filters opts
   return $ Prelude.map (\(Entity k v) -> (k,v)) res
 
-select :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [SelectOpt record] -> m [(Key record, record)]
+select :: (PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> [SelectOpt record] -> IO [(Key record, record)]
 select connpool filters opts = runSqlPool (selectQuery filters opts) connpool
 
-selectKeys :: (MonadResource m, MonadBaseControl IO m, PersistEntity record, BaseBackend (BaseBackend SqlBackend) ~ PersistEntityBackend record, MonadReader SqlBackend m) => Connection__ -> [Filter record] -> [SelectOpt record] -> Source m (Key record)
-selectKeys connpool filters opts = Database.Persist.selectKeys filters opts
+--selectKeys :: (PersistEntity record, BaseBackend (BaseBackend SqlBackend) ~ PersistEntityBackend record, MonadReader SqlBackend IO) => Connection__ -> [Filter record] -> [SelectOpt record] -> Source IO (Key record)
+--selectKeys connpool filters opts = Database.Persist.selectKeys filters opts
 
-countQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => [Filter record] -> Query m Int
+countQuery :: (PersistRecordBackend record SqlBackend) => [Filter record] -> Query Int
 countQuery filters = Database.Persist.count filters
 
-count :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> m Int
+count :: (PersistRecordBackend record SqlBackend) => Connection__ -> [Filter record] -> IO Int
 count connpool filters = runSqlPool (countQuery filters) connpool
 
-checkUniqueQuery :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => record -> Query m (Maybe (Unique record))
+checkUniqueQuery :: (PersistRecordBackend record SqlBackend) => record -> Query (Maybe (Unique record))
 checkUniqueQuery record = Database.Persist.checkUnique record
 
-checkUnique :: (MonadIO m, MonadBaseControl IO m, PersistRecordBackend record SqlBackend) => Connection__ -> record -> m (Maybe (Unique record))
+checkUnique :: (PersistRecordBackend record SqlBackend) => Connection__ -> record -> IO (Maybe (Unique record))
 checkUnique connpool record = runSqlPool (checkUniqueQuery record) connpool
 
 keyToStrings :: (PersistEntity record) => Key record -> [String]
