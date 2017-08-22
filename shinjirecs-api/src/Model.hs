@@ -224,11 +224,12 @@ infixl 6 `finish`
  
 create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
 create t v = do
+  -- data TransactionRequest a b = Commit a | Rollback b
   res <- (return $ DB.Rollbacked v) -- DB.transaction (DB.connection t) impl'
   case res of
-    DB.Rollbacked      x -> return $ Rollbacked x
-    DB.RollbackedByError -> return $ SaveFailed  v [] False
-    DB.Committed       x -> return $ SaveSuccess x
+    DB.Rollbacked     v' -> afterRollback t Nothing   v' >>= return . Rollbacked
+    DB.RollbackedByError -> afterRollback t Nothing   v  >>= return . (\x -> SaveFailed  x [] False)
+    DB.Committed (k',v') -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
   where
     impl' = doBeforeValidation'
       .>>== doValidation'

@@ -29,5 +29,5 @@ stringToAdapterType str =
     _            -> Nothing
 
 
-data TransactionRequest a b = Commit a | Rollback b
-data TransactionResult a b = Committed a | Rollbacked b | RollbackedByError
+data TransactionRequest a b = Commit    a | Rollback b   | CancelButCommit    b | Cancel   b
+data TransactionResult  a b = Committed a | Rollbacked b | CancelButCommitted b | Canceled b | RollbackedByError

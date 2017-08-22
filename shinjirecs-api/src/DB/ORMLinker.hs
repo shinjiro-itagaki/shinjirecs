@@ -45,7 +45,7 @@ import Data.Map(Map,fromList)
 import Data.Text(Text,pack)
 import Data.Maybe(isJust)
 import qualified Data.Aeson as J
-import DB.Types(TransactionRequest(Commit,Rollback),TransactionResult(Committed, Rollbacked, RollbackedByError))
+import DB.Types(TransactionRequest(Commit,Rollback,CancelButCommit,Cancel),TransactionResult(Committed, Rollbacked, CancelButCommitted, Canceled, RollbackedByError))
 import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(MonadIO) -- base
 import Data.IORef(newIORef,readIORef,writeIORef)
@@ -110,19 +110,23 @@ instance Exception PleaseRollback
 
 transaction :: Connection -> Query (TransactionRequest a b) -> IO (TransactionResult a b)
 transaction conn query = do
-  a <- newIORef Nothing
+  ioref <- newIORef Nothing
   ( ORM.runQuery conn $ do
       tres <- query
       case tres of
         Commit   x -> return $ Committed x
-        Rollback x -> do
-          liftIO $ writeIORef a (Just x)
-          throw PleaseRollback
-          return $ Rollbacked x -- this line is dummy
-    ) `catch` (\ (ex :: SomeException) -> (readIORef a) >>= return . vToRtn')
+        Rollback x -> liftIO $ rollback' ioref (Rollbacked x)
+        Cancel   x -> liftIO $ rollback' ioref (Canceled   x)
+        CancelButCommit x -> return $ CancelButCommitted x
+    ) `catch` (\ (ex :: SomeException) -> (readIORef ioref) >>= return . vToRtn')
   where
-    vToRtn' (Just x) = Rollbacked x
+    rollback' ref' rtnval' = do
+      writeIORef ref' $ Just rtnval'
+      throw PleaseRollback
+      return rtnval'  -- this line is dummy
+      
     vToRtn' Nothing  = RollbackedByError
+    vToRtn' (Just x) = x
   
 data Table record = MkTable {
   connection :: Connection
