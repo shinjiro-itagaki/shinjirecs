@@ -39,15 +39,16 @@ import qualified DB.Persist as ORM
 import Data.Int(Int64)
 import DB.Config
 import Control.Monad.Logger (runNoLoggingT)
-import Control.Exception(catch,SomeException,onException)
+import Control.Exception(Exception,catch,SomeException,onException,throw,finally)
 import Control.Monad.IO.Class(liftIO)
 import Data.Map(Map,fromList)
 import Data.Text(Text,pack)
+import Data.Maybe(isJust)
 import qualified Data.Aeson as J
-import DB.Types(TransactionRequest(Commit,Rollback),TransactionResult(Committed, Rollbacked, RollbackedByError),pleaseRollback)
+import DB.Types(TransactionRequest(Commit,Rollback),TransactionResult(Committed, Rollbacked, RollbackedByError))
 import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(MonadIO) -- base
-
+import Data.IORef(newIORef,readIORef,writeIORef)
 type Connection = ORM.Connection__
 
 -- connect :: (MonadIO m, MonadBaseControl IO m, MonadLogger m) => Config -> m Connection
@@ -104,15 +105,24 @@ infixl 3 .||, `or`
 
 type Query a = ORM.Query a
 
+data PleaseRollback = PleaseRollback deriving Show
+instance Exception PleaseRollback
+
 transaction :: Connection -> Query (TransactionRequest a b) -> IO (TransactionResult a b)
-transaction conn query = ( ORM.runQuery conn act' ) `catch` (\ (ex :: SomeException) -> return RollbackedByError )
-  where
-    act' = do
+transaction conn query = do
+  a <- newIORef Nothing
+  ( ORM.runQuery conn $ do
       tres <- query
       case tres of
-        Commit   x -> return $ Committed  x
-        Rollback x -> return $ Rollbacked x -- onException (pleaseRollback x) (return $ Rollbacked x)
-
+        Commit   x -> return $ Committed x
+        Rollback x -> do
+          liftIO $ writeIORef a (Just x)
+          throw PleaseRollback
+          return $ Rollbacked x -- this line is dummy
+    ) `catch` (\ (ex :: SomeException) -> (readIORef a) >>= return . vToRtn')
+  where
+    vToRtn' (Just x) = Rollbacked x
+    vToRtn' Nothing  = RollbackedByError
   
 data Table record = MkTable {
   connection :: Connection

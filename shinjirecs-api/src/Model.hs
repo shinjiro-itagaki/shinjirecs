@@ -230,8 +230,6 @@ create t v = do
     DB.RollbackedByError -> return $ SaveFailed  v [] False
     DB.Committed       x -> return $ SaveSuccess x
   where
---data TransactionRequest a = Commit a | Rollback a
---data TransactionResult a = Committed a | Rollbacked    
     impl' = doBeforeValidation'
       .>>== doValidation'
       .>>== doAfterValidation'

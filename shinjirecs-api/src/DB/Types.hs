@@ -1,5 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric   #-}
+
+{-# LANGUAGE ExistentialQuantification #-}
+
 module DB.Types where
 import Database.Persist.TH
 import qualified Data.Aeson as A
@@ -8,6 +11,7 @@ import GHC.Generics
 import Database.Persist.Sql(PersistFieldSql(sqlType))
 import Database.Persist(SqlType(SqlInt32))
 import Control.Exception(Exception,throw)
+import Data.Typeable(Typeable)
 
 data ChannelType =  GR | BS | CS deriving (Show, Read, Eq, Ord, Enum, Bounded, Generic)
 derivePersistField "ChannelType"
@@ -26,10 +30,4 @@ stringToAdapterType str =
 
 
 data TransactionRequest a b = Commit a | Rollback b
-
 data TransactionResult a b = Committed a | Rollbacked b | RollbackedByError
-
-data PleaseRollback = PleaseRollback deriving Show
-instance Exception PleaseRollback
---pleaseRollback :: (Show a) => a -> a
-pleaseRollback x = throw PleaseRollback x
