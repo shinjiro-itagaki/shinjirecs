@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module DB.ORMLinker (
   Connection
@@ -104,10 +105,10 @@ infixl 3 .||, `or`
 type Query a = ORM.Query a
 
 transaction :: Connection -> Query (TransactionRequest a) -> IO (TransactionResult a)
-transaction conn query = return Rollbacked -- ( ORM.runQuery conn act' ) `catch` (\ex -> return Rollbacked )
+transaction conn query = ( ORM.runQuery conn act' ) `catch` (\ (ex :: SomeException) -> return Rollbacked )
   where
     act' = do
-      tres <- query -- :: TransactionRequest a
+      tres <- query
       case tres of
         Commit   x -> return $ Committed x
         Rollback x -> return $ pleaseRollback x
