@@ -39,12 +39,12 @@ import qualified DB.Persist as ORM
 import Data.Int(Int64)
 import DB.Config
 import Control.Monad.Logger (runNoLoggingT)
-import Control.Exception(catch,SomeException)
+import Control.Exception(catch,SomeException,onException)
 import Control.Monad.IO.Class(liftIO)
 import Data.Map(Map,fromList)
 import Data.Text(Text,pack)
 import qualified Data.Aeson as J
-import DB.Types(TransactionRequest(Commit,Rollback),TransactionResult(Committed, Rollbacked),pleaseRollback)
+import DB.Types(TransactionRequest(Commit,Rollback),TransactionResult(Committed, Rollbacked, RollbackedByError),pleaseRollback)
 import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(MonadIO) -- base
 
@@ -104,14 +104,14 @@ infixl 3 .||, `or`
 
 type Query a = ORM.Query a
 
-transaction :: Connection -> Query (TransactionRequest a) -> IO (TransactionResult a)
-transaction conn query = ( ORM.runQuery conn act' ) `catch` (\ (ex :: SomeException) -> return Rollbacked )
+transaction :: Connection -> Query (TransactionRequest a b) -> IO (TransactionResult a b)
+transaction conn query = ( ORM.runQuery conn act' ) `catch` (\ (ex :: SomeException) -> return RollbackedByError )
   where
     act' = do
       tres <- query
       case tres of
-        Commit   x -> return $ Committed x
-        Rollback x -> return $ pleaseRollback x
+        Commit   x -> return $ Committed  x
+        Rollback x -> return $ Rollbacked x -- onException (pleaseRollback x) (return $ Rollbacked x)
 
   
 data Table record = MkTable {

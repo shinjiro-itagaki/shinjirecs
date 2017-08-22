@@ -25,11 +25,11 @@ stringToAdapterType str =
     _            -> Nothing
 
 
-data TransactionRequest a = Commit a | Rollback a
+data TransactionRequest a b = Commit a | Rollback b
 
-data TransactionResult a = Committed a | Rollbacked
+data TransactionResult a b = Committed a | Rollbacked b | RollbackedByError
 
 data PleaseRollback = PleaseRollback deriving Show
 instance Exception PleaseRollback
 --pleaseRollback :: (Show a) => a -> a
-pleaseRollback x = throw PleaseRollback
+pleaseRollback x = throw PleaseRollback x
