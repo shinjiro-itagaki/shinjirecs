@@ -45,7 +45,7 @@ import Data.Map(Map,fromList)
 import Data.Text(Text,pack)
 import Data.Maybe(isJust)
 import qualified Data.Aeson as J
-import DB.Types(TransactionRequest(Commit,Rollback,CancelButCommit,Cancel),TransactionResult(Committed, Rollbacked, CancelButCommitted, Canceled, RollbackedByError))
+import DB.Types(TransactionRequest(TransactionRequest),TransactionResult(TransactionResult,UnknownError), CommitOrRollback(Commit,Rollback), ActionState(NoProblem, Canceled, Failed))
 import Control.Monad.Trans.Resource (MonadBaseControl) -- resourcet
 import Control.Monad.IO.Class(MonadIO) -- base
 import Data.IORef(newIORef,readIORef,writeIORef)
@@ -108,24 +108,24 @@ type Query a = ORM.Query a
 data PleaseRollback = PleaseRollback deriving Show
 instance Exception PleaseRollback
 
-transaction :: Connection -> Query (TransactionRequest a b) -> IO (TransactionResult a b)
+transaction :: Connection -> Query (TransactionRequest a b c) -> IO (TransactionResult a b c)
 transaction conn query = do
   ioref <- newIORef Nothing
   ( ORM.runQuery conn $ do
       tres <- query
       case tres of
-        Commit   x -> return $ Committed x
-        Rollback x -> liftIO $ rollback' ioref (Rollbacked x)
-        Cancel   x -> liftIO $ rollback' ioref (Canceled   x)
-        CancelButCommit x -> return $ CancelButCommitted x
-    ) `catch` (\ (ex :: SomeException) -> (readIORef ioref) >>= return . vToRtn')
+        TransactionRequest (NoProblem             onSaved    ) -> return $ TransactionResult (NoProblem onSaved)
+        TransactionRequest (Canceled (Commit   onNotSaved) on) -> return $ TransactionResult (Canceled (Commit onNotSaved) on)
+        TransactionRequest (Canceled (Rollback onNotSaved) on) -> liftIO $ rollback' ioref $ TransactionResult (Canceled (Rollback onNotSaved) on)
+        TransactionRequest (Failed   (Commit   onNotSaved)   ) -> return $ TransactionResult (Failed (Commit onNotSaved))
+        TransactionRequest (Failed   (Rollback onNotSaved)   ) -> liftIO $ rollback' ioref $ TransactionResult (Failed (Rollback onNotSaved))
+    ) `catch` (\ (ex :: SomeException) -> (readIORef ioref   ) >>= return . vToRtn')
   where
     rollback' ref' rtnval' = do
       writeIORef ref' $ Just rtnval'
       throw PleaseRollback
-      return rtnval'  -- this line is dummy
-      
-    vToRtn' Nothing  = RollbackedByError
+      return $ rtnval'  -- this line is dummy
+    vToRtn' Nothing  = UnknownError
     vToRtn' (Just x) = x
   
 data Table record = MkTable {

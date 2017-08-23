@@ -29,5 +29,12 @@ stringToAdapterType str =
     _            -> Nothing
 
 
-data TransactionRequest a b = Commit    a | Rollback b   | CancelButCommit    b | Cancel   b
-data TransactionResult  a b = Committed a | Rollbacked b | CancelButCommitted b | Canceled b | RollbackedByError
+data CommitOrRollback onCommit onRollback = Commit onCommit | Rollback onRollback
+
+data ActionState onSaved onNotSaved cancelOn = NoProblem onSaved | Canceled (CommitOrRollback onNotSaved onNotSaved) cancelOn | Failed (CommitOrRollback onNotSaved onNotSaved)
+
+-- TransactionRequest ifSaved ifNotSaved = TransactionRequest (NoProblem onSaved | Cancel (Commit | Rollback onNotSaved) | Failed (Commit onNotSaved | Rollback onNotSaved))
+data TransactionRequest ifSaved ifNotSaved cancelOn = TransactionRequest (ActionState ifSaved ifNotSaved cancelOn)
+
+-- TransactionResult ifSaved ifNotSaved = TransactionResult (NoProblem onSaved | Cancel (Commit onNotSaved| Rollback onNotSaved) | Failed (Commit onNotSaved | Rollback onNotSaved)) | UnknownError
+data TransactionResult  ifSaved ifNotSaved cancelOn = TransactionResult (ActionState ifSaved ifNotSaved cancelOn) | UnknownError
