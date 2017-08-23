@@ -362,9 +362,9 @@ modify t arg@(k,v) = do
     doRollback'                k v on = return $ TransactionRequest $ Canceled (Rollback v) on
     doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
     doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
-{-
-hoge
-save' :: (ModelClass m) => DB.Table m -> arg -> (m -> IO (DB.Entity m)) -> (m -> arg) -> Maybe (DB.Key m) -> typ -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (arg -> m) ->  IO (SaveResult m arg typ)
+
+{- 
+save' :: (ModelClass m) => DB.Table m -> arg -> (m -> DB.Query m) -> (m -> arg) -> Maybe (DB.Key m) -> typ -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (arg -> m) ->  IO (SaveResult m arg typ)
 save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV' = do
   res <- DB.transaction (DB.connection t) (liftIO impl')
   case res of
@@ -436,8 +436,8 @@ save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActi
     doRollback'                k v on = return $ TransactionRequest $ Canceled (Rollback v) on
     doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
     doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
-hoge
 -}
+
 save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
 save t Nothing  v = create t    v  >>= return . Left
 save t (Just k) v = modify t (k,v) >>= return . Right
