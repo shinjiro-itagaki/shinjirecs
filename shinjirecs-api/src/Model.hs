@@ -196,14 +196,7 @@ infixl 6 `finish`
  
 create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
 create t arg = do
-  res <- DB.transaction (DB.connection t) impl'
-  case res of
-    TransactionResult (NoProblem         (k',v')) -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
-    TransactionResult (Canceled (Commit   v') on) -> afterCommit   t toK'   v' >>= return . SaveCanceled on . toArg'
-    TransactionResult (Canceled (Rollback v') on) -> afterRollback t toK'   v' >>= return . SaveCanceled on . toArg'
-    TransactionResult (Failed   (Commit   v')   ) -> afterCommit   t toK'   v' >>= return . (\x -> SaveFailed  (toArg' x) [] True )
-    TransactionResult (Failed   (Rollback v')   ) -> afterRollback t toK'   v' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
-    UnknownError                                  -> afterRollback t toK' argv'  >>= return . (\x -> SaveFailed  (toArg' x) [] False)
+  save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV'  
   where
     actionImpl' x = DB.insertQuery t x >>= DB.getQuery t
     toArg' x = x
@@ -214,68 +207,10 @@ create t arg = do
     beforeAction' = beforeCreate
     afterAction'  = afterCreated
     afterActionFailed' = afterCreateFailed    
-    
-    cancel2Req' True  x step = return $ Left $ TransactionRequest (Canceled (Commit   x) step)
-    cancel2Req' False x step = return $ Left $ TransactionRequest (Canceled (Rollback x) step)
-
-    impl' = doBeforeValidation'
-      .>>== doValidation'
-      .>>== doAfterValidation'
-      .>>== doBeforeSave'
-      .>>== doBeforeAction'
-      .>>== doAction'
-      `finish` doAllAfterActions' $ getV' arg
-      
-    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
-    doValidation'         (Go      x) = return . Right =<< validate t toK' x
-    doValidation'   (Cancel commit x) = cancel2Req' commit x OnBeforeValidation
-    
-    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
-    doAfterValidation'    (Invalid x _) = afterValidationFailed t toK' x >>= (\x2 -> return . Left . TransactionRequest $ Canceled (Rollback x2) OnValidation)
-    
-    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
-    
-    doBeforeAction'        (Go     x) = return . Right =<< beforeAction' t (toArg' x)
-    doBeforeAction' (Cancel commit x) = cancel2Req' commit x OnBeforeSave
-
-    doAction'              (Go     x) = do
-      return . Right . maybe2FindResult' x (\y -> y) =<< actionImpl' x
-    doAction'       (Cancel commit x) = cancel2Req' commit x (OnBefore action')
-
-    doAllAfterActions' (NotFound    v) = doAfterActionFailed' v >>= doAfterSaveFailed'
-    doAllAfterActions' (Found e@(k,v)) = doAfterAction'       e >>= doAfterSave' k
-
-    doAfterAction'             e@(k,v) = afterAction' t e
-    doAfterActionFailed'            v  = afterActionFailed' t (toArg' v)
-    doAfterSave'        k (Rollback v) = doRollback' k v (OnAfter action')
-    doAfterSave'        k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k OnAfterSave
-    doCommitOrRollback' k on (Rollback v) = doRollback' k v on
-    doCommitOrRollback' k on (Commit   v) = doCommit'   k v
-
-    doCommitOrRollbackAfterFailed' (Rollback v) = do
-      doRollbackAfterFailed' v
-    doCommitOrRollbackAfterFailed' (Commit   v) = do
-      doCommitAfterFailed'   v
-      
-    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
-    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
-
-    doCommit'                     k v = return $ TransactionRequest $ NoProblem (k,v)
-    doRollback'                k v on = return $ TransactionRequest $ Canceled (Rollback v) on
-    doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
-    doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
 
 modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
 modify t arg@(k,v) = do
---  res <- return $ TransactionResult $ Canceled (Rollback v) $ OnBefore action'
-  res <- DB.transaction (DB.connection t) impl'
-  case res of
-    TransactionResult (NoProblem         (k',v')) -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
-    TransactionResult (Canceled (Commit   v') on) -> afterCommit   t toK' v' >>= return . SaveCanceled on . toArg'
-    TransactionResult (Canceled (Rollback v') on) -> afterRollback t toK' v' >>= return . SaveCanceled on . toArg'
-    TransactionResult (Failed   (Commit   v')   ) -> afterCommit   t toK' v' >>= return . (\x -> SaveFailed  (toArg' x) [] True )
-    TransactionResult (Failed   (Rollback v')   ) -> afterRollback t toK' v' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
-    UnknownError                                  -> afterRollback t toK' argv' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
+  save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV'
   where
     actionImpl' x = do
       DB.repsertQuery t k x
@@ -288,57 +223,6 @@ modify t arg@(k,v) = do
     beforeAction' = beforeModify
     afterAction'  = afterModified
     afterActionFailed' = afterModifyFailed
-
-    impl' = doBeforeValidation'
-      .>>== doValidation'
-      .>>== doAfterValidation'
-      .>>== doBeforeSave'
-      .>>== doBeforeAction'
-      .>>== doAction'
-      `finish` doAllAfterActions' $ getV' arg
-
-    cancel2Req' True  x step = return $ Left $ TransactionRequest (Canceled (Commit   x) step)
-    cancel2Req' False x step = return $ Left $ TransactionRequest (Canceled (Rollback x) step)
-
-    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
-    doValidation'         (Go      x) = return . Right =<< validate t toK' x
-    doValidation'   (Cancel commit x) = cancel2Req' commit x OnBeforeValidation
-    
-    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
-    doAfterValidation'    (Invalid x _) = afterValidationFailed t toK' x >>= (\x2 -> return . Left . TransactionRequest $ Canceled (Rollback x2) OnValidation)
-    
-    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
-    
-    doBeforeAction'        (Go     x) = return . Right =<< beforeAction' t (toArg' x)
-    doBeforeAction' (Cancel commit x) = cancel2Req' commit x OnBeforeSave
-
-    doAction'              (Go     x) = do
-      return . Right . maybe2FindResult' x (\y -> y) =<< actionImpl' x
-    doAction'       (Cancel commit x) = cancel2Req' commit x (OnBefore action')
-
-    doAllAfterActions' (NotFound    v) = doAfterActionFailed' v >>= doAfterSaveFailed'
-    doAllAfterActions' (Found e@(k,v)) = doAfterAction'       e >>= doAfterSave' k
-
-    doAfterAction'             e@(k,v) = afterAction' t e
-    doAfterActionFailed'            v  = afterActionFailed' t (toArg' v)
-    doAfterSave'        k (Rollback v) = doRollback' k v (OnAfter action')
-    doAfterSave'        k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k OnAfterSave
-    doCommitOrRollback' k on (Rollback v) = doRollback' k v on
-    doCommitOrRollback' k on (Commit   v) = doCommit'   k v
-
-    doCommitOrRollbackAfterFailed' (Rollback v) = do
-      doRollbackAfterFailed' v
-    doCommitOrRollbackAfterFailed' (Commit   v) = do
-      doCommitAfterFailed'   v
-      
-    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
-    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
-
-    doCommit'                     k v = return $ TransactionRequest $ NoProblem (k,v)
-    doRollback'                k v on = return $ TransactionRequest $ Canceled (Rollback v) on
-    doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
-    doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
-
 
 save' :: (ModelClass m) => DB.Table m -> arg -> (m -> DB.Query (Maybe (DB.Entity m))) -> (m -> arg) -> Maybe (DB.Key m) -> typ -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -> (DB.Table m -> DB.Entity m -> IO (AfterActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (arg -> m) ->  IO (SaveResult m arg typ)
 save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV' = do
