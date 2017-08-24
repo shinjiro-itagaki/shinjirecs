@@ -36,11 +36,6 @@ module Model (
   ,select
   ,create
   ,modify
---  ,HookAction(..)
---  ,(>>==)
---  ,(|||)
---  ,ifCancel
---  ,ifInvalid
   ,save
   ,destroy
   ) where
@@ -56,14 +51,7 @@ data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
 
 data ValidationResult   a = Valid   a | Invalid a [(ColumnName, FailedReason)]
 data BeforeActionResult a = Go      a | Cancel Bool a -- commit or not
--- data AfterActionResult  a = Commit  a | Rollback a
 type AfterActionResult a = CommitOrRollback a a
-
---data HookResult a = Validation (ValidationResult a) | BeforeAction (BeforeActionResult a) | AfterAction (AfterActionResult a)
---data ValidationResult   a = ValidationResult   a
---data BeforeActionResult a = BeforeActionResult a
---data AfterActionResult  a = AfterActionResult  a
-
 data HookActionStep a = OnBeforeValidation | OnValidation | OnBeforeSave | OnBefore a | OnAfter a | OnAfterSave 
 
 data SaveResult v a pos = SaveSuccess (DB.Entity v) | SaveFailed a [(ColumnName, FailedReason)] Bool | SaveCanceled (HookActionStep pos) a | Rollbacked a
@@ -177,18 +165,6 @@ get t k = DB.get t k >>= fireAfterFindME t
 
 select :: (ModelClass m) => DB.Table m -> SelectQuery m -> IO [(DB.Entity m)]
 select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . map (fireAfterFind t)
-
---(>>==) :: Either (IO end) (IO next) -> (next -> Either (IO end) (IO next2))  -> Either (IO end) (IO next2)
---(>>==) earg f = impl' earg
---  where
---    impl' (Left  ioarg) = Left ioarg
---    impl' (Right ioarg) = do
---      arg <- ioargf
---      f arg
-
---(>>==) (Left  ioarg) f = Left ioarg
---(>>==) (Right ioarg) f = ioarg >>= (\arg -> f arg)
---infixl 7 >>==
 
 (.>>==) :: (arg -> IO (Either end next)) -> (next -> DB.Query (Either end next2)) -> (arg -> DB.Query (Either end next2))
 (.>>==) f fnext = impl'
