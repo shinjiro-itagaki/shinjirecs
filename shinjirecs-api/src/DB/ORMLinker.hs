@@ -34,6 +34,7 @@ module DB.ORMLinker (
   , EntityField
   , ORM.runQuery
   , transaction
+  , Query
   ) where
 import qualified DB.Persist as ORM
 import Data.Int(Int64)

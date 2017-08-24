@@ -190,15 +190,15 @@ select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . 
 --(>>==) (Right ioarg) f = ioarg >>= (\arg -> f arg)
 --infixl 7 >>==
 
-(.>>==) :: (arg -> IO (Either end next)) -> (next -> IO (Either end next2)) -> (arg -> IO (Either end next2))
+(.>>==) :: (arg -> IO (Either end next)) -> (next -> DB.Query (Either end next2)) -> (arg -> DB.Query (Either end next2))
 (.>>==) f fnext = impl'
   where
-    impl' arg = f arg
+    impl' arg = (liftIO $ f arg)
       >>= (\x -> case x of
               Right next -> fnext next
               Left  y    -> return $ Left y)
 
-infixl 7 .>>==
+infixr 7 .>>==
 
 data FindResult a b = Found a | NotFound b
 
@@ -206,12 +206,12 @@ maybe2FindResult' :: b -> (z -> a) -> Maybe z -> FindResult a b
 maybe2FindResult' ifNothing f Nothing  = NotFound ifNothing
 maybe2FindResult' ifNothing f (Just x) = Found $ f x
 
-finish :: (arg -> IO (Either end next)) -> (next -> IO end) -> (arg -> IO end)
+finish :: (arg -> DB.Query (Either end next)) -> (next -> IO end) -> (arg -> DB.Query end)
 finish f tailf = impl'
   where
     impl' arg = do
       x <- f arg
-      case x of
+      liftIO $ case x of
         Left  y -> return y
         Right y -> tailf  y
 
@@ -220,7 +220,7 @@ infixl 6 `finish`
  
 create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
 create t arg = do
-  res <- DB.transaction (DB.connection t) (liftIO impl')
+  res <- DB.transaction (DB.connection t) impl'
   case res of
     TransactionResult (NoProblem         (k',v')) -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
     TransactionResult (Canceled (Commit   v') on) -> afterCommit   t toK'   v' >>= return . SaveCanceled on . toArg'
@@ -229,7 +229,7 @@ create t arg = do
     TransactionResult (Failed   (Rollback v')   ) -> afterRollback t toK'   v' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
     UnknownError                                  -> afterRollback t toK' argv'  >>= return . (\x -> SaveFailed  (toArg' x) [] False)
   where
-    actionImpl' x = DB.insert t x >>= DB.get t
+    actionImpl' x = DB.insertQuery t x >>= DB.getQuery t
     toArg' x = x
     toK'    = Nothing
     getV'   x = x
@@ -292,7 +292,7 @@ create t arg = do
 modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
 modify t arg@(k,v) = do
 --  res <- return $ TransactionResult $ Canceled (Rollback v) $ OnBefore action'
-  res <- DB.transaction (DB.connection t) (liftIO impl')
+  res <- DB.transaction (DB.connection t) impl'
   case res of
     TransactionResult (NoProblem         (k',v')) -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
     TransactionResult (Canceled (Commit   v') on) -> afterCommit   t toK' v' >>= return . SaveCanceled on . toArg'
@@ -302,8 +302,8 @@ modify t arg@(k,v) = do
     UnknownError                                  -> afterRollback t toK' argv' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
   where
     actionImpl' x = do
-      DB.repsert t k x
-      DB.get t k
+      DB.repsertQuery t k x
+      DB.getQuery t k
     toArg' x = (k,x)
     getV'   = snd
     argv'   = getV' arg
