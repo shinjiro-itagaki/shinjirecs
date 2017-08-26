@@ -7,7 +7,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Controller where
-import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode)
+import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode, parseJSON,toJSON,ToJSON)
+import Data.Aeson.Types(parseMaybe)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
 import qualified DB
@@ -15,8 +16,6 @@ import Class.Castable(Castable(..))
 import Class.String(StringClass(toByteStringL,toTextL,(+++), toText))
 import Routing.Class(RawPathParams, PathParamList(..))
 import Controller.Types(ControllerResponse(..), ActionWrapper(..), Action, Body, ParamGivenAction)
-import Data.Aeson(parseJSON,toJSON,ToJSON)
-import Data.Aeson.Types(parseMaybe)
 import qualified Data.Text.Lazy as TL
 import Data.Int(Int64)
 import Data.Maybe(isJust)
@@ -63,19 +62,19 @@ doIfRecordFound id t f = do
     Nothing -> responseRecordNotFound id
     Just  x -> f x
 
-doIfValidInputJSON :: (FromJSON m) => Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
+doIfValidInputJSON :: (ModelClass m) => Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
 doIfValidInputJSON req f = do
   erec <- fromRequest req
   case erec of
     Left res -> return res
     Right  x -> f x
 
-doIfModifiable :: (FromJSON m) => Int64 -> DB.Table m -> Request -> (DB.Entity m -> IO ControllerResponse) -> IO ControllerResponse
+doIfModifiable :: (ModelClass m) => Int64 -> DB.Table m -> Request -> (DB.Entity m -> IO ControllerResponse) -> IO ControllerResponse
 doIfModifiable id t req f = doIfRecordFound id t $ ifRecordFound'
   where
     ifRecordFound' e@(k,v) = doIfValidInputJSON req $ (\inputV -> f (k,inputV) )
 
-doIfCreatable :: (FromJSON m) => DB.Table m -> Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
+doIfCreatable :: (ModelClass m) => DB.Table m -> Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
 doIfCreatable t req f = doIfValidInputJSON req f
 
 modifyCommon :: (ModelClass m, FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => Int64 -> DB.Table m -> Request -> IO ControllerResponse
@@ -84,19 +83,19 @@ modifyCommon id t req = doIfModifiable id t req impl'
     -- impl' :: DB.Entity m -> IO ControllerResponse
     impl' e = modify t e >>= return . saveResultToControllerResponse
 
-createCommon :: (ModelClass m, FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => DB.Table m -> Request -> IO ControllerResponse
+createCommon :: (ModelClass m) => DB.Table m -> Request -> IO ControllerResponse
 createCommon t req = doIfCreatable t req impl'
   where
     -- impl' :: m -> IO ControllerResponse
     impl' v = create t v >>= return . saveResultToControllerResponse
 
-saveResultToControllerResponse :: (ToJSON (DB.Entity record)) => SaveResult record rore typ -> ControllerResponse
+saveResultToControllerResponse :: (ModelClass record) => SaveResult record rore typ -> ControllerResponse
 saveResultToControllerResponse (SaveSuccess e) = responseSaved e
 saveResultToControllerResponse (SaveFailed e results committed) = responseBadRequest ("failed" :: String)
 saveResultToControllerResponse (SaveCanceled pos e) = responseBadRequest ("canceled" :: String)
 saveResultToControllerResponse (Rollbacked e)       = responseBadRequest ("rollbacked" :: String)
 
-responseSaved :: (ToJSON (DB.Entity record)) => DB.Entity record -> ControllerResponse
+responseSaved :: (ModelClass record) => DB.Entity record -> ControllerResponse
 responseSaved e = defaultControllerResponse {
   body    = toBody e
   ,status = status201
@@ -141,3 +140,20 @@ destroyRecord id table = do
     delete' = DB.delete table
     find'   = DB.find table
   
+
+{-
+class ((ModelClass record, FromJSON record, ToJSON record, ToJSON (DB.Entity record))) => (ResourceClass record) a where
+  readTable :: DB.Connection -> a -> DB.Table record
+  readTable conn self = DB.readTable conn
+  
+  listAction :: a -> Action ()
+  listAction self _ method conn req = getRecords filters' opts' table' (map snd)
+    where
+      table' = readTable conn self
+      filters' = [] -- :: [DB.Filter DB.Channel]
+      opts'    = [] -- :: [DB.SelectOpt DB.Channel]  
+  getAction :: Action Int64
+  modifyAction :: Action Int64
+  createAction :: Action ()
+  destroyAction :: Action Int64  
+-}

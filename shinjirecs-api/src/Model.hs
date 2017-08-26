@@ -45,6 +45,7 @@ import Data.Maybe(isNothing)
 import Control.Monad(sequence)
 import Control.Monad.IO.Class(liftIO)
 import DB.Types(TransactionRequest(TransactionRequest),TransactionResult(TransactionResult,UnknownError), CommitOrRollback(Commit,Rollback), ActionState(NoProblem, Canceled, Failed))
+import Data.Aeson(ToJSON,FromJSON)
 
 type ColumnName = String
 data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
@@ -89,7 +90,7 @@ instance (GetKey r) (DB.Entity r) where
 doNothing' :: a -> IO a
 doNothing' x = return x
 
-class ModelClass m where
+class (FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => ModelClass m where
   
   afterFind :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
   afterFind _ = doNothing'
