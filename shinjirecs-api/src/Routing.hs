@@ -25,7 +25,7 @@ import Class.String(StringClass(..))
 import Data.List.Split
 import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
-
+import Routing.Types(Resource(listAction ,getAction ,modifyAction ,createAction ,destroyAction))
 notFound, badRequest :: Action ()
 notFound conn method req _ = return $ defaultControllerResponse {
   status = status404
@@ -81,31 +81,26 @@ _PATCH_ = [PATCH,PUT]
 _DELETE_ = [DELETE]
 _ALL_ = [minBound .. maxBound] :: [StdMethod]
 
+readResource :: PathPattern -> Resource -> [Route]
+readResource p rs = [
+   ( _GET_ ,   p +++ "/list"     ) @>> listAction    rs
+  ,( _GET_,    p +++ "/:id"      ) @>> getAction     rs
+  ,( _PATCH_,  p +++ "/:id"      ) @>> modifyAction  rs
+  ,( _POST_,   p +++ ""          ) @>> createAction  rs
+  ,( _DELETE_, p +++ "/:id"      ) @>> destroyAction rs
+  ]
+
 routingMap :: [Route]
-routingMap = [
-   ( _GET_ ,   "/channels/list"     ) @>> ChannelsC.list
-  ,( _GET_,    "/channels/:id"      ) @>> ChannelsC.get
-  ,( _PATCH_,  "/channels/:id"      ) @>> ChannelsC.modify
-  ,( _POST_,   "/channels"          ) @>> ChannelsC.create
-  ,( _DELETE_, "/channels/:id"      ) @>> ChannelsC.destroy
-    
-  ,( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
+routingMap =
+  (readResource "/channels"     ChannelsC.resource     ) ++
+  (readResource "/programs"     ProgramsC.resource     ) ++
+  (readResource "/reservations" ReservationsC.resource ) ++  
+  [
+  ( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
   ,( _GET_,    "/install/channels"  ) @>> notFound -- InstallC.resultDetectChannels
   ,( _GET_,    "/install/step1"     ) @>> notFound -- (InstallC.step 1)
   ,( _GET_,    "/install/step2"     ) @>> notFound -- (InstallC.step 2)
   ,( _GET_,    "/install/step3"     ) @>> notFound -- (InstallC.step 3)
-    
-  ,( _GET_,    "/programs/list"     ) @>> notFound -- ProgramsC.list
-  ,( _GET_,    "/programs/:id"      ) @>> notFound -- ProgramsC.get
-  ,( _PATCH_,  "/programs/:id"      ) @>> notFound -- ProgramsC.modify
-  ,( _POST_,   "/programs"          ) @>> notFound -- ProgramsC.create
-  ,( _DELETE_, "/programs/:id"      ) @>> notFound -- ProgramsC.destroy
-    
-  ,( _GET_,    "/reservations/list" ) @>> notFound -- ReservationsC.list
-  ,( _GET_,    "/reservations/:id"  ) @>> notFound -- ReservationsC.get
-  ,( _PATCH_,  "/reservations/:id"  ) @>> notFound -- ReservationsC.modify
-  ,( _POST_,   "/reservations"      ) @>> notFound -- ReservationsC.create
-  ,( _DELETE_, "/reservations/:id"  ) @>> notFound -- ReservationsC.destroy
   ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
   ]
 

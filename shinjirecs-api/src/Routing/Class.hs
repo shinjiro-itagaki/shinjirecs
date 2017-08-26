@@ -12,6 +12,7 @@ import Controller.Types(ActionWrapper(..), Action, ParamGivenAction)
 import Class.String(StringClass,toByteString,toString)
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH))
 import Text.Read(readMaybe)
+import Model(ModelClass)
 
 type Path = ByteString
 
@@ -49,7 +50,7 @@ instance Eq RouteNotFoundError where
 
 data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
-data RawPathParamsError = BadParamTypes [String] | BadRouteDefinition
+data RawPathParamsError = BadParamTypes [String] | BadRouteDefinition | ResourceNotFound Int64
 
 data RoutingError = RouteNotFound RouteNotFoundError | BadPathParams RawPathParamsError
 
@@ -90,6 +91,11 @@ rawPathParamsToArg' (x@(k,v):yy) = case readMaybe v of
                                Just x -> Right x
                                Nothing -> Left (BadParamTypes [k])
 rawPathParamsToArg' _ = Left BadRouteDefinition
+
+rawPathParamsToRecord' :: (Read a) => RawPathParams -> Either RawPathParamsError a
+rawPathParamsToRecord' (x@(k,v):yy) = case readMaybe v of
+                               Just x -> Right x
+                               Nothing -> Left (BadParamTypes [k])
 
 getReadMaybeFailedKey' :: (String,Maybe a) -> Maybe String
 getReadMaybeFailedKey' (k, (Just _)) = Nothing

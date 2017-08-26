@@ -11,7 +11,7 @@ import Data.Int(Int64)
 import Data.Map(Map(..), empty, fromList)
 import Data.ByteString as B
 import Data.ByteString.Lazy as L
-import DB(Connection)
+import DB(Connection,Entity,Table)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status)
 import Network.HTTP.Types.Method(StdMethod)
@@ -45,4 +45,5 @@ data ActionWrapper = Action_N    (Action ())
                    | Action_ISS  (Action (Int64,String,String))
                    | Action_SIS  (Action (String,Int64,String))
                    | Action_SSS  (Action (String,String,String))
+
 

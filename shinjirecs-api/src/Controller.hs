@@ -22,6 +22,8 @@ import Data.Maybe(isJust)
 import Data.Text(Text)
 import Model(ModelClass, SaveResult(SaveSuccess, SaveFailed, SaveCanceled, Rollbacked), create, CreateResult, modify, ModifyResult)
 
+import Routing.Types(Resource(Resource,listAction,getAction,modifyAction,createAction,destroyAction))
+
 defaultControllerResponse :: ControllerResponse
 defaultControllerResponse = MkControllerResponse {
   contentType = "application/json"
@@ -141,19 +143,29 @@ destroyRecord id table = do
     find'   = DB.find table
   
 
-{-
-class ((ModelClass record, FromJSON record, ToJSON record, ToJSON (DB.Entity record))) => (ResourceClass record) a where
-  readTable :: DB.Connection -> a -> DB.Table record
-  readTable conn self = DB.readTable conn
-  
-  listAction :: a -> Action ()
-  listAction self _ method conn req = getRecords filters' opts' table' (map snd)
-    where
-      table' = readTable conn self
-      filters' = [] -- :: [DB.Filter DB.Channel]
-      opts'    = [] -- :: [DB.SelectOpt DB.Channel]  
-  getAction :: Action Int64
-  modifyAction :: Action Int64
-  createAction :: Action ()
-  destroyAction :: Action Int64  
--}
+defaultListAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action ()
+defaultListAction f _ method conn req = getRecords filters' opts' (f conn) (map snd)
+  where
+    filters' = [] -- :: [DB.Filter DB.Channel]
+    opts'    = [] -- :: [DB.SelectOpt DB.Channel]
+    
+defaultGetAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultGetAction f id method conn req = getRecord id (f conn) snd
+
+defaultModifyAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultModifyAction f id method conn req = modifyCommon id (f conn) req
+    
+defaultCreateAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action ()
+defaultCreateAction f _ method conn req = createCommon (f conn) req
+
+defaultDestroyAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultDestroyAction f id method conn req = destroyRecord id (f conn)
+
+mkDefaultResource :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Resource
+mkDefaultResource tg = Resource {
+  listAction     = defaultListAction    tg
+  ,getAction     = defaultGetAction     tg
+  ,modifyAction  = defaultModifyAction  tg
+  ,createAction  = defaultCreateAction  tg
+  ,destroyAction = defaultDestroyAction tg
+  }

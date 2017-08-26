@@ -6,32 +6,26 @@ module Controllers.ChannelsController where
 import qualified DB
 import Models.Channel
 import Controller.Types(Action, ControllerResponse(body))
-import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord, fromRequest, modifyCommon,createCommon)
+import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord, fromRequest, modifyCommon,createCommon,defaultListAction, defaultGetAction, defaultModifyAction, defaultCreateAction, defaultDestroyAction, mkDefaultResource)
 import Data.Int(Int64)
 
+tableGetter conn = DB.readTable conn :: DB.Table DB.Channel
+
+resource = mkDefaultResource tableGetter
+
+{-
 list :: Action () -- (() -> Connection -> StdMethod -> Request -> IO ControllerResponse)
-list _ method conn req = getRecords filters' opts' table' (map snd)
-  where
-    table' = DB.readTable conn :: DB.Table DB.Channel
-    filters' = [] -- :: [DB.Filter DB.Channel]
-    opts'    = [] -- :: [DB.SelectOpt DB.Channel]
+list = defaultListAction tableGetter
 
 get :: Action Int64
-get id method conn req = getRecord id table' snd
-  where
-    table' = DB.readTable conn :: DB.Table DB.Channel
+get = defaultGetAction tableGetter
 
 modify :: Action Int64
-modify id method conn req = do
-  modifyCommon id t' req
-  where
-    t' = DB.readTable conn :: DB.Table DB.Channel
+modify = defaultModifyAction tableGetter
 
 create :: Action ()
-create _ method conn req = do
-  createCommon t' req
-  where
-    t' = DB.readTable conn :: DB.Table DB.Channel
+create = defaultCreateAction tableGetter
     
 destroy :: Action Int64
-destroy id method conn req = destroyRecord id $ (DB.readTable conn :: DB.Table DB.Channel)
+destroy = defaultDestroyAction tableGetter
+-}

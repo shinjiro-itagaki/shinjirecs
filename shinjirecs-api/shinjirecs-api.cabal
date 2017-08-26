@@ -54,6 +54,7 @@ library
                      , Jobs.Recording
                      , Routing
                      , Routing.Class
+                     , Routing.Types
   build-depends:       base >= 4.7 && < 5
                      , HDBC
                      , HDBC-sqlite3
