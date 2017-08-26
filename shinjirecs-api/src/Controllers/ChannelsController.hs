@@ -6,7 +6,7 @@ module Controllers.ChannelsController where
 import qualified DB
 import Models.Channel
 import Controller.Types(Action, ControllerResponse(body))
-import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord)
+import Controller(defaultControllerResponse,ToBody(toBody), getRecords, getRecord, destroyRecord, fromRequest, modifyCommon,createCommon)
 import Data.Int(Int64)
 
 list :: Action () -- (() -> Connection -> StdMethod -> Request -> IO ControllerResponse)
@@ -23,10 +23,9 @@ get id method conn req = getRecord id table' snd
 
 modify :: Action Int64
 modify id method conn req = do
-  mchannel <- (DB.find $ DB.channelsTable conn) id
-  return $ defaultControllerResponse {
-    body = toBody mchannel -- resText
-    }
+  modifyCommon id t' req
+  where
+    t' = DB.readTable conn :: DB.Table DB.Channel
 
 create :: Action ()
 create _ method conn req = do

@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module DB.Persist(
   migrate
@@ -82,7 +83,7 @@ import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mys
 import Database.Persist.Sqlite (withSqliteConn, createSqlitePool) -- persistent-sqlite
 import Database.Persist.Postgresql (withPostgresqlConn, createPostgresqlPool) -- persistent-postgresql
 import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Database.Persist.Class (BaseBackend, IsPersistBackend, PersistEntity(..), Key(..), keyToValues) -- persistent
+import Database.Persist.Class (BaseBackend, IsPersistBackend, PersistEntity(..), Key(..), keyToValues, entityIdToJSON,entityIdFromJSON) -- persistent
 import Control.Monad.Trans.Resource (runResourceT, ResourceT, MonadBaseControl, MonadResource) -- resourcet
 import Control.Monad.Logger (runNoLoggingT, NoLoggingT) -- monad-logger
 import Control.Monad.IO.Class(liftIO,MonadIO) -- base
@@ -104,6 +105,7 @@ import Data.Int(Int64)
 import qualified Data.Text as Text --text
 -- import DB.Class(Record(..))
 import Data.Conduit(Source)
+import Data.Aeson(ToJSON(toJSON), FromJSON(parseJSON))
 import DB.Status(ReservationState(..))
 import DB.Types(ChannelType(..))
 import qualified Data.Aeson as J
@@ -336,3 +338,11 @@ checkUnique connpool record = runSqlPool (checkUniqueQuery record) connpool
 
 keyToStrings :: (PersistEntity record) => Key record -> [String]
 keyToStrings key = Prelude.map show $ keyToValues key
+
+--  The resulting JSON looks like {"id": 1, "name": ...}.
+instance (PersistEntity record, ToJSON record, ToJSON (Key record)) => ToJSON (Entity record) where
+  toJSON r = entityIdToJSON r
+
+-- The input JSON looks like {"id": 1, "name": ...}.
+instance (PersistEntity record, FromJSON record, FromJSON (Key record)) => FromJSON (Entity record) where
+  parseJSON = entityIdFromJSON

@@ -297,7 +297,6 @@ save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActi
     doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
     doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
 
-
 save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
 save t Nothing  v = create t    v  >>= return . Left
 save t (Just k) v = modify t (k,v) >>= return . Right
