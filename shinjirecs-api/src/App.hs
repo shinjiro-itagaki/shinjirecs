@@ -21,6 +21,7 @@ import Routing.Class(RouteNotFoundError(PathNotFound, PathFoundButMethodUnmatch,
 import Routing(run)
 import qualified Data.ByteString.Lazy as L
 import Class.String(toByteStringL)
+import System.IO(putStrLn)
 
 {-
 setCommonHeaders :: Middleware
@@ -83,7 +84,9 @@ app env req respond = do
     
 
 listen :: Int -> Env -> IO ()
-listen port env = Network.Wai.Handler.Warp.run port $ app env
+listen port env = do
+  putStrLn $ "listen port=" ++ (show port)
+  Network.Wai.Handler.Warp.run port $ app env
 
 migrate :: Env -> IO ()
 migrate env = Config.loadDefault env >>= maybe
