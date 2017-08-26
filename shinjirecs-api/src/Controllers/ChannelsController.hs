@@ -29,10 +29,9 @@ modify id method conn req = do
 
 create :: Action ()
 create _ method conn req = do
-  mchannel <- (DB.find $ DB.channelsTable conn) (1 :: Int64)
-  return $ defaultControllerResponse {
-    body = toBody mchannel -- resText
-    }
+  createCommon t' req
+  where
+    t' = DB.readTable conn :: DB.Table DB.Channel
     
 destroy :: Action Int64
 destroy id method conn req = destroyRecord id $ (DB.readTable conn :: DB.Table DB.Channel)

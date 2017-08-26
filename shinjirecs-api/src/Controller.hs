@@ -82,25 +82,19 @@ modifyCommon :: (ModelClass m, FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => In
 modifyCommon id t req = doIfModifiable id t req impl'
   where
     -- impl' :: DB.Entity m -> IO ControllerResponse
-    impl' e = modify t e >>= return . modifyResultToControllerResponse
+    impl' e = modify t e >>= return . saveResultToControllerResponse
 
 createCommon :: (ModelClass m, FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => DB.Table m -> Request -> IO ControllerResponse
 createCommon t req = doIfCreatable t req impl'
   where
     -- impl' :: m -> IO ControllerResponse
-    impl' v = create t v >>= return . createResultToControllerResponse
+    impl' v = create t v >>= return . saveResultToControllerResponse
 
-modifyResultToControllerResponse :: (ToJSON (DB.Entity record)) => ModifyResult record -> ControllerResponse
-modifyResultToControllerResponse (SaveSuccess e) = responseSaved e
-modifyResultToControllerResponse (SaveFailed e results committed) = responseBadRequest ("failed" :: String)
-modifyResultToControllerResponse (SaveCanceled pos e) = responseBadRequest ("canceled" :: String)
-modifyResultToControllerResponse (Rollbacked e)       = responseBadRequest ("rollbacked" :: String)
-
-createResultToControllerResponse :: (ToJSON (DB.Entity record)) => CreateResult record -> ControllerResponse
-createResultToControllerResponse (SaveSuccess e) = responseSaved e
-createResultToControllerResponse (SaveFailed e results committed) = responseBadRequest ("failed" :: String)
-createResultToControllerResponse (SaveCanceled pos e) = responseBadRequest ("canceled" :: String)
-createResultToControllerResponse (Rollbacked e)       = responseBadRequest ("rollbacked" :: String)
+saveResultToControllerResponse :: (ToJSON (DB.Entity record)) => SaveResult record rore typ -> ControllerResponse
+saveResultToControllerResponse (SaveSuccess e) = responseSaved e
+saveResultToControllerResponse (SaveFailed e results committed) = responseBadRequest ("failed" :: String)
+saveResultToControllerResponse (SaveCanceled pos e) = responseBadRequest ("canceled" :: String)
+saveResultToControllerResponse (Rollbacked e)       = responseBadRequest ("rollbacked" :: String)
 
 responseSaved :: (ToJSON (DB.Entity record)) => DB.Entity record -> ControllerResponse
 responseSaved e = defaultControllerResponse {
