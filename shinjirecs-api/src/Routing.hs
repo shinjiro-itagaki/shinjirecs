@@ -26,6 +26,8 @@ import Data.List.Split
 import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
 import Routing.Types(Resource(listAction ,getAction ,modifyAction ,createAction ,destroyAction))
+import System.IO(putStrLn)
+
 notFound, badRequest :: Action ()
 notFound conn method req _ = return $ defaultControllerResponse {
   status = status404
@@ -129,13 +131,13 @@ findRoute stdmethod path =
     showRoute' :: Route -> String
     showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
-run :: Request -> Either RoutingError (StdMethod, ParamGivenAction)
+run :: Request -> Either RoutingError (StdMethod, ParamGivenAction, Route)
 run req =
   case parseMethod $ requestMethod req of
     Left _ -> Left $ RouteNotFound UnknownMethod
     Right stdmethod -> case findRoute stdmethod (rawPathInfo req) of
-      Right ((MkRoute methods ptn actionWrapper), rawPathParams) ->
+      Right (route@(MkRoute methods ptn actionWrapper), rawPathParams) ->
         case toParamGivenAction actionWrapper rawPathParams of
           Left x -> Left $ BadPathParams x
-          Right action -> Right (stdmethod, action)
+          Right action -> Right (stdmethod, action, route)
       Left x -> Left $ RouteNotFound x

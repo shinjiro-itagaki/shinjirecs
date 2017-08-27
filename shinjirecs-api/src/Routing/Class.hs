@@ -50,6 +50,10 @@ instance Eq RouteNotFoundError where
 
 data Route = MkRoute [StdMethod] PathPattern ActionWrapper
 
+instance Show Route where
+  show (MkRoute stdmethods pathpattern _) = (show stdmethods) ++ " " ++ (show pathpattern)
+
+
 data RawPathParamsError = BadParamTypes [String] | BadRouteDefinition | ResourceNotFound Int64
 
 data RoutingError = RouteNotFound RouteNotFoundError | BadPathParams RawPathParamsError
@@ -133,7 +137,7 @@ rawPathParamsToArgsMap' xs = impl' xs [] []
       Nothing   -> impl' ps' (failedKeys' ++ [k']) rightParams'
 
 instance PathParamList () where
-  rawPathParamsToArgs = rawPathParamsToArg'
+  rawPathParamsToArgs _ = Right ()
   toActionWrapper = Action_N
   
 instance PathParamList String where

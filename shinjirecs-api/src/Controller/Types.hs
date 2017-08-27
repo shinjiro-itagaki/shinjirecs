@@ -23,7 +23,7 @@ data ControllerResponse = MkControllerResponse {
   contentType :: ContentType
   ,body       :: Body
   ,status     :: Status
-  }
+  } deriving Show
 
 type ParamGivenAction = (StdMethod -> Connection -> Request -> IO ControllerResponse)
 type Action a    = (a -> ParamGivenAction)
