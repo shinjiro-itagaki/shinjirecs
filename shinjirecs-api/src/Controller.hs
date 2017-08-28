@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Controller where
-import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode, parseJSON,toJSON,ToJSON)
+import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode, parseJSON,toJSON,ToJSON,Value(Object), encode)
 import Data.Aeson.Types(parseMaybe)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
@@ -21,7 +21,6 @@ import Data.Int(Int64)
 import Data.Maybe(isJust)
 import Data.Text(Text)
 import Model(ModelClass, SaveResult(SaveSuccess, SaveFailed, SaveCanceled, Rollbacked), create, CreateResult, modify, ModifyResult)
-
 import Routing.Types(Resource(Resource,listAction,getAction,modifyAction,createAction,destroyAction))
 
 defaultControllerResponse :: ControllerResponse
@@ -38,9 +37,7 @@ class ToBody a where
   toBody :: a -> Body
 
 instance (ToJSON a) => ToBody a where
-  toBody x = toBodyFromTextL $ case (fromJSON $ toJSON x) :: Result TL.Text of
-    Error msg -> toTextL msg
-    Success x -> x
+  toBody = encode
 
 fromRequest :: (FromJSON a) => Request -> IO (Either ControllerResponse a)
 fromRequest req = do
@@ -109,20 +106,20 @@ responseRecordNotFound id = return defaultControllerResponse {
   ,status = status404
   }
 
-getRecords :: (ToBody t) => [DB.Filter record] -> [DB.SelectOpt record] -> DB.Table record -> ([DB.Entity record] -> t) -> IO ControllerResponse
-getRecords filters opts table f = do
+getRecords :: (ToJSON (DB.Entity record)) => [DB.Filter record] -> [DB.SelectOpt record] -> DB.Table record -> IO ControllerResponse
+getRecords filters opts table = do
   records <- DB.select table filters opts
   return $ defaultControllerResponse {
-    body = toBody $ f records
+    body = toBody records
     }  
 
-getRecord :: (ToBody t) => Int64 -> DB.Table record -> (DB.Entity record -> t) -> IO ControllerResponse
-getRecord id table f = do
+getRecord :: (ToJSON (DB.Entity record)) => Int64 -> DB.Table record -> IO ControllerResponse
+getRecord id table = do
   mrec <- find' id
   case mrec of
     Nothing -> responseRecordNotFound id -- record not found
     Just x  -> return $ defaultControllerResponse {
-    body = toBody $ f x
+    body = toBody x
     }
   where
     find' = DB.find table
@@ -144,13 +141,13 @@ destroyRecord id table = do
   
 
 defaultListAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action ()
-defaultListAction f _ method conn req = getRecords filters' opts' (f conn) (map snd)
+defaultListAction f _ method conn req = getRecords filters' opts' (f conn)
   where
     filters' = [] -- :: [DB.Filter DB.Channel]
     opts'    = [] -- :: [DB.SelectOpt DB.Channel]
     
 defaultGetAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
-defaultGetAction f id method conn req = getRecord id (f conn) snd
+defaultGetAction f id method conn req = getRecord id (f conn)
 
 defaultModifyAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
 defaultModifyAction f id method conn req = modifyCommon id (f conn) req
