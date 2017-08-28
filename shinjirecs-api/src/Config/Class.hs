@@ -39,9 +39,9 @@ class ConfigClass a where
   or dflt obj dfltf objf = fromMaybe (dfltf dflt) (objf obj)
   readYaml :: FilePath -> Env -> IO (Maybe a)
   readYaml path env = do
-    putStrLn $ "filepath: " ++ path
+--    putStrLn $ "filepath: " ++ path
     mallconfigs <- decodeFile path
-    putStrLn $ show mallconfigs
+--    putStrLn $ show mallconfigs
     defaultConfig' <- defaultConfig env
     return $ (mallconfigs >>= (\all -> Just $ initImportOtherConfig' all defaultConfig'))
     where
