@@ -22,6 +22,7 @@ import Routing(run)
 import qualified Data.ByteString.Lazy as L
 import Class.String(toByteStringL)
 import System.IO(putStrLn)
+import Controller(response500)
 
 {-
 setCommonHeaders :: Middleware
@@ -48,8 +49,8 @@ toResponse res = responseLBS
 mkResponse :: Status -> L.ByteString -> Response
 mkResponse status msg = responseLBS status [("Content-Type", "text/plain")] msg
 
-response500 :: L.ByteString -> Response
-response500 msg = mkResponse status500 msg
+--response500 :: L.ByteString -> Response
+--response500 msg = mkResponse status500 msg
 
 response404 :: L.ByteString -> Response
 response404 path = mkResponse status404 $ L.concat [path, " is not found"]
@@ -66,18 +67,13 @@ response_NotAllowedMethod method path = mkResponse status405 $ L.concat [method,
 app :: Env -> Application
 app env req respond = do
   maybeConf <- Config.loadDefault env
-  case maybeConf of
+  respond . toResponse =<< case maybeConf of
     Just conf -> do
       conn <- (DB.connect $ Config.db conf)
       case Routing.run req of
-        Right (stdmethod, action, route) -> putStrLn (show route) >> action stdmethod conn req >>= respond . toResponse
-        Left x -> respond $ case x of
-          RouteNotFound PathNotFound                    -> response404                path'
-          RouteNotFound (PathFoundButMethodUnmatch msg) -> response_NotAllowedMethod  method' path'
-          RouteNotFound UnknownMethod                   -> response_UnsupportedMethod method'
-          BadPathParams (BadParamTypes keys) -> mkResponse status400 $ toByteStringL $ (show keys) ++ " are bad type"
-          BadPathParams BadRouteDefinition   -> response500 "BadRouteDefinition!"
-    Nothing -> respond $ response500 "load config error!"
+        Right (stdmethod, action, route) -> putStrLn (show route) >> action stdmethod conn req
+        Left err_res -> return err_res
+    Nothing -> return $ response500 "load config error!"
   where
     method' = toByteStringL $ requestMethod req
     path'   = toByteStringL $ rawPathInfo req

@@ -5,7 +5,7 @@
 
 module Routing where
 import Network.Wai (Request(..))
-import Network.HTTP.Types.Method(StdMethod, parseMethod)
+import Network.HTTP.Types.Method(StdMethod, parseMethod, Method, renderStdMethod)
 import Data.List(find)
 import Data.ByteString(ByteString)
 import Data.ByteString.Char8(split,null)
@@ -156,26 +156,28 @@ multi _ method conn req = doIfValidInputJSON req $ impl' []
         Right (_, action, _) -> do
           cres <- action method conn req
           impl' (ys ++ [return (x,cres)]) xs
-        Left err -> return $ routingErrorToControllerResponse err path' method
+        Left err -> return err
 
-routingErrorToControllerResponse :: RoutingError -> Path -> StdMethod -> ControllerResponse
+routingErrorToControllerResponse :: RoutingError -> Path -> Method -> ControllerResponse
 routingErrorToControllerResponse (RouteNotFound PathNotFound)                    path method = responsePathNotFound      path
 routingErrorToControllerResponse (RouteNotFound (PathFoundButMethodUnmatch msg)) path method = responseNotAllowedMethod  path (show method)
 routingErrorToControllerResponse (RouteNotFound UnknownMethod)                   path method = responseUnsupportedMethod path
 routingErrorToControllerResponse (BadPathParams (BadParamTypes keys))            path method = responseBadRequest $ (show keys) ++ " are bad type"
 routingErrorToControllerResponse (BadPathParams BadRouteDefinition)              path method = response500 "BadRouteDefinition!"
 
-run :: Request -> Either RoutingError (StdMethod, ParamGivenAction, Route)
+run :: Request -> Either ControllerResponse (StdMethod, ParamGivenAction, Route)
 run req =
   case parseMethod $ requestMethod req of
-    Left _ -> Left $ RouteNotFound UnknownMethod
-    Right stdmethod -> runImpl stdmethod (rawPathInfo req)
+    Left method -> Left $ routingErrorToControllerResponse (RouteNotFound UnknownMethod) path' method
+    Right stdmethod -> runImpl stdmethod path'
+  where
+    path' = rawPathInfo req
 
-runImpl :: StdMethod -> ByteString -> Either RoutingError (StdMethod, ParamGivenAction, Route)
+runImpl :: StdMethod -> ByteString -> Either ControllerResponse (StdMethod, ParamGivenAction, Route)
 runImpl stdmethod path =
   case findRoute stdmethod path of
     Right (route@(MkRoute methods ptn actionWrapper), rawPathParams) ->
       case toParamGivenAction actionWrapper rawPathParams of
-        Left x -> Left $ BadPathParams x
+        Left x -> Left $ routingErrorToControllerResponse (BadPathParams x) path (renderStdMethod stdmethod)
         Right action -> Right (stdmethod, action, route)
-    Left x -> Left $ RouteNotFound x  
+    Left x -> Left $ routingErrorToControllerResponse (RouteNotFound x) path (renderStdMethod stdmethod)
