@@ -13,9 +13,11 @@ import Data.ByteString as B
 import Data.ByteString.Lazy as L
 import DB(Connection,Entity,Table)
 import Network.Wai (Request(..))
-import Network.HTTP.Types (Status)
+import Network.HTTP.Types (Status(statusCode,statusMessage))
 import Network.HTTP.Types.Method(StdMethod)
-
+import Data.Aeson(Value,object, (.=))
+import Class.String(toText, toTextL)
+  
 type ContentType = B.ByteString
 type Body = L.ByteString
 
@@ -47,3 +49,11 @@ data ActionWrapper = Action_N    (Action ())
                    | Action_SSS  (Action (String,String,String))
 
 
+
+responseToValue :: ControllerResponse -> Value
+responseToValue res = object [
+  "contentType"   .= (toText     $ contentType  res),
+  "body"          .= (toTextL    $ body         res),
+  "statusCode"    .= (             statusCode    $ status res),
+  "statusMessage" .= (toText     $ statusMessage $ status res)
+  ]

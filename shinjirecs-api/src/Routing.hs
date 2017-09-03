@@ -5,20 +5,37 @@
 
 module Routing where
 import Network.Wai (Request(..))
-
 import Network.HTTP.Types.Method(StdMethod, parseMethod)
 import Data.List(find)
 import Data.ByteString(ByteString)
 import Data.ByteString.Char8(split,null)
 
-import Controller.Types(ParamGivenAction)
-
-import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParam,RawPathParams,toParamGivenAction, RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod), RoutingError(RouteNotFound,BadPathParams))
-import Routing.Map(routingMap)
+import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParam,RawPathParams,toParamGivenAction, RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod), RawPathParamsError(BadRouteDefinition, BadParamTypes),RoutingError(RouteNotFound,BadPathParams))
 import Class.String(toString, toByteString)
 import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
+import Data.Text(Text)
 import System.IO(putStrLn)
+
+import qualified Controllers.ChannelsController     as ChannelsC
+import qualified Controllers.HomeController         as HomeC
+import qualified Controllers.InstallController      as InstallC
+import qualified Controllers.ProgramsController     as ProgramsC
+import qualified Controllers.ReservationsController as ReservationsC
+import Routing.Class(Route(MkRoute),Path,PathPattern,PathParamList(..), toActionWrapper)
+import Routing.Types(Resource(listAction ,getAction ,modifyAction ,createAction ,destroyAction))
+
+import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH))
+import Controller.Types(Action,status,ControllerResponse)
+import Class.String((+++))
+import Controller(defaultControllerResponse, responseBadRequest, doIfValidInputJSON,ToBody(toBody), responsePathNotFound, responseNotAllowedMethod, responseUnsupportedMethod, response500)
+import Network.HTTP.Types (status200, status201, status400, status404)
+import Data.Aeson(Value,(.=),object)
+import Controller.Types(ParamGivenAction,responseToValue,body)
+import Network.Wai (Request(..))
+--import Routing.Class(RoutingError(RouteNotFound,BadPathParams))
+import Network.HTTP.Types.Method(StdMethod, parseMethod)
+import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParam,RawPathParams,toParamGivenAction, RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod))
 
 matchStdMethods :: Route -> StdMethod -> Bool
 matchStdMethods (MkRoute methods _ _ ) method = elem method methods
@@ -82,13 +99,83 @@ findRoute stdmethod path =
     showRoute' :: Route -> String
     showRoute' (MkRoute methods ptn _ ) = Prelude.concat [show methods, " ", toString ptn]
 
+notFound, badRequest :: Action ()
+notFound conn method req _ = return $ defaultControllerResponse {
+  status = status404
+  }
+
+badRequest conn method req _ = return $ defaultControllerResponse {
+  status = status400
+  }
+
+_GET_ = [GET]
+_POST_ = [POST]
+_PATCH_ = [PATCH,PUT]
+_DELETE_ = [DELETE]
+_ALL_ = [minBound .. maxBound] :: [StdMethod]
+
+(@>>) :: (PathParamList a) => ([StdMethod], PathPattern) -> Action a -> Route
+(@>>) (stdmethods, pathpattern) action = MkRoute stdmethods pathpattern $ toActionWrapper action
+
+readResource :: PathPattern -> Resource -> [Route]
+readResource p rs = [
+   ( _GET_ ,   p +++ "/list"     ) @>> listAction    rs
+  ,( _GET_,    p +++ "/:id"      ) @>> getAction     rs
+  ,( _PATCH_,  p +++ "/:id"      ) @>> modifyAction  rs
+  ,( _POST_,   p +++ ""          ) @>> createAction  rs
+  ,( _DELETE_, p +++ "/:id"      ) @>> destroyAction rs
+  ]
+
+routingMap :: [Route]
+routingMap =
+  (readResource "/channels"     ChannelsC.resource     ) ++
+  (readResource "/programs"     ProgramsC.resource     ) ++
+  (readResource "/reservations" ReservationsC.resource ) ++  
+  [
+  ( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
+  ,( _GET_,    "/install/channels"  ) @>> notFound -- InstallC.resultDetectChannels
+  ,( _GET_,    "/install/step1"     ) @>> notFound -- (InstallC.step 1)
+  ,( _GET_,    "/install/step2"     ) @>> notFound -- (InstallC.step 2)
+  ,( _GET_,    "/install/step3"     ) @>> notFound -- (InstallC.step 3)
+  ,( _GET_,    "/multi"             ) @>> multi
+  ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
+  ]
+
+multi :: Action ()
+multi _ method conn req = doIfValidInputJSON req $ impl' []
+  where
+    path' = rawPathInfo req :: ByteString
+    impl' :: [IO (Text, ControllerResponse)] -> [Text] -> IO ControllerResponse
+    impl' ys []     = do
+      xs <- sequence ys
+      return $ defaultControllerResponse {
+        body = toBody $ object $ Prelude.map (\(k,v) -> k .= (responseToValue v)) xs
+        }
+    impl' ys (x:xs) = do
+      case runImpl method (toByteString x) of
+        Right (_, action, _) -> do
+          cres <- action method conn req
+          impl' (ys ++ [return (x,cres)]) xs
+        Left err -> return $ routingErrorToControllerResponse err path' method
+
+routingErrorToControllerResponse :: RoutingError -> Path -> StdMethod -> ControllerResponse
+routingErrorToControllerResponse (RouteNotFound PathNotFound)                    path method = responsePathNotFound      path
+routingErrorToControllerResponse (RouteNotFound (PathFoundButMethodUnmatch msg)) path method = responseNotAllowedMethod  path (show method)
+routingErrorToControllerResponse (RouteNotFound UnknownMethod)                   path method = responseUnsupportedMethod path
+routingErrorToControllerResponse (BadPathParams (BadParamTypes keys))            path method = responseBadRequest $ (show keys) ++ " are bad type"
+routingErrorToControllerResponse (BadPathParams BadRouteDefinition)              path method = response500 "BadRouteDefinition!"
+
 run :: Request -> Either RoutingError (StdMethod, ParamGivenAction, Route)
 run req =
   case parseMethod $ requestMethod req of
     Left _ -> Left $ RouteNotFound UnknownMethod
-    Right stdmethod -> case findRoute stdmethod (rawPathInfo req) of
-      Right (route@(MkRoute methods ptn actionWrapper), rawPathParams) ->
-        case toParamGivenAction actionWrapper rawPathParams of
-          Left x -> Left $ BadPathParams x
-          Right action -> Right (stdmethod, action, route)
-      Left x -> Left $ RouteNotFound x
+    Right stdmethod -> runImpl stdmethod (rawPathInfo req)
+
+runImpl :: StdMethod -> ByteString -> Either RoutingError (StdMethod, ParamGivenAction, Route)
+runImpl stdmethod path =
+  case findRoute stdmethod path of
+    Right (route@(MkRoute methods ptn actionWrapper), rawPathParams) ->
+      case toParamGivenAction actionWrapper rawPathParams of
+        Left x -> Left $ BadPathParams x
+        Right action -> Right (stdmethod, action, route)
+    Left x -> Left $ RouteNotFound x  

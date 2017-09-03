@@ -10,16 +10,17 @@ module Controller where
 import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode, parseJSON,toJSON,ToJSON,Value(Object), encode)
 import Data.Aeson.Types(parseMaybe)
 import Network.Wai (Request(..))
-import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
+import Network.HTTP.Types (Status, status200, status201, status400, status404, status405, status500, StdMethod(..))
 import qualified DB
 import Class.Castable(Castable(..))
-import Class.String(StringClass(toByteStringL,toTextL,(+++), toText),toJSON)
+import Class.String(StringClass(toByteString, toByteStringL,toTextL,(+++), toText),toJSON)
 import Routing.Class(RawPathParams, PathParamList(..))
 import Controller.Types(ControllerResponse(..), ActionWrapper(..), Action, Body, ParamGivenAction)
 import qualified Data.Text.Lazy as TL
 import Data.Int(Int64)
 import Data.Maybe(isJust)
 import Data.Text(Text)
+import Data.ByteString(ByteString)
 import Model(ModelClass, SaveResult(SaveSuccess, SaveFailed, SaveCanceled, Rollbacked), create, CreateResult, modify, ModifyResult)
 import Routing.Types(Resource(Resource,listAction,getAction,modifyAction,createAction,destroyAction))
 
@@ -50,9 +51,33 @@ fromRequest req = do
 
 responseBadRequest :: (StringClass s) => s -> ControllerResponse
 responseBadRequest txt = defaultControllerResponse {
-  body    = toBody $ (toText txt) +++ (" is not found" :: Text)
+  body    = toBody $ toText txt
   ,status = status400
   }
+
+responsePathNotFound :: ByteString -> ControllerResponse
+responsePathNotFound path = defaultControllerResponse {
+  body    = toBody $ toText $ path +++ (" is not found." :: ByteString)
+  ,status = status404  
+  }
+
+responseNotAllowedMethod :: ByteString -> String -> ControllerResponse
+responseNotAllowedMethod path method = defaultControllerResponse {
+  body = toBody $ toText $ (toByteString method) +++ (" is not allowed on " :: ByteString) +++ path
+  ,status = status404
+  }
+
+responseUnsupportedMethod :: ByteString -> ControllerResponse
+responseUnsupportedMethod method = defaultControllerResponse {
+  body = toBody $ toText $ method +++ (" is unsupported" :: ByteString)
+  ,status = status405
+  }
+
+response500 :: Text -> ControllerResponse
+response500 msg = defaultControllerResponse {
+  body    = toBody msg
+  ,status = status500
+  }  
 
 doIfRecordFound :: Int64 -> DB.Table m -> (DB.Entity m -> IO ControllerResponse) -> IO ControllerResponse
 doIfRecordFound id t f = do
