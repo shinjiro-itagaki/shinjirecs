@@ -210,7 +210,6 @@ reservationsTable conn = readTable conn :: Table ORM.Reservation
 channelsTable     conn = readTable conn :: Table ORM.Channel
 programsTable     conn = readTable conn :: Table ORM.Program
 
-
-
 instance J.ToJSON (Table record, Entity record) where
   toJSON (t, e) = (entityToJSON t) e
+

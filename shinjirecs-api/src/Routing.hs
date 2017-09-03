@@ -5,37 +5,20 @@
 
 module Routing where
 import Network.Wai (Request(..))
-import qualified Controllers.ChannelsController     as ChannelsC
-import qualified Controllers.InstallController      as InstallC
-import qualified Controllers.ProgramsController     as ProgramsC
-import qualified Controllers.ReservationsController as ReservationsC
-import DB(Connection)
 
-import Network.HTTP.Types (status200, status201, status400, status404)
-import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH), parseMethod)
+import Network.HTTP.Types.Method(StdMethod, parseMethod)
 import Data.List(find)
 import Data.ByteString(ByteString)
 import Data.ByteString.Char8(split,null)
 
-import Controller.Types(ActionWrapper(..), Action, ControllerResponse(..) ,ParamGivenAction)
-import Controller(defaultControllerResponse)
+import Controller.Types(ParamGivenAction)
 
-import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParamKey,RawPathParamVal,RawPathParam,RawPathParams,PathParamList(..),toParamGivenAction, toActionWrapper,RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod), RawPathParamsError(BadParamTypes,BadRouteDefinition), RoutingError(RouteNotFound,BadPathParams))
-import Class.String(StringClass(..))
-import Data.List.Split
+import Routing.Class(Route(MkRoute),Path,PathPattern,RawPathParam,RawPathParams,toParamGivenAction, RouteNotFoundError(PathNotFound,PathFoundButMethodUnmatch,UnknownMethod), RoutingError(RouteNotFound,BadPathParams))
+import Routing.Map(routingMap)
+import Class.String(toString, toByteString)
 import Data.Maybe(fromJust,isJust)
 import Data.Word(Word8)
-import Routing.Types(Resource(listAction ,getAction ,modifyAction ,createAction ,destroyAction))
 import System.IO(putStrLn)
-
-notFound, badRequest :: Action ()
-notFound conn method req _ = return $ defaultControllerResponse {
-  status = status404
-  }
-
-badRequest conn method req _ = return $ defaultControllerResponse {
-  status = status400
-  }
 
 matchStdMethods :: Route -> StdMethod -> Bool
 matchStdMethods (MkRoute methods _ _ ) method = elem method methods
@@ -73,38 +56,6 @@ getRawPathParams :: Route -> Path -> RawPathParams
 getRawPathParams r p = case getMaybeRawPathParams r p of
   Just params -> params
   Nothing     -> []
-
-(@>>) :: (PathParamList a) => ([StdMethod], PathPattern) -> Action a -> Route
-(@>>) (stdmethods, pathpattern) action = MkRoute stdmethods pathpattern $ toActionWrapper action
-
-_GET_ = [GET]
-_POST_ = [POST]
-_PATCH_ = [PATCH,PUT]
-_DELETE_ = [DELETE]
-_ALL_ = [minBound .. maxBound] :: [StdMethod]
-
-readResource :: PathPattern -> Resource -> [Route]
-readResource p rs = [
-   ( _GET_ ,   p +++ "/list"     ) @>> listAction    rs
-  ,( _GET_,    p +++ "/:id"      ) @>> getAction     rs
-  ,( _PATCH_,  p +++ "/:id"      ) @>> modifyAction  rs
-  ,( _POST_,   p +++ ""          ) @>> createAction  rs
-  ,( _DELETE_, p +++ "/:id"      ) @>> destroyAction rs
-  ]
-
-routingMap :: [Route]
-routingMap =
-  (readResource "/channels"     ChannelsC.resource     ) ++
-  (readResource "/programs"     ProgramsC.resource     ) ++
-  (readResource "/reservations" ReservationsC.resource ) ++  
-  [
-  ( _GET_,    "/install/index"     ) @>> notFound -- InstallC.index
-  ,( _GET_,    "/install/channels"  ) @>> notFound -- InstallC.resultDetectChannels
-  ,( _GET_,    "/install/step1"     ) @>> notFound -- (InstallC.step 1)
-  ,( _GET_,    "/install/step2"     ) @>> notFound -- (InstallC.step 2)
-  ,( _GET_,    "/install/step3"     ) @>> notFound -- (InstallC.step 3)
-  ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
-  ]
 
 findPathMatchedRoutes :: Path -> [Route] -> [(Route, RawPathParams)]
 findPathMatchedRoutes path [] = []

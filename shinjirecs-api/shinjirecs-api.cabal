@@ -37,6 +37,7 @@ library
                      , Controller
                      , Controller.Types                     
                      , Controllers.ChannelsController
+                     , Controllers.HomeController
                      , Controllers.InstallController
                      , Controllers.ProgramsController
                      , Controllers.ReservationsController
@@ -54,6 +55,7 @@ library
                      , Jobs.Recording
                      , Routing
                      , Routing.Class
+                     , Routing.Map
                      , Routing.Types
   build-depends:       base >= 4.7 && < 5
                      , HDBC

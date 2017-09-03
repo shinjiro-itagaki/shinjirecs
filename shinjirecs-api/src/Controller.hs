@@ -50,7 +50,7 @@ fromRequest req = do
 
 responseBadRequest :: (StringClass s) => s -> ControllerResponse
 responseBadRequest txt = defaultControllerResponse {
-  body    = toBody $ (toText txt) +++ ("is not found" :: Text)
+  body    = toBody $ (toText txt) +++ (" is not found" :: Text)
   ,status = status400
   }
 
