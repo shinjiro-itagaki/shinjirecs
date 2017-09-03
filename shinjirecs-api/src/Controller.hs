@@ -61,7 +61,7 @@ doIfRecordFound id t f = do
     Nothing -> responseRecordNotFound id
     Just  x -> f x
 
-doIfValidInputJSON :: (ModelClass m) => Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
+doIfValidInputJSON :: (FromJSON m) => Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
 doIfValidInputJSON req f = do
   erec <- fromRequest req
   case erec of
