@@ -7,7 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Controller where
-import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON,decode, parseJSON,toJSON,ToJSON,Value(Object), encode)
+import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON, parseJSON,toJSON,ToJSON,Value(Object), encode)
 import Data.Aeson.Types(parseMaybe)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, status405, status500, StdMethod(..))

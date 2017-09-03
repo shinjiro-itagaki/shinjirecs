@@ -15,7 +15,7 @@ import DB(Connection,Entity,Table)
 import Network.Wai (Request(..))
 import Network.HTTP.Types (Status(statusCode,statusMessage))
 import Network.HTTP.Types.Method(StdMethod)
-import Data.Aeson(Value,object, (.=))
+import Data.Aeson(Value(Null),object, (.=), decode)
 import Class.String(toText, toTextL)
   
 type ContentType = B.ByteString
@@ -52,8 +52,12 @@ data ActionWrapper = Action_N    (Action ())
 
 responseToValue :: ControllerResponse -> Value
 responseToValue res = object [
-  "contentType"   .= (toText     $ contentType  res),
-  "body"          .= (toTextL    $ body         res),
-  "statusCode"    .= (             statusCode    $ status res),
+  "contentType"   .= (toText     $ contentType   res),
+  "body"          .= (toBody'    $ decode $ body res),
+  "statusCode"    .= (statusCode $ status        res),
   "statusMessage" .= (toText     $ statusMessage $ status res)
   ]
+  where
+    toBody' :: Maybe Value -> Value
+    toBody' (Just v) = v
+    toBody' Nothing  = Null
