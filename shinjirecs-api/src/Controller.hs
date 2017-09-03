@@ -13,7 +13,7 @@ import Network.Wai (Request(..))
 import Network.HTTP.Types (Status, status200, status201, status400, status404, StdMethod(..))
 import qualified DB
 import Class.Castable(Castable(..))
-import Class.String(StringClass(toByteStringL,toTextL,(+++), toText))
+import Class.String(StringClass(toByteStringL,toTextL,(+++), toText),toJSON)
 import Routing.Class(RawPathParams, PathParamList(..))
 import Controller.Types(ControllerResponse(..), ActionWrapper(..), Action, Body, ParamGivenAction)
 import qualified Data.Text.Lazy as TL
@@ -42,7 +42,7 @@ instance (ToJSON a) => ToBody a where
 fromRequest :: (FromJSON a) => Request -> IO (Either ControllerResponse a)
 fromRequest req = do
   body <- requestBody req
-  return $ case decode $ toByteStringL body of
+  return $ case Class.String.toJSON body of
     Nothing -> Left $ responseBadRequest body -- parse error
     Just x -> case fromJSON x of
       Error   _ -> Left $ responseBadRequest body -- maybe lack some attributes

@@ -15,6 +15,7 @@ import Data.ByteString.Char8 as BC
 import Data.ByteString.Lazy as BL
 import Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.String.Utils as Utils
+import Data.Aeson(Value,decode)
 
 class (Eq a) => StringClass a where
   toString      :: a -> Prelude.String
@@ -97,3 +98,6 @@ instance StringClass BL.ByteString where
   toByteStringL a = a
   (+++)       x y = BL.concat [x,y]
   split     x txt = Prelude.map BL.pack $ splitByList (BL.unpack x) (BL.unpack txt)
+
+toJSON :: (StringClass s) => s -> Maybe Value
+toJSON = decode . toByteStringL

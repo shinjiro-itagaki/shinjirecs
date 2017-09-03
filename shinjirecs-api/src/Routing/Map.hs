@@ -16,7 +16,7 @@ import Routing.Types(Resource(listAction ,getAction ,modifyAction ,createAction 
 import Network.HTTP.Types.Method(StdMethod(GET,POST,HEAD,PUT,DELETE,TRACE,CONNECT,OPTIONS,PATCH))
 import Controller.Types(Action,status)
 import Class.String((+++))
-import Controller(defaultControllerResponse)
+import Controller(defaultControllerResponse, responseBadRequest)
 import Network.HTTP.Types (status200, status201, status400, status404)
 
 notFound, badRequest :: Action ()
@@ -57,6 +57,11 @@ routingMap =
   ,( _GET_,    "/install/step1"     ) @>> notFound -- (InstallC.step 1)
   ,( _GET_,    "/install/step2"     ) @>> notFound -- (InstallC.step 2)
   ,( _GET_,    "/install/step3"     ) @>> notFound -- (InstallC.step 3)
-  ,( _GET_,    "/home/multi"        ) @>> HomeC.multi
+  ,( _GET_,    "/multi"             ) @>> multi
   ,( _ALL_,    "*"                  ) @>> notFound -- not found error 
   ]
+
+multi :: Action ()
+multi _ method conn req = do
+  
+  return $ responseBadRequest ("urls" :: String)
