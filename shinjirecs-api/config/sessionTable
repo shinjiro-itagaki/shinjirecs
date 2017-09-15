@@ -1,4 +1,5 @@
 Session
   sessionId   String
   sessionData Text
+  expiringDate UTCTime
   UniqueSessionId sessionId  

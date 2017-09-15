@@ -27,7 +27,7 @@ module DB.ORMLinker (
   , reservationsTable
   , channelsTable
   , programsTable
-  , mkAsc, mkDesc, mkOffset, mkLimit
+  , mkAsc, mkDesc, mkOffset, mkLimit, ORM.mkUnique
   , mkAndFilter, mkOrFilter
   , (.==), (.!=), (.<), (.>), (.<=), (.>=), (.||)
   , eq, neq, lt, gt, lte, gte, DB.ORMLinker.or

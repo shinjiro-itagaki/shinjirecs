@@ -58,6 +58,7 @@ module DB.Persist(
   ,mkDesc
   ,mkOffsetBy
   ,mkLimitTo
+  ,mkUnique
   ,(==.)
   ,(!=.)
   ,(<.)
@@ -77,7 +78,7 @@ module DB.Persist(
 import qualified DB.Config
 import qualified Data.Text as Text --text
 import Data.Text (Text,pack) -- text
-import Database.Persist(PersistField, PersistValue(PersistInt64), checkUnique, count, getBy, get, deleteWhere, deleteBy, selectKeys, selectList, delete, updateWhere, repsert, insertBy, updateGet, insert, PersistRecordBackend, Filter(Filter,FilterOr,FilterAnd), Update(..),PersistFilter(..),(==.),(!=.),(<.),(>.),(<=.),(>=.),(<-.),(/<-.),(||.)) -- persistent
+import Database.Persist(PersistField, PersistValue(PersistInt64), checkUnique, count, getBy, get, deleteWhere, deleteBy, selectKeys, selectList, delete, updateWhere, repsert, insertBy, updateGet, insert, PersistRecordBackend, Filter(Filter,FilterOr,FilterAnd), Update(..),PersistFilter(..),(==.),(!=.),(<.),(>.),(<=.),(>=.),(<-.),(/<-.),(||.),PersistEntity(persistUniqueKeys)) -- persistent
 import Database.Persist.Types(Entity(Entity), SelectOpt(..)) -- persistent
 import Database.Persist.Sql (Connection, ConnectionPool ,runSqlConn , runSqlPool, SqlPersistT, IsSqlBackend, runSqlPersistMPool, runMigration) -- persistentget
 import Database.Persist.MySQL (withMySQLConn, createMySQLPool) -- persistent-mysql
@@ -172,6 +173,9 @@ mkAsc      = Asc
 mkDesc     = Desc
 mkOffsetBy = OffsetBy
 mkLimitTo  = LimitTo
+
+mkUnique :: (PersistEntity val) => val -> [Unique val]
+mkUnique = persistUniqueKeys
 --mkFilter :: forall v typ. PersistField typ => EntityField v typ -> typ -> Filter v
 --mkFilter   = Filter
 

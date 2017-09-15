@@ -4,19 +4,19 @@ import Data.Int(Int64)
 import Data.ByteString(ByteString)
 import Data.Time.Clock(UTCTime ,getCurrentTime) -- ,utctDay)
 import Helper.DateTimeHelper((.++))
+import DB(Connection)
+import Data.Aeson(ToJSON,FromJSON)
+import Class.String(StringClass)
 
-class Show k => IsSessionKey k where
-
-class (Show v, Read v) => IsSessionValue v where
+class (ToJSON v, FromJSON v) => IsSessionValue v where
   
 class IsSession s where
-  start   :: ByteString -> IO s
-  load    :: ByteString -> IO s
-  read    :: (IsSessionKey k, IsSessionValue v) => s -> k -> IO (Maybe v)
-  write   :: (IsSessionKey k, IsSessionValue v) => s -> k -> v -> IO ()
-  delete  :: (IsSessionKey k, IsSessionValue v) => s -> k -> IO (Maybe v)
+  start   :: Connection -> Maybe String -> IO (Maybe s)
+  read    :: (StringClass k, IsSessionValue v) => s -> k -> IO (Maybe v)
+  write   :: (StringClass k, IsSessionValue v) => s -> k -> v -> IO s
+  delete  :: (StringClass k, IsSessionValue v) => s -> k -> IO (Maybe v)
   destroy :: s -> IO ()
-  renew   :: s -> IO s
+  renew   :: s -> IO (Maybe s)
   getExpire :: s -> UTCTime
   setExpire :: s -> UTCTime -> IO s
   addExpireSecond :: s -> Int64 -> IO UTCTime
