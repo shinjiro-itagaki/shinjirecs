@@ -53,3 +53,4 @@ configToPgSQLConnectionString :: Config -> ByteString
 configToPgSQLConnectionString = PgSQL.postgreSQLConnectionString . configToPgSQLConnectInfo 
 
 migrationFilePath = "config/models"
+migrationSessionTableFilePath = "config/sessionTable"

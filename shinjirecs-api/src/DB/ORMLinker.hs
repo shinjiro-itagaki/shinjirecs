@@ -16,6 +16,7 @@ module DB.ORMLinker (
 --  , Channel(..)
   , ORM.Program(..)
 --  , Program(..)
+  , ORM.Session(..)
   , Update
   , Unique
   , Filter

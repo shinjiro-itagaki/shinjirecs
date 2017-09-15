@@ -1,0 +1,4 @@
+Session
+  sessionId   String
+  sessionData Text
+  UniqueSessionId sessionId  

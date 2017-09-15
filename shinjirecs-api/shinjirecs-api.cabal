@@ -56,6 +56,9 @@ library
                      , Routing
                      , Routing.Class
                      , Routing.Types
+                     , Session
+                     , Session.Class
+                     , Session.DB
   build-depends:       base >= 4.7 && < 5
                      , HDBC
                      , HDBC-sqlite3
@@ -71,7 +74,7 @@ library
                      , enumerator
                      , extra
                      , filepath
---                     , scotty
+--                     , hedis
                      , http-types
                      , mtl
                      , mysql-simple
@@ -94,6 +97,7 @@ library
                      , time
                      , transformers
                      , unordered-containers
+                     , uuid
                      , vector
                      , wai
                      , wai-extra

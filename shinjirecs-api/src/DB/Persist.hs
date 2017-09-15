@@ -14,6 +14,7 @@ module DB.Persist(
   ,Reservation(..)
   ,Channel(..)
   ,Program(..)
+  ,Session(..)
   ,run
   ,createPool
   ,connect
@@ -90,7 +91,7 @@ import Control.Monad.IO.Class(liftIO,MonadIO) -- base
 import Control.Monad.Logger (MonadLogger)
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader) -- mtl
 import DB.Types(AdapterType(..))
-import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString,migrationFilePath)
+import DB.Config(Config(..),configToMySQLConnectInfo,configToPgSQLConnectionString,migrationFilePath,migrationSessionTableFilePath)
 import Config.Env(Env(..))
 import Database.Persist.TH (share, mkMigrate, mkPersist, sqlSettings, persistFileWith, derivePersistField) -- persistent-template
 
@@ -146,12 +147,18 @@ run p action = liftIO $ runSqlPool action p
 -- Reservation
 -- Program
 -- ... and others
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+share [mkPersist sqlSettings, mkMigrate "migrateModels"]
   $(persistFileWith lowerCaseSettings migrationFilePath)
 
+share [mkPersist sqlSettings, mkMigrate "migrateSession"]
+  $(persistFileWith lowerCaseSettings migrationSessionTableFilePath)
+  
 migrate :: DB.Config.Config -> IO ()
 -- migrate = runAction (\pool -> run pool $ runMigration migrateAll)
-migrate config = (runNoLoggingT $ DB.Persist.createPool config) >>= (\pool -> run pool $ runMigration migrateAll)
+migrate config = do
+  pool <- runNoLoggingT $ DB.Persist.createPool config
+  run pool $ runMigration migrateModels
+  run pool $ runMigration migrateSession
 
 type Connection__ = ConnectionPool
 type Key__ = Key
