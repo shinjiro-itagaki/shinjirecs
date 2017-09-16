@@ -149,7 +149,6 @@ data Table record = MkTable {
   ,count       :: [Filter record] -> IO Int
   ,checkUnique :: record -> IO (Maybe (Unique record))
   ,keyToStrings :: Key record -> [String]
-  ,entityToJSON :: Entity record -> J.Value
   ,insertQuery      :: record -> Query (Key record)    
   ,updateQuery      :: Key record -> [Update record] -> Query record    
   ,insertByQuery    :: record -> Query (Either (Entity record) (Key record))    
@@ -185,7 +184,6 @@ readTable conn = MkTable {
   ,count       = ORM.count        conn
   ,checkUnique = ORM.checkUnique  conn
   ,keyToStrings = ORM.keyToStrings
-  ,entityToJSON = (\(k,v) -> J.toJSON $ fromList [("id", idToJSON $ ORM.keyToStrings k ),("values",J.toJSON v)])
   ,insertQuery      = ORM.insertQuery
   ,updateQuery      = ORM.updateQuery
   ,insertByQuery    = ORM.insertByQuery
@@ -210,7 +208,3 @@ idToJSON xs     = J.toJSON xs
 reservationsTable conn = readTable conn :: Table ORM.Reservation
 channelsTable     conn = readTable conn :: Table ORM.Channel
 programsTable     conn = readTable conn :: Table ORM.Program
-
-instance J.ToJSON (Table record, Entity record) where
-  toJSON (t, e) = (entityToJSON t) e
-
