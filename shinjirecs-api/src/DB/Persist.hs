@@ -15,6 +15,7 @@ module DB.Persist(
   ,Channel(..)
   ,Program(..)
   ,Session(..)
+--  ,SessionSid
   ,run
   ,createPool
   ,connect

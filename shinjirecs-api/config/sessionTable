@@ -1,5 +1,5 @@
 Session
-  sessionId   String
-  sessionData Text
+  sid String
+  data Text
   expiringDate UTCTime
-  UniqueSessionId sessionId  
+  UniqueSessionId sid
