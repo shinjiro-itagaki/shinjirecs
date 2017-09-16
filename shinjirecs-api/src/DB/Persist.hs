@@ -15,7 +15,7 @@ module DB.Persist(
   ,Channel(..)
   ,Program(..)
   ,Session(..)
---  ,SessionSid
+  ,EntityField(..)
   ,run
   ,createPool
   ,connect
@@ -154,7 +154,9 @@ share [mkPersist sqlSettings, mkMigrate "migrateModels"]
 
 share [mkPersist sqlSettings, mkMigrate "migrateSession"]
   $(persistFileWith lowerCaseSettings migrationSessionTableFilePath)
-  
+
+
+
 migrate :: DB.Config.Config -> IO ()
 -- migrate = runAction (\pool -> run pool $ runMigration migrateAll)
 migrate config = do
@@ -177,6 +179,8 @@ mkLimitTo  = LimitTo
 
 mkUnique :: (PersistEntity val) => val -> [Unique val]
 mkUnique = persistUniqueKeys
+
+-- mkFilter :: (PersistField typ) => () val -> [Unique val]
 --mkFilter :: forall v typ. PersistField typ => EntityField v typ -> typ -> Filter v
 --mkFilter   = Filter
 

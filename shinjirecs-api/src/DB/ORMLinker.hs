@@ -11,12 +11,10 @@ module DB.ORMLinker (
   , migrate
   , Key
   , ORM.Reservation(..)
---  , Reservation(..)
   , ORM.Channel(..)
---  , Channel(..)
   , ORM.Program(..)
---  , Program(..)
   , ORM.Session(..)
+  , ORM.EntityField(..)
   , Update
   , Unique
   , Filter
@@ -32,7 +30,6 @@ module DB.ORMLinker (
   , (.==), (.!=), (.<), (.>), (.<=), (.>=), (.||)
   , eq, neq, lt, gt, lte, gte, DB.ORMLinker.or
   , in_, notIn
-  , EntityField
   , ORM.runQuery
   , transaction
   , Query
@@ -71,7 +68,6 @@ mkOffset = ORM.mkOffsetBy
 mkLimit  = ORM.mkLimitTo
 mkAndFilter = ORM.mkAndFilter
 mkOrFilter = ORM.mkOrFilter
-type EntityField = ORM.EntityField__
 type Entity record = (Key record,record)
 type Reservation = ORM.Reservation
 type Channel     = ORM.Channel

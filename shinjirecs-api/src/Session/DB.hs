@@ -2,7 +2,7 @@
 module Session.DB where
 import Session.Class(IsSession(start,get,set,del,save,destroy,renew,getExpire,setExpire,addExpireSecond), IsSessionValue)
 import qualified DB
-import DB(Connection,Session(Session,sessionSid,sessionData,sessionExpiringDate))
+import DB(Connection,Session(..),(.==))
 import Data.Time.Clock(UTCTime,getCurrentTime)
 import Data.Text(Text)
 import Data.Int(Int64)
@@ -46,9 +46,8 @@ instance IsSession SessionData where
     now <- getCurrentTime
     let dflt = Session id "" now
         t = (DB.readTable conn)
-        -- DB.SessionSid .== id
-    kv <- DB.select t [] [DB.mkLimit 1]
-    case [] of
+    kv <- DB.select t [DB.SessionSid .== id] [DB.mkLimit 1]
+    case kv of
       [] -> do
         DB.insert t dflt >>= DB.get t >>= return . fmap (SessionData conn)
       (e:xs) -> do

@@ -3,3 +3,4 @@ Session
   data Text
   expiringDate UTCTime
   UniqueSessionId sid
+  deriving Show

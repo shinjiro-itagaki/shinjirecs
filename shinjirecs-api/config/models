@@ -11,6 +11,7 @@ Reservation json
   videoFileNameFormat FilePath
   xwday Word
   state ReservationState
+  deriving Show
 
 Program json
   channelId ChannelId
@@ -19,6 +20,7 @@ Program json
   title String
   description Text
   name Text
+  deriving Show  
 
 Channel json
   number String
@@ -26,3 +28,4 @@ Channel json
   displayName String
   order Int
   enable Bool
+  deriving Show  
