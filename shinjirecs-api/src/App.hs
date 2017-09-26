@@ -7,7 +7,8 @@ module App (
   )where
 import Data.Maybe(maybe)
 import Network.Wai (Application,Request(..),Response,ResponseReceived,responseLBS,Middleware)
-import Network.Wai.Handler.Warp (run)
+import Network.Wai.Handler.Warp (run,defaultSettings,setPort)
+import Network.Wai.Handler.WarpTLS(runTLS,tlsSettings)
 import Network.HTTP.Types
 import Network.HTTP.Types.Status(Status,status200,status405,status405)
 import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
@@ -83,7 +84,7 @@ listen :: Int -> Env -> IO ()
 listen port env = do
   putStrLn $ "listen port=" ++ (show port)
   Network.Wai.Handler.Warp.run port $ app env
-
+-- runTLS (tlsSettings "server.crt" "server.key") (setPort 8080 defaultSettings) app env
 migrate :: Env -> IO ()
 migrate env = Config.loadDefault env >>= maybe
   (fail "read config error") -- if Nothing

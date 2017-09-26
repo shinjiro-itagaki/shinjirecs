@@ -1,0 +1,22 @@
+default:
+  port: 3000
+  ssl: false
+
+default-mysql:
+  adapter: mysql
+  socket: /tmp/mysql.sock
+  username: root
+  password: number4026
+  
+development:
+  <<: default
+#  <<: default-mysql
+  
+test:
+  <<: default
+  database: db/shinjirecs_test.sqlite3
+  
+production:
+  <<: default
+  database: db/shinjirecs.sqlite3
+
