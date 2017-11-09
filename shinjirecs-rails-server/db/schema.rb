@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171109121511) do
+ActiveRecord::Schema.define(version: 20171109170533) do
 
-  create_table "channels", force: :cascade do |t|
+  create_table "channels", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "number", null: false
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false
@@ -21,38 +21,35 @@ ActiveRecord::Schema.define(version: 20171109121511) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "program_categories", force: :cascade do |t|
+  create_table "program_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.string "label", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
-  create_table "programs", force: :cascade do |t|
-    t.datetime "start_time", null: false
-    t.datetime "stop_time", null: false
-    t.integer "channels_id", null: false
+  create_table "programs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.timestamp "stop_time", null: false
+    t.integer "channel_id", null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.integer "program_categories_id", null: false
+    t.integer "program_category_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["channels_id"], name: "index_programs_on_channels_id"
-    t.index ["program_categories_id"], name: "index_programs_on_program_categories_id"
   end
 
-  create_table "reservations", force: :cascade do |t|
-    t.datetime "start_time", null: false
+  create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.integer "duration", null: false
-    t.integer "channels_id", null: false
+    t.integer "channel", null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.integer "program_categories_id", null: false
+    t.integer "program_category_id", null: false
+    t.integer "state", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["channels_id"], name: "index_reservations_on_channels_id"
-    t.index ["program_categories_id"], name: "index_reservations_on_program_categories_id"
   end
 
 end
