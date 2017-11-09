@@ -5,7 +5,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string  "label"            , null: false
       t.boolean "channels_checked" , null: false, default: false
       t.timestamps                   null: false
-      t.index :label, unique: true
+      t.index ["label"], unique: true
     end
 
     create_table :system, unsigned: true do |t|
@@ -57,6 +57,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer    "next_counter"         , null: false , default: 1
       t.integer    "weekdays"             , null: false , default: 0, limit: 1 # byte
       t.boolean    "auto_next"            , null: false , default: true
+      t.string     "label_format"         , null: false , default: ''
       t.timestamps                          null: false
       t.index ["start_time", "channel_id"], unique: true
     end
@@ -81,6 +82,11 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       #  1: recording
       #  2: success
       t.integer    "state"               , null: false , default: 0, limit: 1
+      t.text       "command_str"         , null: false
+      t.integer    "command_pid"         , null: false
+      t.text       "log"                 , null: false
+      t.text       "errror_log"          , null: false
+      t.string     "filename"            , null: false
       t.timestamps                         null: false
     end
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2));"

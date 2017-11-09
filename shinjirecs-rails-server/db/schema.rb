@@ -49,6 +49,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "next_counter", default: 1, null: false
     t.integer "weekdays", limit: 1, default: 0, null: false
     t.boolean "auto_next", default: true, null: false
+    t.string "label_format", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["start_time", "channel_id"], name: "index_program_titles_on_start_time_and_channel_id", unique: true
@@ -78,6 +79,11 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "program_title_id", default: 0, null: false
     t.integer "counter", default: 0, null: false
     t.integer "state", limit: 1, default: 0, null: false
+    t.text "command_str", null: false
+    t.integer "command_pid", null: false
+    t.text "log", null: false
+    t.text "errror_log", null: false
+    t.string "filename", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
