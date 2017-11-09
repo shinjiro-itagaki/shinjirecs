@@ -1,0 +1,2 @@
+class ProgramCategory < ApplicationRecord
+end
