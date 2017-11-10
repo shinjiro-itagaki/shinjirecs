@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  resources :program_titles
+  resources :systems
+  resources :areas
   resources :program_categories
   resources :reservations
   resources :programs
