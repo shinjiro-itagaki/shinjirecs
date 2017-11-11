@@ -24,7 +24,7 @@ class System < ApplicationRecord
   def self.ins() self.instance end
 
   def self.setup_finished?
-    ins = self.get_instance
+    ins = self.instance
     ins && ins.setup?
   end
 
