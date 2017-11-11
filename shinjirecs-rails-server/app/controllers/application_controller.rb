@@ -70,7 +70,7 @@ class ApplicationController < ActionController::API
   end
 
   def system_check
-    ins = System.get_instance
+    ins = System.instance
     if not (ins && ins.initialized?) then
       render_data nil, system: ins
     end
