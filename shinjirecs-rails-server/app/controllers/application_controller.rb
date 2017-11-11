@@ -71,8 +71,8 @@ class ApplicationController < ActionController::API
 
   def system_check
     ins = System.instance
-    if not (ins && ins.initialized?) then
-      render_data nil, system: ins
+    if not (ins && ins.setup?) then
+      render_data nil, system: ins, setup: false
     end
   end
 end

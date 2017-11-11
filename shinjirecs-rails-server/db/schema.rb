@@ -90,7 +90,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   create_table "systems", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "area_id", default: 0, null: false
     t.boolean "active", default: true, null: false
-    t.boolean "initialized", default: false, null: false
+    t.boolean "setup", default: false, null: false
     t.integer "gr_tuner_count", default: 1, null: false
     t.integer "bs_tuner_count", default: 0, null: false
     t.integer "rest_gr_tuner_count", default: 1, null: false

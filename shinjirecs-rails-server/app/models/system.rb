@@ -34,9 +34,7 @@ class System < ApplicationRecord
 
   private
   def refresh_instance
-    puts "refresh_instance"
     if @@instance and !(@@instance.object_id == self.object_id)
-      puts "@@instance.reload"
       @@instance.reload
     end
   end
