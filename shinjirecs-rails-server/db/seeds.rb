@@ -8,6 +8,6 @@
 
 area = Area.find_or_create_by!(id: 0, label: 'デフォルト')
 
-System.create area: area , active: true  if not System.instance.exists?
-System.create area: area , active: false if not System.dummy.exists?
+System.create area: area , active: true  if not System.where_instance.exists?
+System.create area: area , active: false if not System.where_dummy.exists?
 ProgramCategory.find_or_create_by!(id: 0, label: 'その他')

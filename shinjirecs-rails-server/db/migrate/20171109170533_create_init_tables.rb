@@ -10,7 +10,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     create_table :systems, unsigned: true do |t|
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.boolean "active"       , null: false, default: true
-      t.boolean "initialized"  , null: false, default: false
+      t.boolean "setup"        , null: false, default: false
       t.integer "gr_tuner_count" , null: false, default: 1
       t.integer "bs_tuner_count" , null: false, default: 0
       t.integer "rest_gr_tuner_count" , null: false, default: 1

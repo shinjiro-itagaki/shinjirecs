@@ -5,8 +5,8 @@ class ApplicationController < ActionController::API
   end
 
   before_action :set_model
-  before_action :set_record, only: [:show, :update, :destroy]
   before_action :system_check
+  before_action :set_record, only: [:show, :update, :destroy]
 
   # GET /${record}s/params_info
   def params_info
@@ -52,7 +52,7 @@ class ApplicationController < ActionController::API
   protected
 
   def render_data(obj=nil, options={})
-    render( {json: {body: obj}}.merge(options) )
+    render( {json: {header: options, body: obj}}.merge(options) )
   end
 
   def set_model
@@ -70,7 +70,9 @@ class ApplicationController < ActionController::API
   end
 
   def system_check
-    if not System.get_instance then
+    ins = System.get_instance
+    if not (ins && ins.initialized?) then
+      render_data nil, system: ins
     end
   end
 end

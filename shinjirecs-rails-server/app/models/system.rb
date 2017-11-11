@@ -1,12 +1,45 @@
 class System < ApplicationRecord
   belongs_to :area
-  scope :instance, ->(){ where(active: true ) }
-  scope :dummy   , ->(){ where(active: false) }
+  scope :where_instance, ->(){ where(active: true ) }
+  scope :where_dummy   , ->(){ where(active: false) }
 
   @@instance = nil
 
-  def self.reload_instance() @@instance  = self.instance.first  end
-  def self.get_instance()    @@instance || self.reload_instance end
+  after_save :refresh_instance
+
+  min = {length: { minimum: 0 }, numericality: { only_integer: true }}
+
+  validates :gr_tuner_count,      min
+  validates :bs_tuner_count,      min
+  validates :rest_gr_tuner_count, min
+  validates :rest_bs_tuner_count, min
+
+  validate do |rec|
+    rec.errors[:rest_gr_tuner_count] << "inconsistent rest_gr_tuner_count" if rec.gr_tuner_count < rec.rest_gr_tuner_count
+    rec.errors[:rest_bs_tuner_count] << "inconsistent rest_bs_tuner_count" if rec.bs_tuner_count < rec.rest_bs_tuner_count
+  end
+
+  def self.reload_instance() @@instance = self.where_instance.first  end
+  def self.instance() @@instance || self.reload_instance end
+  def self.ins() self.instance end
+
+  def self.setup_finished?
+    ins = self.get_instance
+    ins && ins.setup?
+  end
+
+  def channels
+    self.area.channels
+  end
+
+  private
+  def refresh_instance
+    puts "refresh_instance"
+    if @@instance and !(@@instance.object_id == self.object_id)
+      puts "@@instance.reload"
+      @@instance.reload
+    end
+  end
 
   # execute "ALTER TABLE system ADD CONSTRAINT system_active CHECK( active = true );"
   # execute "ALTER TABLE system ADD CONSTRAINT system_active CHECK( gr_tuner_count > -1 and bs_tuner_count > -1 and rest_gr_tuner_count > -1 and rest_bs_tuner_count > -1 and gr_tuner_count >= rest_gr_tuner_count and bs_tuner_count >= rest_bs_tuner_count);"
