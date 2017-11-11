@@ -71,12 +71,11 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.integer "duration", null: false
-    t.integer "channel", null: false
+    t.integer "channel_id", default: 0, null: false
+    t.integer "program_title_id", default: 0, null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.integer "program_category_id", default: 0, null: false
-    t.integer "program_title_id", default: 0, null: false
     t.integer "counter", default: 0, null: false
     t.integer "state", limit: 1, default: 0, null: false
     t.text "command_str", null: false
@@ -88,11 +87,17 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "system", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+  create_table "systems", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "area_id", default: 0, null: false
     t.boolean "active", default: true, null: false
+    t.boolean "initialized", default: false, null: false
+    t.integer "gr_tuner_count", default: 1, null: false
+    t.integer "bs_tuner_count", default: 0, null: false
+    t.integer "rest_gr_tuner_count", default: 1, null: false
+    t.integer "rest_bs_tuner_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_systems_on_active", unique: true
   end
 
 end

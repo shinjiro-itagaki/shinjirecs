@@ -1,6 +1,5 @@
 class CreateInitTables < ActiveRecord::Migration[5.1]
   def change
-
     create_table :areas, unsigned: true do |t|
       t.string  "label"            , null: false
       t.boolean "channels_checked" , null: false, default: false
@@ -8,12 +7,19 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.index ["label"], unique: true
     end
 
-    create_table :system, unsigned: true do |t|
+    create_table :systems, unsigned: true do |t|
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.boolean "active"       , null: false, default: true
+      t.boolean "initialized"  , null: false, default: false
+      t.integer "gr_tuner_count" , null: false, default: 1
+      t.integer "bs_tuner_count" , null: false, default: 0
+      t.integer "rest_gr_tuner_count" , null: false, default: 1
+      t.integer "rest_bs_tuner_count" , null: false, default: 0
+      t.index ["active"], unique: true
       t.timestamps               null: false
     end
-    execute "ALTER TABLE system ADD CONSTRAINT system_active CHECK( active = true );"
+    execute "ALTER TABLE systems ADD CONSTRAINT system_active CHECK( active = 1 );"
+    execute "ALTER TABLE systems ADD CONSTRAINT system_tuner_counts CHECK( gr_tuner_count > -1 and bs_tuner_count > -1 and rest_gr_tuner_count > -1 and rest_bs_tuner_count > -1 and gr_tuner_count >= rest_gr_tuner_count and bs_tuner_count >= rest_bs_tuner_count);"
 
     create_table :channels, unsigned: true do |t|
       t.integer "number"       , null: false
@@ -78,8 +84,9 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       # -2: canceled
       # -1: failed
       #  0: waiting
-      #  1: recording
-      #  2: success
+      #  1: preparing
+      #  2: recording
+      #  3: success
       t.integer    "state"               , null: false , default: 0, limit: 1
       t.text       "command_str"         , null: false
       t.integer    "command_pid"         , null: false
@@ -88,8 +95,8 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string     "filename"            , null: false
       t.timestamps                         null: false
     end
-    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2));"
+    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2,3));"
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_duration CHECK( duration > 0);"
-    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_duration CHECK( counter >= 0);"
+    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_counter CHECK( counter >= 0);"
   end
 end

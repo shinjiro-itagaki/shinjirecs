@@ -1,4 +1,5 @@
 class Reservation < ApplicationRecord
+
   belongs_to :channel
   belongs_to :program_title
 
@@ -9,19 +10,119 @@ class Reservation < ApplicationRecord
   # -2: canceled
   # -1: failed
   #  0: waiting
-  #  1: recording
-  #  2: success
-  enum state: { waiting: 0, recording: 1, success: 2, failed: -1, canceled: -2 }
+  #  1: preparing
+  #  2: recording
+  #  3: success
+  enum state: { waiting: 0, preparing: 1, recording: 2, success: 3, failed: -1, canceled: -2 }
 
-  def initialize
-    self.state.waiting!
-    @weekdays = Weekdays.none
+  @@reservations_cache = {
+    waiting:   {},
+    preparing: {},
+    recording: {},
+    success:   {},
+    failed:    {},
+    canceled:  {}
+  }.freeze # :: {Int => {Int => Reservation}}
+
+  def self.set_reservation_cache(rsv)
+    @@reservations_cache.keys.each do |k,m|
+      m[rsv.id] = nil
+    end
+    @@reservations_cache[rsv.state]
+  end
+
+  scope :will_start_in, ->(sec = 10){
+    now ||= Time.now
+    # where{ start_time.gt(now) & start_time.lt(now+sec) }
+    where("start_time > ?", now).where("start_time < ?", now+sec)
+  }
+
+  def will_start_in?(sec)
+    now = Time.now
+    @start_time > now && @start_time < now + sec
+  end
+
+  scope :now_in_time, ->() {
+    now = Time.now
+    where("start_time <= ?", now ).where("end_time >= ?", now)
+  }
+
+  def now_in_time?
+    now = Time.now
+    @start_time <= now && @end_time >= now
+  end
+
+  def self.run
+    self.count
+    1
+  end
+
+  @@do_check_preparing_now = false
+
+  def self.check_preparing
+    if @@do_check_preparing_now then
+      return false
+    else
+      @@do_check_preparing_now = true
+      proxy = self.waiting.will_start_in(30)
+      rsvs = proxy.all.to_a
+      # @@staging_reservations[rsv.id] ||= rsv
+      rsvs.each do |rsv|
+        rsv.state.preparing!
+      end
+
+      self.transaction do
+        rsvs.each do |rsv|
+          rsv.save!
+        end
+      end
+    end
+  end
+
+  after_save :after_save_impl
+
+  def after_save_impl
+    st = self.class.states
+    case @state
+    when st[:waiting] then
+      self.after_save_state_waiting
+    when st[:recording] then
+      self.after_save_state_recording
+    when st[:success] then
+      self.after_save_state_success
+    when st[:failed] then
+      self.after_save_state_failed
+    when st[:canceled] then
+      self.after_save_state_canceled
+    end
+    self.class.check_preparing
+  end
+
+  def after_save_state_waiting
+  end
+
+  def after_save_state_recording
+  end
+
+  def after_save_state_success
+  end
+
+  def after_save_state_failed
+  end
+
+  def after_save_state_canceled
+  end
+
+  after_initialize :set_default_value
+
+  def set_default_value
+    self.waiting! if not self.state
+    @weekdays ||= Weekdays.none
   end
 
 #  def select_label(lmap)
 #    lmap[self.status] || lmap[self.status.to_s] || "j"
 #  end
-
 
   # def duration(from=self.starttime)
   #   ( self.stoptime - from ).to_i
@@ -48,7 +149,7 @@ class Reservation < ApplicationRecord
     ( @weekdays & ( 0x01 << wday )) == 0
   end
 
-  def recorded?
+  def recording_tried?
     self.success? || self.failed?
   end
 
@@ -165,5 +266,7 @@ class Reservation < ApplicationRecord
 #  def not_everyweek!() @next = 0 if @next == 7 ; self; end
 
 #  def exist?() File.exist? self.filepath end
-#  def videofileexist?() File.exist? self.videofilepath end
+  #  def videofileexist?() File.exist? self.videofilepath end
+
 end
+
