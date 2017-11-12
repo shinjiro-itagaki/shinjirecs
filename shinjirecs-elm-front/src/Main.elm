@@ -2,7 +2,8 @@ import Html exposing (Html,div,input,text,li,Attribute,beginnerProgram)
 import Html.Events exposing (on,keyCode,onInput)
 import Html.Attributes exposing (type_,value)
 import Json.Decode as Json
-import Html.CssHelpers
+import Html.CssHelpers exposing (withNamespace)
+import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 
 -- main : Program Never model msg
 main = beginnerProgram { model = model, view = view, update = update }
@@ -20,10 +21,12 @@ update msg ({list,value} as model) =
         Input str -> {model | value = str}
         Enter -> {model | list = list ++ [value] , value = ""}
         Fail -> model
-                                                                       
+
+{ id, class, classList } = withNamespace "root"
+
 ---view
 view {list,value} =
-    div []
+    div [ class [ NavBar ]]
         [ listStr list
         , yourName value
         , textField value]

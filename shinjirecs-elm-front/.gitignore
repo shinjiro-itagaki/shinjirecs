@@ -1,2 +1,3 @@
 elm-stuff
-output
+public/*
+!public/index.html
