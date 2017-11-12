@@ -1,4 +1,4 @@
-JS="index.js"
+JS=index.js
 
 all: compile-css compile
 start:

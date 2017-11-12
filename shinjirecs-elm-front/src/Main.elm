@@ -5,7 +5,8 @@ import Json.Decode as Json
 import Html.CssHelpers exposing (withNamespace)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 
-import Ports exposing (sendToJs,receiveFromJs)
+import Ports exposing (sendToJs,receiveFromJs,newState)
+import API exposing (getAPI)
 
 -- program : { init : (model, Cmd msg),
  --            update : msg -> model -> (model, Cmd msg),
@@ -17,8 +18,9 @@ import Ports exposing (sendToJs,receiveFromJs)
 main = program { init = init, view = view, update = update, subscriptions = subscriptions }
        {- beginnerProgram { model = model, view = view, update = update } -} 
        
-type Msg = Input String | Fail | Enter
-type alias Model = {list : List String, value : String}
+type Msg = Input String | Fail | Enter | Subscribed String
+type alias Strings = List String
+type alias Model = {list : Strings, value : String}
     
 model : Model
 model = {list=[],value=""}
@@ -28,7 +30,8 @@ init =
     (model, sendToJs "init" )
 
 subscriptions : Model -> Sub Msg
-subscriptions m = Sub.none
+subscriptions m =
+    newState Subscribed
 
 -----Update
 -- msg -> model -> (model, Cmd msg),
@@ -38,6 +41,7 @@ update msg ({list,value} as m) =
         Input str -> ({m | value = str}, Cmd.none)
         Enter     -> ({m | list = list ++ [value] , value = ""}, sendToJs (value ++ " was given") )
         Fail      -> (m, Cmd.none)
+        Subscribed str -> (m, Cmd.none)
 
 { id, class, classList } = withNamespace "root"
 
