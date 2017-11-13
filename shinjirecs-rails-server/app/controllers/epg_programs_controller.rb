@@ -1,3 +1,3 @@
-class ProgramsController < ApplicationController
+class EpgProgramsController < ApplicationController
   set_model EpgProgram
 end

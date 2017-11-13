@@ -43,7 +43,7 @@ class EpgProgram < ApplicationRecord
 
     not_overlap = xy1 || xy2
 
-    return not not_overlap
+    return !not_overlap
   end
 
   def include?(time)
