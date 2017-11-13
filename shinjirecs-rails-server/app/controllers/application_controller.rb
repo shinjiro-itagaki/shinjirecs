@@ -5,7 +5,7 @@ class ApplicationController < ActionController::API
   end
 
   before_action :set_model
-  before_action :system_check
+  before_action :system_setup_check, except: [:params_info]
   before_action :set_record, only: [:show, :update, :destroy]
 
   # GET /${record}s/params_info
@@ -69,7 +69,7 @@ class ApplicationController < ActionController::API
     params.fetch(:record, {})
   end
 
-  def system_check
+  def system_setup_check
     ins = System.instance
     if not (ins && ins.setup?) then
       render_data nil, system: ins, setup: false
