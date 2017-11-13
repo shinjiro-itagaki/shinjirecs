@@ -1,11 +1,7 @@
 Rails.application.routes.draw do
-  resources :program_title_dayoffs
-  resources :program_title_terms
   root to: "systems#root"
 
-  [
-    :program_titles,
-    :systems,
+  [ :systems,
     :areas,
     :epg_program_categories,
     :reservations,
@@ -17,6 +13,24 @@ Rails.application.routes.draw do
       collection do
         get :params_info
       end
+    end
+  end
+
+  resources :program_titles do
+    [ :program_title_dayoffs,
+      :program_title_terms].each do |sym|
+      resources sym
+    end
+
+    collection do
+      get :params_info
+    end
+  end
+
+  [ :program_title_dayoffs,
+    :program_title_terms].each do |sym|
+    namespace sym do
+      get :params_info
     end
   end
 

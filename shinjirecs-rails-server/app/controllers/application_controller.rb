@@ -2,11 +2,18 @@ class ApplicationController < ActionController::API
   class << self
     def set_model(model) @model = model; end
     def model() @model; end
+    def set_parent_model(model,fkey)
+      @parent_model = model
+      @parent_fkey  = fkey
+    end
+    def parent_model() @parent_model; end
+    def parent_fkey() @parent_fkey; end
   end
 
-  before_action :set_model
-  before_action :system_setup_check, except: [:params_info]
+  before_action :set_models
+  before_action :set_parent_record
   before_action :set_record, only: [:show, :update, :destroy]
+  before_action :system_setup_check, except: [:params_info]
 
   # GET /${record}s/params_info
   def params_info
@@ -55,13 +62,28 @@ class ApplicationController < ActionController::API
     render( {json: {header: options, body: obj}}.merge(options) )
   end
 
-  def set_model
+  def set_models
     @model = self.class.model
+    @parent_model = self.class.parent_model
+    @parent_fkey  = self.class.parent_fkey
+  end
+
+  def set_parent_record
+    if @parent_model && @parent_fkey then
+      @parent_record = @parent_model.find(params[@parent_fkey])
+    end
   end
 
   # Use callbacks to share common setup or constraints between actions.
   def set_record
-    @record = @model.find(params[:id])
+    puts "========="
+    puts @parent_fkey
+    puts "========="
+    if @parent_model && @parent_fkey then
+      @record = @model.where(:id => params[:id], @parent_fkey => @parent_record.id).first
+    else
+      @record = @model.find(params[:id])
+    end
   end
 
   # Only allow a trusted parameter "white list" through.
