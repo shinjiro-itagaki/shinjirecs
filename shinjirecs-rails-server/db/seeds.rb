@@ -10,4 +10,5 @@ area = Area.find_or_create_by!(id: 0, label: 'デフォルト')
 
 System.create area: area , active: true  if not System.where_instance.exists?
 System.create area: area , active: false if not System.where_dummy.exists?
-ProgramCategory.find_or_create_by!(id: 0, label: 'その他')
+categ = ProgramCategory.find_or_create_by!(id: 0, label_ja: "その他", label_en: "others")
+ProgramMediumCategory.find_or_create_by!(id: 0, label_ja: "その他", label_en: "others", parent_id: categ.id)

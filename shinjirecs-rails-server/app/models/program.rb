@@ -1,8 +1,11 @@
 class Program < ApplicationRecord
-  # execute "ALTER TABLE programs ADD CONSTRAINT chk_times CHECK( start_time < stop_time );"
-
   belongs_to :channel
-  belongs_to :program_category
+  has_and_belongs_to_many :program_category,        association_foreign_key: "category_id", join_table: "program_category_maps"
+  has_and_belongs_to_many :program_medium_category, association_foreign_key: "category_id", join_table: "program_medium_category_maps"
+
+  validate do |rec|
+    rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
+  end
 
   def overlap?(start,endt)
     st = self.starttime

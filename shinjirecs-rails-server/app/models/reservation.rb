@@ -3,16 +3,9 @@ class Reservation < ApplicationRecord
   belongs_to :channel
   belongs_to :program_title
 
-  # execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2));"
-  # execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_duration CHECK( duration > 0);"
-  # execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_duration CHECK( counter >= 0);"
+  validates :duration, length: { minimum: 1 }, numericality: { only_integer: true }
+  validates :counter,  length: { minimum: 0 }, numericality: { only_integer: true }
 
-  # -2: canceled
-  # -1: failed
-  #  0: waiting
-  #  1: preparing
-  #  2: recording
-  #  3: success
   enum state: { waiting: 0, preparing: 1, recording: 2, success: 3, failed: -1, canceled: -2 }
 
   @@reservations_cache = {

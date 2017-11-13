@@ -2,7 +2,9 @@ class ProgramTitle < ApplicationRecord
   belongs_to :channel
   belongs_to :program_category
   has_many :reservations
-  # execute "ALTER TABLE programs ADD CONSTRAINT chk_between CHECK( start_time < end_time )"
-  # execute "ALTER TABLE programs ADD CONSTRAINT chk_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
-  # execute "ALTER TABLE programs ADD CONSTRAINT chk_next_counter CHECK( next_counter > 0 )"
+  validates :weekdays, length: { minimum: 0, maximum: 0b1111111 }, numericality: { only_integer: true }
+  validates :next_counter, length: { minimum: 1 }, numericality: { only_integer: true }
+  validate do |rec|
+    rec.errors[:end_time] << "inconsistent end_time" if not rec.start_time < rec.end_time
+  end
 end

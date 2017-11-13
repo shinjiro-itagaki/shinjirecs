@@ -32,11 +32,41 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.index ["area_id", "number", "ctype"], name: "index_channels_on_area_id_and_number_and_ctype", unique: true
   end
 
-  create_table "program_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.string "label", null: false
+  create_table "epgdump_schedules", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "system_id", null: false
+    t.time "time", default: "2000-01-01 00:00:00", null: false
+    t.integer "weekdays", limit: 1, default: 127, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["label"], name: "index_program_categories_on_label", unique: true
+  end
+
+  create_table "program_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "label_ja", null: false
+    t.string "label_en", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["label_ja", "label_en"], name: "index_program_categories_on_label_ja_and_label_en", unique: true
+  end
+
+  create_table "program_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "category_id", null: false
+    t.index ["program_id", "category_id"], name: "index_program_category_maps_on_program_id_and_category_id", unique: true
+  end
+
+  create_table "program_medium_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "label_ja", null: false
+    t.string "label_en", null: false
+    t.integer "parent_id", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["label_ja", "label_en"], name: "index_program_medium_categories_on_label_ja_and_label_en", unique: true
+  end
+
+  create_table "program_medium_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "category_id", null: false
+    t.index ["program_id", "category_id"], name: "index_program_medium_category_maps_on_program_id_and_category_id", unique: true
   end
 
   create_table "program_titles", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|

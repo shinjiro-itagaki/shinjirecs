@@ -21,6 +21,14 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     execute "ALTER TABLE systems ADD CONSTRAINT system_active CHECK( active = 1 );"
     execute "ALTER TABLE systems ADD CONSTRAINT system_tuner_counts CHECK( gr_tuner_count > -1 and bs_tuner_count > -1 and rest_gr_tuner_count > -1 and rest_bs_tuner_count > -1 and gr_tuner_count >= rest_gr_tuner_count and bs_tuner_count >= rest_bs_tuner_count);"
 
+    create_table :epgdump_schedules, unsigned: true do |t|
+      t.integer "system_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.time    "time"      , null: false, default: "00:00:00"
+      t.integer "weekdays"  , null: false, default: 127, limit: 1 # byte, 0 means not active
+      t.timestamps null: false
+    end
+    execute "ALTER TABLE epgdump_schedules ADD CONSTRAINT chk_schedule_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
+
     create_table :channels, unsigned: true do |t|
       t.integer "number"       , null: false
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
@@ -35,9 +43,18 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_number CHECK( number > 0 );"
 
     create_table :program_categories, unsigned: true do |t|
-      t.string     "label" , null: false
-      t.timestamps           null: false
-      t.index "label", unique: true
+      t.string "label_ja"   , null: false
+      t.string "label_en"   , null: false
+      t.timestamps            null: false
+      t.index ["label_ja","label_en"], unique: true
+    end
+
+    create_table :program_medium_categories, unsigned: true do |t|
+      t.string "label_ja"   , null: false
+      t.string "label_en"   , null: false
+      t.integer "parent_id" , null: false , default: 0, foreign_key: {to_table: "program_categories", on_delete: :set_default, on_update: :cascade}
+      t.timestamps            null: false
+      t.index ["label_ja","label_en"], unique: true
     end
 
     create_table :programs, unsigned: true do |t|
@@ -52,6 +69,18 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.index ["start_time", "channel_id"], unique: true
     end
     execute "ALTER TABLE programs ADD CONSTRAINT chk_times CHECK( start_time < stop_time );"
+
+    create_table :program_category_maps, unsigned: true do |t|
+      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "program_categories"}
+      t.index ["program_id","category_id"], unique: true
+    end
+
+    create_table :program_medium_category_maps, unsigned: true do |t|
+      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "program_medium_categories"}
+      t.index ["program_id","category_id"], unique: true
+    end
 
     create_table :program_titles, unsigned: true do |t|
       t.timestamp  "start_time"           , null: false
