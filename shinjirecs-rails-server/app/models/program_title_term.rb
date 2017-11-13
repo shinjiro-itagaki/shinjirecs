@@ -1,0 +1,2 @@
+class ProgramTitleTerm < ApplicationRecord
+end

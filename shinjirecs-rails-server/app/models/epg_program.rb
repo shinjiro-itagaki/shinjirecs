@@ -4,10 +4,10 @@
 # t.string     "title"                , null: false
 # t.text       "desc"                 , null: false
 # t.integer    "program_category_id"  , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
-class Program < ApplicationRecord
+class EpgProgram < ApplicationRecord
   belongs_to :channel
-  has_and_belongs_to_many :program_category,        association_foreign_key: "category_id", join_table: "program_category_maps"
-  has_and_belongs_to_many :program_medium_category, association_foreign_key: "category_id", join_table: "program_medium_category_maps"
+  has_and_belongs_to_many :epg_program_category,        association_foreign_key: "category_id", join_table: "epg_program_category_maps"
+  has_and_belongs_to_many :epg_program_medium_category, association_foreign_key: "category_id", join_table: "epg_program_medium_category_maps"
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time

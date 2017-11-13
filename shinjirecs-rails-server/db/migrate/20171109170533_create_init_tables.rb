@@ -42,49 +42,47 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_ctype  CHECK( ctype IN ('gr','bs'));"
     execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_number CHECK( number > 0 );"
 
-    create_table :program_categories, unsigned: true do |t|
+    create_table :epg_program_categories, unsigned: true do |t|
       t.string "label_ja"   , null: false
       t.string "label_en"   , null: false
       t.timestamps            null: false
       t.index ["label_ja","label_en"], unique: true
     end
 
-    create_table :program_medium_categories, unsigned: true do |t|
+    create_table :epg_program_medium_categories, unsigned: true do |t|
       t.string "label_ja"   , null: false
       t.string "label_en"   , null: false
-      t.integer "parent_id" , null: false , default: 0, foreign_key: {to_table: "program_categories", on_delete: :set_default, on_update: :cascade}
+      t.integer "parent_id" , null: false , default: 0, foreign_key: {to_table: "epg_program_categories", on_delete: :set_default, on_update: :cascade}
       t.timestamps            null: false
       t.index ["label_ja","label_en"], unique: true
     end
 
-    create_table :programs, unsigned: true do |t|
+    create_table :epg_programs, unsigned: true do |t|
       t.timestamp  "start_time"           , null: false
       t.timestamp  "stop_time"            , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade} # delete all programs if channel is deleted
       t.string     "title"                , null: false
       t.text       "desc"                 , null: false
       t.integer    "event_id"             , null: false , default: 0
-      t.integer    "program_category_id"  , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
+      t.integer    "epg_program_category_id"  , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
       t.timestamps                          null: false
       t.index ["start_time", "channel_id"], unique: true
     end
-    execute "ALTER TABLE programs ADD CONSTRAINT chk_times CHECK( start_time < stop_time );"
+    execute "ALTER TABLE epg_programs ADD CONSTRAINT chk_times CHECK( start_time < stop_time );"
 
-    create_table :program_category_maps, unsigned: true do |t|
-      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade}
-      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "program_categories"}
+    create_table :epg_program_category_maps, unsigned: true do |t|
+      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
+      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_program_categories"}
       t.index ["program_id","category_id"], unique: true
     end
 
-    create_table :program_medium_category_maps, unsigned: true do |t|
-      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade}
-      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "program_medium_categories"}
-      t.index ["program_id","category_id"], unique: true
+    create_table :epg_program_medium_category_maps, unsigned: true do |t|
+      t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
+      t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_program_medium_categories"}
+      t.index ["program_id","category_id"], unique: true, name: "unique_epg_program_medium_category_maps"
     end
 
     create_table :program_titles, unsigned: true do |t|
-      t.date       "begin_on"             , null: false
-      t.date       "finish_on"            , null: false
       t.time       "start_at"             , null: false
       t.integer    "duration"             , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
@@ -96,10 +94,23 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string     "label_format"         , null: false , default: ''
       t.timestamps                          null: false
     end
-    execute "ALTER TABLE program_titles ADD CONSTRAINT chk_between CHECK( begin_on <= finish_on )"
     execute "ALTER TABLE program_titles ADD CONSTRAINT chk_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
     execute "ALTER TABLE program_titles ADD CONSTRAINT chk_next_counter CHECK( next_counter > 0 )"
     execute "ALTER TABLE program_titles ADD CONSTRAINT chk_program_title_duration CHECK( duration > 0 )"
+
+    create_table :program_title_terms, unsigned: true do |t|
+      t.integer "program_title_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.date    "begin_on"         , null: false
+      t.date    "finish_on"        , null: false
+      t.index   ["program_title_id"], unique: true
+    end
+    execute "ALTER TABLE program_title_terms ADD CONSTRAINT chk_between CHECK( begin_on <= finish_on )"
+
+    create_table :program_title_dayoffs, unsigned: true do |t|
+      t.integer "program_title_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.date    "on"               , null: false
+      t.index   ["program_title_id","on"], unique: true
+    end
 
     create_table :reservations, unsigned: true do |t|
       t.timestamp  "start_time"          , null: false
