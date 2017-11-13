@@ -37,6 +37,15 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
+  def as_json(options = nil)
+    res = super(options)
+    res.keys.each do |k|
+      v = res[k]
+      res[k] = v.to_f if v.kind_of? Time
+    end
+    res
+  end
+
   protected
   def set_default
   end
