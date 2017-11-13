@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  resources :program_title_dayoffs
+  resources :program_title_terms
   root to: "systems#root"
 
   [
@@ -8,7 +10,8 @@ Rails.application.routes.draw do
     :epg_program_categories,
     :reservations,
     :epg_programs,
-    :channels
+    :channels,
+    :epgdump_schedules
   ].each do |sym|
     resources sym do
       collection do
