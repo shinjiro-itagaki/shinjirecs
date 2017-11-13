@@ -5,9 +5,9 @@ Rails.application.routes.draw do
     :program_titles,
     :systems,
     :areas,
-    :program_categories,
+    :epg_program_categories,
     :reservations,
-    :programs,
+    :epg_programs,
     :channels
   ].each do |sym|
     resources sym do
