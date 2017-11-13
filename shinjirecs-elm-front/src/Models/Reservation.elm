@@ -1,5 +1,7 @@
-module Models.Reservation exposing (Reservation)
+module Models.Reservation exposing (Reservation,ReservationId)
 import Time exposing (Time)
+import Json.Decode as D
+import Models.Types exposing (map16)
 
 type State = Canceled -- -2
            | Failed -- -1
@@ -9,16 +11,18 @@ type State = Canceled -- -2
            | Success -- 3
 
 toState : Int -> State
-toState -2 = Canceled
-toState -1 = Failed
-toState  0 = Waiting
-toState  1 = Preparing
-toState  2 = Recording
-toState  3 = Success
-    
-type Reservation =
-    { id : Int
-    , start_time : Time
+toState i = case i of
+                (-2) -> Canceled
+                (-1) -> Failed
+                0 -> Waiting
+                1 -> Preparing
+                2 -> Recording
+                3 -> Success
+                _ -> Waiting
+
+type ReservationId = ReservationId Int
+type alias Reservation =
+    { start_time : Time
     , duration : Int
     , channel_id : Int
     , program_title_id : Int
@@ -35,4 +39,26 @@ type Reservation =
     , created_at : Time
     , updated_at : Time
     }
-
+stateDecoder : D.Decoder State
+stateDecoder = D.int |> D.andThen (D.succeed << toState)
+            
+reservationDecoder : D.Decoder Reservation
+reservationDecoder =
+    map16
+        Reservation
+        (D.at ["start_time"] D.float)
+        (D.at ["duration"] D.int)
+        (D.at ["channel_id"] D.int)
+        (D.at ["program_title_id"] D.int)
+        (D.at ["title"] D.string)
+        (D.at ["desc"] D.string)
+        (D.at ["event_id"] D.int)
+        (D.at ["counter"] D.int)
+        (D.at ["state"] stateDecoder)
+        (D.at ["command_str"] D.string)
+        (D.at ["command_pid"] D.int)
+        (D.at ["log"] D.string)
+        (D.at ["errror_log"] D.string)
+        (D.at ["filename"] D.string)
+        (D.at ["created_at"] D.float)
+        (D.at ["updated_at"] D.float)
