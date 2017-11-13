@@ -70,8 +70,10 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   end
 
   create_table "program_titles", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.timestamp "end_time", null: false
+    t.date "begin_on", null: false
+    t.date "finish_on", null: false
+    t.time "start_at", null: false
+    t.integer "duration", null: false
     t.integer "channel_id", null: false
     t.string "title", null: false
     t.text "desc", null: false
@@ -82,7 +84,6 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.string "label_format", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["start_time", "channel_id"], name: "index_program_titles_on_start_time_and_channel_id", unique: true
   end
 
   create_table "programs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|

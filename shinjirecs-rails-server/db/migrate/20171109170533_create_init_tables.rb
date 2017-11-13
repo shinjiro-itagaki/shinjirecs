@@ -83,22 +83,23 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     end
 
     create_table :program_titles, unsigned: true do |t|
-      t.timestamp  "start_time"           , null: false
-      t.timestamp  "end_time"             , null: false
+      t.date       "begin_on"             , null: false
+      t.date       "finish_on"            , null: false
+      t.time       "start_at"             , null: false
+      t.integer    "duration"             , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.string     "title"                , null: false
       t.text       "desc"                 , null: false
-      t.integer    "program_category_id"  , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
       t.integer    "next_counter"         , null: false , default: 1
       t.integer    "weekdays"             , null: false , default: 0, limit: 1 # byte
       t.boolean    "auto_next"            , null: false , default: true
       t.string     "label_format"         , null: false , default: ''
       t.timestamps                          null: false
-      t.index ["start_time", "channel_id"], unique: true
     end
-    execute "ALTER TABLE program_titles ADD CONSTRAINT chk_between CHECK( start_time < end_time )"
+    execute "ALTER TABLE program_titles ADD CONSTRAINT chk_between CHECK( begin_on <= finish_on )"
     execute "ALTER TABLE program_titles ADD CONSTRAINT chk_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
     execute "ALTER TABLE program_titles ADD CONSTRAINT chk_next_counter CHECK( next_counter > 0 )"
+    execute "ALTER TABLE program_titles ADD CONSTRAINT chk_program_title_duration CHECK( duration > 0 )"
 
     create_table :reservations, unsigned: true do |t|
       t.timestamp  "start_time"          , null: false

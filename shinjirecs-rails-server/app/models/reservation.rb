@@ -1,3 +1,17 @@
+# t.timestamp  "start_time"          , null: false
+# t.integer    "duration"            , null: false # seconds
+# t.integer    "channel_id"          , null: false , default: 0, foreign_key: {on_delete: :restrict   , on_update: :cascade}
+# t.integer    "program_title_id"    , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
+# t.string     "title"               , null: false
+# t.text       "desc"                , null: false
+# t.integer    "event_id"            , null: false , default: 0
+# t.integer    "counter"             , null: false , default: 0
+# t.integer    "state"               , null: false , default: 0, limit: 1
+# t.text       "command_str"         , null: false
+# t.integer    "command_pid"         , null: false
+# t.text       "log"                 , null: false
+# t.text       "errror_log"          , null: false
+# t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
 
   belongs_to :channel
