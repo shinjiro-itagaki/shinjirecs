@@ -1,3 +1,3 @@
 class ProgramCategoriesController < ApplicationController
-  set_model ProgramCategory
+  set_model EpgProgramCategory
 end
