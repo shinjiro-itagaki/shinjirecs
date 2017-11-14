@@ -15,6 +15,13 @@ class ApplicationController < ActionController::API
   before_action :set_record, only: [:show, :update, :destroy]
   before_action :system_setup_check, except: [:params_info]
 
+  rescue_from "ActiveRecord::RecordNotFound" do |e|
+    # render status: 404, json: e
+    # render_error 404, {id: e.id, model: e.model.name}
+    # render_error 404, e
+    render_error 404, {message: e.message, id: e.id, model: e.model}
+  end
+
   # GET /${record}s/params_info
   def params_info
     render_data @model.params_info
@@ -60,6 +67,10 @@ class ApplicationController < ActionController::API
 
   def render_data(obj=nil, options={})
     render( {json: {header: options, body: obj}}.merge(options) )
+  end
+
+  def render_error(status, obj=nil)
+    render status: status, json: obj
   end
 
   def set_models
