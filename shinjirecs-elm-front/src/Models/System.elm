@@ -1,4 +1,4 @@
-module Models.System exposing (System, SystemId,systemDecoder,systemEncoder)
+module Models.System exposing (System, SystemId,systemDecoder,systemEncoder,new)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
@@ -16,6 +16,19 @@ type alias System =
     , created_at : Time
     , updated_at : Time
     }
+    
+new : System
+new = { area_id = 0
+      , active = False
+      , setup  = False
+      , gr_tuner_count = 0
+      , bs_tuner_count = 0
+      , rest_gr_tuner_count = 0
+      , rest_bs_tuner_count = 0
+      , created_at = 0
+      , updated_at = 0
+      }
+    
 systemDecoder : D.Decoder System
 systemDecoder =
     map9

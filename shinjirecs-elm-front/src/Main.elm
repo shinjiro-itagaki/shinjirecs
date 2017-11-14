@@ -7,7 +7,10 @@ import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCss
 
 import Ports exposing (sendToJs,receiveFromJs,newState)
 import API exposing (getAPI)
+import Components exposing (Components)
 
+type Msg = Input String | Fail | Enter | Subscribed String
+    
 -- program : { init : (model, Cmd msg),
  --            update : msg -> model -> (model, Cmd msg),
  --            subscriptions : model -> Sub msg,
@@ -16,11 +19,9 @@ import API exposing (getAPI)
 
 -- main : Program Never model msg
 main = program { init = init, view = view, update = update, subscriptions = subscriptions }
-       {- beginnerProgram { model = model, view = view, update = update } -} 
-       
-type Msg = Input String | Fail | Enter | Subscribed String
-type alias Strings = List String
-type alias Model = {list : Strings, value : String}
+       {- beginnerProgram { model = model, view = view, update = update } -}
+
+type alias Model = {list : List String, value : String }
     
 model : Model
 model = {list=[],value=""}
@@ -30,8 +31,7 @@ init =
     (model, sendToJs "init" )
 
 subscriptions : Model -> Sub Msg
-subscriptions m =
-    newState Subscribed
+subscriptions m = newState Subscribed
 
 -----Update
 -- msg -> model -> (model, Cmd msg),
