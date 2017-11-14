@@ -25,5 +25,5 @@ subscriptions : SystemModel -> Sub Msg
 subscriptions m = Sub.none
 
 view : SystemModel -> Html Msg
-view model = div [] [text <| "こんにちは"]
+view model = div [] [text <| "システム設定"]
     

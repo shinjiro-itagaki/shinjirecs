@@ -1,14 +1,18 @@
-module Components exposing (Components,Models)
+module Components exposing (root)
 import Html exposing (Html,div,input,text,li,Attribute,program)
 import Components.SystemC exposing (SystemC,SystemModel)
 import Components.SystemC as SystemC exposing (new,Msg)
 import Components.Types exposing (ComponentSym(SystemCSym))
+import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
+import Html.CssHelpers exposing (withNamespace)
+
+{ id, class, classList } = withNamespace "root"
 
 type MsgToRoot = FromSystem SystemC.Msg
 
 type alias Components = { system : SystemC }
 type alias Models = { currentC : Maybe ComponentSym
-                    , models : { system : SystemModel }
+                    , system : SystemModel
                     }
 
 components : Components
@@ -23,28 +27,27 @@ root = program { init = init
 init : (Models, Cmd MsgToRoot)
 init = let x = components
            m = { currentC = Nothing
-               , models = { system = x.system.init
-                          }
+               , system = x.system.init
                }
        in (m, Cmd.none)
 
 update : MsgToRoot -> Models -> (Models, Cmd MsgToRoot)
-update msg models = (models,Cmd.none)
+update msg models =
+    case msg of
+        FromSystem msg -> components.system.update msg models.system |> \(m,cmd) -> ( { models | system = m } , Cmd.map FromSystem cmd )
 
 subscriptions : Models -> Sub MsgToRoot
 subscriptions m = Sub.none
 
--- div [] []
 view : Models -> Html MsgToRoot
-view model =
-    case model.currentC of
-        Just SystemCSym -> div [] [invoke model]
-        Nothing  -> div [] [text <| "初期状態です"]
+view models = div [ class [NavBar] ] <|
+              case models.currentC of
+                  Just sym -> [invoke sym models]
+                  Nothing  -> [text <| "初期状態です"]
 
-invoke : Models -> Html MsgToRoot
-invoke m =
-    case m.currentC of
-        Just SystemCSym -> Html.map FromSystem <| components.system.view m.models.system
-        Nothing -> div [] []
+invoke : ComponentSym -> Models -> Html MsgToRoot
+invoke sym m =
+    case sym of
+        SystemCSym -> Html.map FromSystem <| components.system.view m.system
 
 -- program : { init : (model, Cmd msg), update : msg -> model -> (model, Cmd msg), subscriptions : model -> Sub msg, view : model -> Html msg } -> Program Never model msg

@@ -7,7 +7,7 @@ import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCss
 
 import Ports exposing (sendToJs,receiveFromJs,newState)
 import API exposing (getAPI)
-import Components exposing (Components)
+import Components exposing (root)
 
 type Msg = Input String | Fail | Enter | Subscribed String
     
@@ -18,7 +18,7 @@ type Msg = Input String | Fail | Enter | Subscribed String
  -- -> Program Never model msg
 
 -- main : Program Never model msg
-main = program { init = init, view = view, update = update, subscriptions = subscriptions }
+main = root -- program { init = init, view = view, update = update, subscriptions = subscriptions }
        {- beginnerProgram { model = model, view = view, update = update } -}
 
 type alias Model = {list : List String, value : String }
@@ -45,9 +45,8 @@ update msg ({list,value} as m) =
 
 { id, class, classList } = withNamespace "root"
 
----view
-view : Model -> Html Msg
-view {list,value} =
+view2 : Model -> Html Msg
+view2 {list,value} =
     div [ class [ NavBar ]]
         [ listStr list
         , yourName value
