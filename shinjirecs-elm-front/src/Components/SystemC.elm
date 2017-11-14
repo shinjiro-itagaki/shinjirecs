@@ -1,5 +1,5 @@
 module Components.SystemC exposing (SystemModel,SystemC,new,Msg) -- ,newSystemC)
-import Components.Types exposing (Component)
+import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable)
 import Models.System exposing (System)
 import Models.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute)
@@ -18,12 +18,12 @@ new = { init          = init
 init : SystemModel
 init = {record = System.new }
 
-update : Msg -> SystemModel -> (SystemModel, Cmd Msg)
-update msg model = (model,Cmd.none)
+update : Msg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> ((SystemModel,CommonModelEditable), Cmd Msg)
+update msg (model,r,wr) = ((model,wr),Cmd.none)
 
-subscriptions : SystemModel -> Sub Msg
-subscriptions m = Sub.none
+subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Msg
+subscriptions (m,r,wr) = Sub.none
 
-view : SystemModel -> Html Msg
-view model = div [] [text <| "システム設定"]
+view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html Msg
+view (model,r,wr) = div [] [text <| "システム設定"]
     
