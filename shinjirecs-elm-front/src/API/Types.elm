@@ -4,11 +4,11 @@ import Dict exposing (Dict)
 import Http
 import Models.Types exposing (Entity)
 import Models.Area exposing (Area)
-import Models.Program as M exposing (Program)
+import Models.EpgProgram exposing (EpgProgram)
 import Models.ProgramTitle exposing (ProgramTitle)
 import Models.System exposing (System)
 import Models.Channel exposing (Channel)
-import Models.ProgramCategory exposing (ProgramCategory)
+import Models.EpgProgramCategory exposing (EpgProgramCategory)
 import Models.Reservation exposing (Reservation)
 
 
@@ -70,8 +70,8 @@ type alias ResourcesI a =
 
 type alias AreasI             = ResourcesI Area
 type alias ChannelsI          = ResourcesI Channel
-type alias ProgramsI          = ResourcesI M.Program
-type alias ProgramCategoriesI = ResourcesI ProgramCategory
+type alias EpgProgramsI          = ResourcesI EpgProgram
+type alias EpgProgramCategoriesI = ResourcesI EpgProgramCategory
 type alias ProgramTitlesI     = ResourcesI ProgramTitle
 type alias ReservationsI      = ResourcesI Reservation
 type alias SystemI            = ResourcesI System
