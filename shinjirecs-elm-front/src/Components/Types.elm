@@ -1,4 +1,4 @@
-module Components.Types exposing (Component,ComponentSym(..))
+module Components.Types exposing (Component,ComponentSym(..),CommonCmd(..))
 import Html exposing (Html,div,input,text,li,Attribute)
 
 type alias Component model msg = { init          : model -- (model, Cmd msg)
@@ -6,3 +6,4 @@ type alias Component model msg = { init          : model -- (model, Cmd msg)
                                  , subscriptions : model -> Sub msg
                                  , view          : model -> Html msg }
 type ComponentSym = SystemCSym
+type CommonCmd = SwitchTo ComponentSym

@@ -11,16 +11,9 @@ import Components exposing (root)
 
 type Msg = Input String | Fail | Enter | Subscribed String
     
--- program : { init : (model, Cmd msg),
- --            update : msg -> model -> (model, Cmd msg),
- --            subscriptions : model -> Sub msg,
- --            view : model -> Html msg }
- -- -> Program Never model msg
+main = root
 
--- main : Program Never model msg
-main = root -- program { init = init, view = view, update = update, subscriptions = subscriptions }
-       {- beginnerProgram { model = model, view = view, update = update } -}
-
+{-        
 type alias Model = {list : List String, value : String }
     
 model : Model
@@ -77,3 +70,4 @@ onEnter v_at_fail v_at_success =
             else v_at_fail
     in
         on "keyup" (Json.map tagger keyCode)
+-}
