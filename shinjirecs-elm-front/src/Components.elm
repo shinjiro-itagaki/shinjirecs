@@ -3,7 +3,7 @@ import Html exposing (Html,program)
 import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
 import Components.SystemC as SystemC exposing (new,Msg)
-import Components.Types exposing (ComponentSym(SystemCSym),CommonCmd(SwitchTo),CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (ComponentSym(SystemCSym),CommonCmd(SwitchTo,NoComponentSelected),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events exposing (on,keyCode,onInput,onClick)
@@ -62,6 +62,7 @@ update msg models =
                    FromSystem system_msg -> updateComponent__ system_msg components.system.update FromSystem models.system (\ms_ m_ -> {ms_ | system = m_})
                                              
         Common (SwitchTo sym) -> ({ models | currentC = Just sym }, Cmd.none)
+        Common NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
 
 subscriptions : Models -> Sub MsgToRoot
 subscriptions m = Sub.none
@@ -79,7 +80,10 @@ componentView models =
 
 view : Models -> Html MsgToRoot
 view models = H.div [class [NavBar]] [
-               H.header [] [H.span [][H.text <| (++) "カウンター : " <| toString models.editable.counter]]
+               H.header [] [
+                    H.div [][H.text <| (++) "カウンター : " <| toString models.editable.counter]
+                   ,if models.currentC == Nothing then H.span [] [] else H.button [onClick (Common NoComponentSelected)] [H.text "選択解除へ"]
+                   ]
               ,componentView models
               ,H.footer [] []
               ]
@@ -87,5 +91,3 @@ invoke : ComponentSym -> Models -> Html MsgToRoot
 invoke sym m =
     case sym of
         SystemCSym -> Html.map (FromComponent << FromSystem) <| components.system.view (m.system,m.readonly,m.editable)
-
--- program : { init : (model, Cmd msg), update : msg -> model -> (model, Cmd msg), subscriptions : model -> Sub msg, view : model -> Html msg } -> Program Never model msg

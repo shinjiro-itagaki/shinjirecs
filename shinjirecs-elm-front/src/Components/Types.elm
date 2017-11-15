@@ -9,4 +9,4 @@ type alias Component model msg = { init          : model -- (model, Cmd msg)
                                  , subscriptions : (model,CommonModelReadOnly,CommonModelEditable) -> Sub msg
                                  , view          : (model,CommonModelReadOnly,CommonModelEditable) -> Html msg }
 type ComponentSym = SystemCSym
-type CommonCmd = SwitchTo ComponentSym
+type CommonCmd = SwitchTo ComponentSym | NoComponentSelected
