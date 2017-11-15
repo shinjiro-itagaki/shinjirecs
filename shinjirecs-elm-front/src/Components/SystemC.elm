@@ -2,9 +2,10 @@ module Components.SystemC exposing (SystemModel,SystemC,new,Msg) -- ,newSystemC)
 import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable)
 import Models.System exposing (System)
 import Models.System as System exposing (new)
-import Html exposing (Html,div,input,text,li,Attribute)
+import Html exposing (Html,div,input,text,li,Attribute,button)
+import Html.Events exposing (onClick)
 
-type Msg = None
+type Msg = CountUp | None
 type alias SystemModel = { record : System }
 type alias SystemC = Component SystemModel Msg
 
@@ -19,11 +20,17 @@ init : SystemModel
 init = {record = System.new }
 
 update : Msg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> ((SystemModel,CommonModelEditable), Cmd Msg)
-update msg (model,r,wr) = ((model,wr),Cmd.none)
+update msg (model,r,wr) =
+    case msg of
+        CountUp -> ((model,{ wr | counter = wr.counter + 1 }),Cmd.none)
+        None -> ((model,wr),Cmd.none)
 
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Msg
 subscriptions (m,r,wr) = Sub.none
 
 view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html Msg
-view (model,r,wr) = div [] [text <| "システム設定"]
+view (model,r,wr) = div [] [
+                     text <| "システム設定"
+                    ,button [ onClick CountUp ] [text <| "カウントアップ"]
+                    ]
     

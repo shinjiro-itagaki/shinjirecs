@@ -1,5 +1,6 @@
 module Components exposing (root)
-import Html exposing (Html,div,span,input,text,li,Attribute,program)
+import Html exposing (Html,program)
+import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
 import Components.SystemC as SystemC exposing (new,Msg)
 import Components.Types exposing (ComponentSym(SystemCSym),CommonCmd(SwitchTo),CommonModelReadOnly,CommonModelEditable)
@@ -67,15 +68,21 @@ subscriptions m = Sub.none
 
 switchTo : ComponentSym -> MsgToRoot
 switchTo sym = Common (SwitchTo sym)
-                  
-view : Models -> Html MsgToRoot
-view models = div [ class [NavBar] ] <| singleton <|
-              case models.currentC of
-                  Just sym -> invoke sym models
-                  Nothing  -> div [] [
-                               (span [onClick (switchTo SystemCSym)] [text "システム設定へ"])
-                              ]
 
+componentView : Models -> Html MsgToRoot
+componentView models =
+    case models.currentC of
+        Just sym -> invoke sym models
+        Nothing  -> H.div [] [
+                     (H.span [onClick (switchTo SystemCSym)] [H.text "システム設定へ"])
+                    ]
+
+view : Models -> Html MsgToRoot
+view models = H.div [class [NavBar]] [
+               H.header [] [H.span [][H.text <| (++) "カウンター : " <| toString models.editable.counter]]
+              ,componentView models
+              ,H.footer [] []
+              ]
 invoke : ComponentSym -> Models -> Html MsgToRoot
 invoke sym m =
     case sym of
