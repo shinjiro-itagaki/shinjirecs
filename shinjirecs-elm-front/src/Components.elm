@@ -6,7 +6,7 @@ import Components.SystemC as SystemC exposing (new,Msg)
 import Components.Types exposing (ComponentSym(SystemCSym),CommonCmd(SwitchTo,NoComponentSelected),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
-import Html.Events exposing (on,keyCode,onInput,onClick)
+import Html.Events as E
 import List exposing (singleton)
 
 { id, class, classList } = withNamespace "root"
@@ -75,14 +75,14 @@ componentView models =
     case models.currentC of
         Just sym -> invoke sym models
         Nothing  -> H.div [] [
-                     (H.span [onClick (switchTo SystemCSym)] [H.text "システム設定へ"])
+                     (H.button [E.onClick (switchTo SystemCSym)] [H.text "システム設定へ"])
                     ]
 
 view : Models -> Html MsgToRoot
 view models = H.div [class [NavBar]] [
                H.header [] [
                     H.div [][H.text <| (++) "カウンター : " <| toString models.editable.counter]
-                   ,if models.currentC == Nothing then H.span [] [] else H.button [onClick (Common NoComponentSelected)] [H.text "選択解除へ"]
+                   ,if models.currentC == Nothing then H.span [] [] else H.button [E.onClick (Common NoComponentSelected)] [H.text "選択解除へ"]
                    ]
               ,componentView models
               ,H.footer [] []

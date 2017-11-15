@@ -2,27 +2,13 @@ module API.Remote exposing (getImpl)
 import String exposing (join)
 import API.Types as T exposing (..)
 import Http exposing (get,post,jsonBody)
-import Json.Decode as D --  exposing (list, string, Decoder, bool)
+import Json.Decode as D
 import Time exposing (Time)
+import Models.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
 import Models.Types exposing (Entity,Encoder)
 import Models.System  exposing (System  ,systemDecoder  ,systemEncoder)
 import Models.Channel exposing (Channel ,channelDecoder ,channelEncoder)
 import Dict exposing (Dict)
-
-type Method = Head | Options | Get | Post | Patch | Delete
-
-{-    
-mkRequest : { method : Method
-            , headers : List Http.Header
-            , url : String
-            , body : Http.Body
-            , expect : Http.Expect a
-            , timeout : Maybe Time
-            , withCredentials : Bool } -> Http.Request a
-mkRequest mkRequest x = Http.request { x | method = toString x.method }
--}
-
--- send : (Result Error a -> msg) -> Request a -> Cmd msg
 
 common : Http.Request a -> Cmd (Result Http.Error a)
 common req =
@@ -68,8 +54,8 @@ rModify domain path decoder encoder e = patch (join "/" [domain,path,(toString e
 rDestroy : String -> String -> D.Decoder a -> Entity a -> Cmd (Result Http.Error Bool)
 rDestroy domain path decoder e = delete (join "/" [domain,path,(toString e.id)]) D.bool
 
-rInfo : String -> String -> D.Decoder T.ColumnInfo -> Cmd (Result Http.Error (Dict String T.ColumnInfo))
-rInfo domain path decoder = get (join "/" [domain,path,"params_info"]) (D.dict T.columnInfoDecoder)
+rInfo : String -> String -> D.Decoder ColumnInfo -> Cmd (Result Http.Error (Dict String ColumnInfo))
+rInfo domain path decoder = get (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
            
 mkResourcesI : String -> String -> D.Decoder a -> Encoder a -> T.ResourcesI a
 mkResourcesI domain path decoder encoder =
@@ -91,26 +77,3 @@ getImpl : String -> T.API
 getImpl domain = { system   = mkSystemI   domain
                  , channels = mkChannelsI domain }
 
-
-{- 
-type Msg2 = Click | NewBook (Result Http.Error String)
-
-type Model = Dummy
-model = Dummy
-    
-update : Msg2 -> Model -> Model
-update msg model =
-    case msg of
-        Click ->
-            ( model, getWarAndPeace )
-        NewBook (Ok book) ->
-            ( model, getWarAndPeace )
-        NewBook (Err _) ->
-            ( model, getWarAndPeace )
-getWarAndPeace : Cmd Msg2
-getWarAndPeace =
-    Http.send NewBook <| Http.getString "https://example.com/books/war-and-peace.md"
-                                                                                                                               
--}
-
-    
