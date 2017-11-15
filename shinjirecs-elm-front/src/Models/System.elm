@@ -2,7 +2,7 @@ module Models.System exposing (System, SystemId,systemDecoder,systemEncoder,new)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
-import Models.Types exposing (map9,Encoder)
+import Utils.Json exposing (map9,Encoder)
 
 type SystemId = SystemId Int
 type alias System =

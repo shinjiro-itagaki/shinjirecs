@@ -1,7 +1,7 @@
 module Models.Reservation exposing (Reservation,ReservationId)
 import Time exposing (Time)
 import Json.Decode as D
-import Models.Types exposing (map16)
+import Utils.Json exposing (map16)
 
 type State = Canceled -- -2
            | Failed -- -1

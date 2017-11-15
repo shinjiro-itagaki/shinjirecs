@@ -1,5 +1,5 @@
 module Models.ProgramTitle exposing (ProgramTitle,ProgramTitleId)
-import Models.Types exposing (map15,fromTimeToDateDecoder)
+import Utils.Json exposing (map15,fromTimeToDateDecoder)
 import Time exposing (Time)
 import Json.Decode as D
 import Date exposing (Date)

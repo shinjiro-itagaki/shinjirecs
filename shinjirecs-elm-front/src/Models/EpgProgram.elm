@@ -1,7 +1,7 @@
 module Models.EpgProgram exposing (EpgProgram,EpgProgramId)
 import Time exposing (Time)
-import Models.Types exposing (map9)
 import Json.Decode as D
+import Utils.Json exposing (map9,Encoder)
 
 type EpgProgramId = EpgProgramId Int
 type alias EpgProgram =
