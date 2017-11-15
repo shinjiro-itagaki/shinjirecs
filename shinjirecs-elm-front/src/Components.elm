@@ -10,7 +10,9 @@ import List exposing (singleton)
 
 { id, class, classList } = withNamespace "root"
 
-type MsgToRoot = FromSystem SystemC.Msg | Common CommonCmd
+type MsgFromComponent = FromSystem SystemC.Msg
+-- type MsgToRoot = FromSystem SystemC.Msg | Common CommonCmd
+type MsgToRoot = FromComponent MsgFromComponent | Common CommonCmd
 
 type alias Components = { system : SystemC }
 type alias Models = { currentC : Maybe ComponentSym
@@ -37,10 +39,27 @@ init = let x = components
                }
        in (m, Cmd.none)
 
+--mergeModel : ComponentSym -> Models
+--mergeModel (x,r,wr) ()
+
+updateComponent : Models
+                -> msg
+                -> (msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), Cmd msg))
+                -> (msg -> MsgFromComponent)
+                -> model
+                -> (Models -> model -> Models)
+                -> (Models, Cmd MsgToRoot)
+updateComponent models msg_ f_update f_castToMsgFromComponent model f_model_updater =
+    f_update msg_ (model, models.readonly, models.editable) |> \((m,wr),cmd) -> ( f_model_updater {models | editable = wr} m, Cmd.map (FromComponent << f_castToMsgFromComponent) cmd )
+    
 update : MsgToRoot -> Models -> (Models, Cmd MsgToRoot)
 update msg models =
     case msg of
-        FromSystem msg -> components.system.update msg (models.system, models.readonly, models.editable) |> \((m,wr),cmd) -> ( { models | system = m, editable = wr } , Cmd.map FromSystem cmd )
+        FromComponent msgfrom ->
+            let updateComponent__ = updateComponent models
+            in case msgfrom of
+                   FromSystem system_msg -> updateComponent__ system_msg components.system.update FromSystem models.system (\ms_ m_ -> {ms_ | system = m_})
+                                             
         Common (SwitchTo sym) -> ({ models | currentC = Just sym }, Cmd.none)
 
 subscriptions : Models -> Sub MsgToRoot
@@ -60,6 +79,6 @@ view models = div [ class [NavBar] ] <| singleton <|
 invoke : ComponentSym -> Models -> Html MsgToRoot
 invoke sym m =
     case sym of
-        SystemCSym -> Html.map FromSystem <| components.system.view (m.system,m.readonly,m.editable)
+        SystemCSym -> Html.map (FromComponent << FromSystem) <| components.system.view (m.system,m.readonly,m.editable)
 
 -- program : { init : (model, Cmd msg), update : msg -> model -> (model, Cmd msg), subscriptions : model -> Sub msg, view : model -> Html msg } -> Program Never model msg
