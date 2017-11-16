@@ -4,7 +4,7 @@ import Models.System exposing (System)
 import Models.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
-import Components.Partials exposing (mkInput)
+import Components.Partials exposing (formByColumns)
 
 type Msg = CountUp | None
 type alias SystemModel = { record : System }

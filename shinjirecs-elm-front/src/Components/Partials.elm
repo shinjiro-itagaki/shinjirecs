@@ -49,37 +49,41 @@ weekdayOptions = List.map (\w -> H.option [A.value <| toString <| weekdayToInt w
 
 weekdayChecks = List.map (\w -> H.input [A.type_ "checkbox", A.value <| toString <| weekdayToInt w] [H.text <| (weekdayLabel w).ja] ) weekdays
                  
-getInputConstructor : C.ColumnInfo -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
-getInputConstructor info =
-    case info.tipe of
-        C.StringT   -> (H.input    , [A.type_ "text"],[])
-        C.TextT     -> (H.textarea , [A.type_ "text"],[])
-        C.IntegerT  -> (H.input    , [A.type_ "number"],[])
-        C.FloatT    -> (H.input    , [A.type_ "number"],[])
-        C.DateT     -> (H.input    , [A.type_ "date"],[])
-        C.TimeT     -> (H.input    , [A.type_ "time"],[])
-        C.DateTimeT -> (H.input    , [A.type_ "datetime-local"],[])
-        C.PasswordT -> (H.input    , [A.type_ "password"],[])
-        C.HiddenT   -> (H.input    , [A.type_ "hidden"],[])
-        C.BooleanT  -> (H.input    , [A.type_ "checkbox"],[])
-        C.BelongsTo -> (H.select   , [],[])
-        C.HasMany   -> (H.input    , [A.type_ "checkbox"],[])
-        C.Tel       -> (H.input    , [A.type_ "tel"],[])
-        C.URL       -> (H.input    , [A.type_ "url"],[])
-        C.Email     -> (H.input    , [A.type_ "email"],[])
-        C.Month     -> (H.select   , [], monthOptions)
-        C.Week      -> (H.input    , [A.type_ "week"],[])
-        C.Weeks     -> (H.div      , []              ,weekdayChecks)
-        C.Range     -> (H.input    , [A.type_ "range"],[])
-        C.Color     -> (H.input    , [A.type_ "color"],[])
-            
-mkInput : C.ColumnInfo -> H.Html msg
-mkInput info =
+defaultInput : (String,C.ColumnInfo) -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
+defaultInput (name,info) =
     let
-        attrs = catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
+        aname = A.name name
+        attrs = (++) [aname] <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
     in
-        H.input attrs []
+        case info.tipe of
+            C.StringT   -> (H.input    , attrs ++ [A.type_ "text"]          ,[])
+            C.TextT     -> (H.textarea , attrs ++ [A.type_ "text"]          ,[])
+            C.IntegerT  -> (H.input    , attrs ++ [A.type_ "number"]        ,[])
+            C.FloatT    -> (H.input    , attrs ++ [A.type_ "number"]        ,[])
+            C.DateT     -> (H.input    , attrs ++ [A.type_ "date"]          ,[])
+            C.TimeT     -> (H.input    , attrs ++ [A.type_ "time"]          ,[])
+            C.DateTimeT -> (H.input    , attrs ++ [A.type_ "datetime-local"],[])
+            C.PasswordT -> (H.input    , attrs ++ [A.type_ "password"]      ,[])
+            C.HiddenT   -> (H.input    , attrs ++ [A.type_ "hidden"]        ,[])
+            C.BooleanT  -> (H.input    , attrs ++ [A.type_ "checkbox"]      ,[])
+            C.BelongsTo -> (H.select   , attrs                             ,[])
+            C.HasMany   -> (H.input    , attrs ++ [A.type_ "checkbox"]      ,[])
+            C.Tel       -> (H.input    , attrs ++ [A.type_ "tel"]           ,[])
+            C.URL       -> (H.input    , attrs ++ [A.type_ "url"]           ,[])
+            C.Email     -> (H.input    , attrs ++ [A.type_ "email"]         ,[])
+            C.Month     -> (H.select   , attrs                              ,monthOptions)
+            C.Week      -> (H.input    , attrs ++ [A.type_ "week"]          ,[])
+            C.Weeks     -> (H.div      , attrs                              ,weekdayChecks)
+            C.Range     -> (H.input    , attrs ++ [A.type_ "range"]         ,[])
+            C.Color     -> (H.input    , attrs ++ [A.type_ "color"]         ,[])
+            
+mkInput : (String,C.ColumnInfo) -> H.Html msg
+mkInput (name,info) = defaultInput (name,info) |> ( \(f,attrs,children) -> f attrs children )
 
 formByColumns : List (String, C.ColumnInfo) -> H.Html msg
 formByColumns colmap =
-    H.dl [] <| List.concat <| List.map (\(colname,info) -> [ H.dt [] [H.text colname], H.dd [] [mkInput info]] ) colmap
+    H.form [] <| List.singleton <|
+        H.dl [] <| List.concat <| List.map (\x -> [ H.dt [] [H.text <| Tuple.first x]
+                                                  , H.dd [] [mkInput x]
+                                                  ]
+                                           ) colmap
