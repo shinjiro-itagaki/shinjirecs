@@ -1,9 +1,29 @@
-module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new)
+module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..))
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
 import Utils.Json exposing (map9,Encoder)
+import Records.Types exposing (ChannelType(GR,BS))
+import Result exposing (map,mapError)
 
+type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
+
+toBool : String -> Result String Bool
+toBool = Result.map (\x -> x > 0) << String.toInt
+    
+updateSystem : System -> ColumnTarget -> String -> Result (String,ColumnTarget) System
+updateSystem rec target valstr =
+    let common : (a -> System) -> (String -> Result String a) -> Result (String,ColumnTarget) System
+        common f1 f2 = Result.map f1 <| mapError (\s -> (s,target)) <| f2 valstr
+    in case target of
+           AreaId            -> common (\v -> {rec | area_id             = v} ) String.toInt
+           Active            -> common (\v -> {rec | active              = v} ) toBool
+           Setup             -> common (\v -> {rec | setup               = v} ) toBool
+           TunerCount GR     -> common (\v -> {rec | gr_tuner_count      = v} ) String.toInt
+           TunerCount BS     -> common (\v -> {rec | bs_tuner_count      = v} ) String.toInt
+           RestTunerCount GR -> common (\v -> {rec | rest_gr_tuner_count = v} ) String.toInt
+           RestTunerCount BS -> common (\v -> {rec | rest_bs_tuner_count = v} ) String.toInt
+    
 type SystemId = SystemId Int
 type alias System =
     { area_id : Int

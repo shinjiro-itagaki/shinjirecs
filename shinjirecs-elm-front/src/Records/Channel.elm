@@ -1,10 +1,9 @@
 module Records.Channel exposing (Channel,ChannelId,channelDecoder,channelTypeDecoder,channelEncoder)
+import Records.Types exposing (ChannelType(BS,GR))
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
 import Utils.Json exposing (map9,Encoder)
-
-type ChannelType = GR | BS
 
 toType : String -> ChannelType
 toType s =

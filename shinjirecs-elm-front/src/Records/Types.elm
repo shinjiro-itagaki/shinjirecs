@@ -7,3 +7,5 @@ type alias Entity a =
     { id  : Int
     , val : a
     }
+
+type ChannelType = GR | BS    

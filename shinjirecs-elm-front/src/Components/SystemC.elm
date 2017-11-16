@@ -25,7 +25,7 @@ update : Msg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> ((Syste
 update msg (model,r,wr) =
     case msg of
         CountUp -> ((model,{ wr | counter = wr.counter + 1 }),Cmd.none)
-        None -> ((model,wr),Cmd.none)
+        _ -> ((model,wr),Cmd.none)
 
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Msg
 subscriptions (m,r,wr) = Sub.none
