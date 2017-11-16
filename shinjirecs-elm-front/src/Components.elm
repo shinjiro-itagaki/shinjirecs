@@ -8,6 +8,7 @@ import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCss
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
 import List exposing (singleton)
+import API exposing (getAPI)
 
 { id, class, classList } = withNamespace "root"
 
@@ -35,7 +36,7 @@ init : (Models, Cmd MsgToRoot)
 init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
-               , readonly = { config = 1 }
+               , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000" }
                , editable = { counter = 0 }
                }
        in (m, Cmd.none)

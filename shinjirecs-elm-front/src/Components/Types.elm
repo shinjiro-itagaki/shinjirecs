@@ -1,7 +1,8 @@
 module Components.Types exposing (Component,ComponentSym(..),CommonCmd(..),CommonModelReadOnly,CommonModelEditable)
 import Html exposing (Html,div,input,text,li,Attribute)
+import API exposing (API,getAPI)
 
-type alias CommonModelReadOnly = { config : Int }
+type alias CommonModelReadOnly = { config : Int, api : API }
 type alias CommonModelEditable = { counter : Int }
 
 type alias Component model msg = { init          : model -- (model, Cmd msg)
