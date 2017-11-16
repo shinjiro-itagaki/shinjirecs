@@ -1,12 +1,13 @@
 module Components.SystemC exposing (SystemModel,SystemC,new,Msg) -- ,newSystemC)
 import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable)
+import Components.SystemMsg exposing (SystemMsg(None,CountUp))
 import Models.System exposing (System)
 import Models.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
 import Components.Partials exposing (formByColumns)
 
-type Msg = CountUp | None
+type alias Msg = SystemMsg
 type alias SystemModel = { record : System }
 type alias SystemC = Component SystemModel Msg
 
