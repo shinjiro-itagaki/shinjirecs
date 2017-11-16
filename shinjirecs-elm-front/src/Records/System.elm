@@ -10,20 +10,52 @@ type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTuner
 
 toBool : String -> Result String Bool
 toBool = Result.map (\x -> x > 0) << String.toInt
-    
+
+common : String -> tgt -> rec -> (rec -> a -> rec) -> (String -> Result String a) -> Result (String,tgt) rec
+common valstr target rec replacer caster = Result.map (replacer rec) <| mapError (\s -> (s,target)) <| caster valstr
+
 updateSystem : System -> ColumnTarget -> String -> Result (String,ColumnTarget) System
 updateSystem rec target valstr =
-    let common : (a -> System) -> (String -> Result String a) -> Result (String,ColumnTarget) System
-        common f1 f2 = Result.map f1 <| mapError (\s -> (s,target)) <| f2 valstr
+    let common_ = common valstr target rec
     in case target of
-           AreaId            -> common (\v -> {rec | area_id             = v} ) String.toInt
-           Active            -> common (\v -> {rec | active              = v} ) toBool
-           Setup             -> common (\v -> {rec | setup               = v} ) toBool
-           TunerCount GR     -> common (\v -> {rec | gr_tuner_count      = v} ) String.toInt
-           TunerCount BS     -> common (\v -> {rec | bs_tuner_count      = v} ) String.toInt
-           RestTunerCount GR -> common (\v -> {rec | rest_gr_tuner_count = v} ) String.toInt
-           RestTunerCount BS -> common (\v -> {rec | rest_bs_tuner_count = v} ) String.toInt
-    
+           AreaId            -> common_ replace_area_id             String.toInt
+           Active            -> common_ replace_active              toBool
+           Setup             -> common_ replace_setup               toBool
+           TunerCount GR     -> common_ replace_gr_tuner_count      String.toInt
+           TunerCount BS     -> common_ replace_bs_tuner_count      String.toInt
+           RestTunerCount GR -> common_ replace_rest_gr_tuner_count String.toInt
+           RestTunerCount BS -> common_ replace_rest_bs_tuner_count String.toInt
+
+replace_area_id : System -> Int -> System
+replace_area_id rec v = {rec | area_id = v }
+replace_active : System -> Bool -> System
+replace_active rec v = { rec | active = v }
+replace_setup : System -> Bool -> System
+replace_setup rec v = { rec | setup = v }
+replace_gr_tuner_count : System -> Int -> System
+replace_gr_tuner_count rec v = { rec | gr_tuner_count = v }
+replace_bs_tuner_count : System -> Int -> System
+replace_bs_tuner_count rec v = { rec | bs_tuner_count = v }
+replace_rest_gr_tuner_count : System -> Int -> System
+replace_rest_gr_tuner_count rec v = { rec | rest_gr_tuner_count = v }
+replace_rest_bs_tuner_count : System -> Int -> System
+replace_rest_bs_tuner_count rec v = { rec | rest_bs_tuner_count = v }
+
+area_id : System -> Int
+area_id rec = rec.area_id
+active : System -> Bool
+active rec = rec.active
+setup : System -> Bool
+setup rec = rec.setup
+gr_tuner_count : System -> Int
+gr_tuner_count rec = rec.gr_tuner_count
+bs_tuner_count : System -> Int
+bs_tuner_count rec = rec.bs_tuner_count
+rest_gr_tuner_count : System -> Int
+rest_gr_tuner_count rec = rec.rest_gr_tuner_count
+rest_bs_tuner_count : System -> Int
+rest_bs_tuner_count rec = rec.rest_bs_tuner_count
+                                    
 type SystemId = SystemId Int
 type alias System =
     { area_id : Int
@@ -36,7 +68,7 @@ type alias System =
     , created_at : Time
     , updated_at : Time
     }
-    
+        
 new : System
 new = { area_id = 0
       , active = False
