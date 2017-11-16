@@ -1,4 +1,4 @@
-module Models.ColumnInfo exposing (ColumnInfo,columnInfoDecoder,minimum,maximum,Typ(..))
+module Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder,minimum,maximum,Typ(..))
 import Json.Decode as D
 import Utils.Maybe exposing (or)
 import Utils.Json exposing (map9)

@@ -1,5 +1,5 @@
 module Components.Partials exposing (..)
-import Models.ColumnInfo as C exposing (..)
+import Records.ColumnInfo as C exposing (..)
 import Html as H exposing (..)
 import Html.Attributes as A exposing (..)
 import Utils.Maybe exposing (or,catMaybes)

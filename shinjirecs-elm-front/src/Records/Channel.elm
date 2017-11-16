@@ -1,4 +1,4 @@
-module Models.Channel exposing (Channel,ChannelId,channelDecoder,channelTypeDecoder,channelEncoder)
+module Records.Channel exposing (Channel,ChannelId,channelDecoder,channelTypeDecoder,channelEncoder)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E

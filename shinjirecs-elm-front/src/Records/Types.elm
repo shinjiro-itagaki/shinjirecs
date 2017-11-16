@@ -1,4 +1,4 @@
-module Models.Types exposing (..)
+module Records.Types exposing (..)
 import Json.Decode as D
 import Json.Encode exposing (Value)
 import Date as D

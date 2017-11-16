@@ -1,4 +1,4 @@
-module Models.EpgProgram exposing (EpgProgram,EpgProgramId)
+module Records.EpgProgram exposing (EpgProgram,EpgProgramId)
 import Time exposing (Time)
 import Json.Decode as D
 import Utils.Json exposing (map9,Encoder)

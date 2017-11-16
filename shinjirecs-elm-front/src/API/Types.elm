@@ -1,15 +1,15 @@
 module API.Types exposing (API,SystemI,ChannelsI,ResourcesI)
 import Dict exposing (Dict)
 import Http
-import Models.Types exposing (Entity)
-import Models.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
-import Models.Area exposing (Area)
-import Models.EpgProgram exposing (EpgProgram)
-import Models.ProgramTitle exposing (ProgramTitle)
-import Models.System exposing (System)
-import Models.Channel exposing (Channel)
-import Models.EpgProgramCategory exposing (EpgProgramCategory)
-import Models.Reservation exposing (Reservation)
+import Records.Types exposing (Entity)
+import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
+import Records.Area exposing (Area)
+import Records.EpgProgram exposing (EpgProgram)
+import Records.ProgramTitle exposing (ProgramTitle)
+import Records.System exposing (System)
+import Records.Channel exposing (Channel)
+import Records.EpgProgramCategory exposing (EpgProgramCategory)
+import Records.Reservation exposing (Reservation)
 
 
 {- type Error = BadUrl String

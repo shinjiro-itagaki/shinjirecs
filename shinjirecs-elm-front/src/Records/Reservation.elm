@@ -1,4 +1,4 @@
-module Models.Reservation exposing (Reservation,ReservationId)
+module Records.Reservation exposing (Reservation,ReservationId)
 import Time exposing (Time)
 import Json.Decode as D
 import Utils.Json exposing (map16)

@@ -1,4 +1,4 @@
-module Models.System exposing (System, SystemId,systemDecoder,systemEncoder,new)
+module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E

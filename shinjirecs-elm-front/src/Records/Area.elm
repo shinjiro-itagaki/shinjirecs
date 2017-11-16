@@ -1,4 +1,4 @@
-module Models.Area exposing (Area,AreaId)
+module Records.Area exposing (Area,AreaId)
 import Time exposing (Time)
 import Json.Decode as D
 

@@ -1,4 +1,4 @@
-module Models.ProgramTitle exposing (ProgramTitle,ProgramTitleId)
+module Records.ProgramTitle exposing (ProgramTitle,ProgramTitleId)
 import Utils.Json exposing (map15,fromTimeToDateDecoder)
 import Time exposing (Time)
 import Json.Decode as D

@@ -1,4 +1,4 @@
-module Models.EpgProgramCategory exposing (EpgProgramCategory,EpgProgramCategoryId)
+module Records.EpgProgramCategory exposing (EpgProgramCategory,EpgProgramCategoryId)
 import Time exposing (Time)
 import Json.Decode as D
 
