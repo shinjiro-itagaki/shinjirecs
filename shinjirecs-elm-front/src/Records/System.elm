@@ -21,7 +21,17 @@ stringToTarget str =
         _                     -> Nothing
     
 toBool : String -> Result String Bool
-toBool = Result.map (\x -> x > 0) << String.toInt
+toBool str =
+    case String.toLower str of
+        "on"    -> Ok True
+        "t"     -> Ok True
+        "true"  -> Ok True
+        "yes"   -> Ok True
+        "off"   -> Ok False
+        "f"     -> Ok False
+        "false" -> Ok False
+        "no"    -> Ok False
+        x       -> Result.map (\x -> x > 0) <| String.toInt x
 
 common : String -> tgt -> rec -> (rec -> a -> rec) -> (String -> Result String a) -> Result (String,tgt) rec
 common valstr target rec replacer caster = Result.map (replacer rec) <| mapError (\s -> (s,target)) <| caster valstr
