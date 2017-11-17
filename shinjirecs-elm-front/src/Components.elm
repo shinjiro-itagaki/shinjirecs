@@ -2,16 +2,19 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
-import Components.Types exposing (MsgToRoot(SwitchTo,NoComponentSelected,FromSystem,ShowHttpError),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
 import List exposing (singleton)
 import API exposing (getAPI)
 import Components.SystemC as SystemC
+import Components.SystemMsg exposing (SystemMsg)
 
 { id, class, classList } = withNamespace "root"
 
+type Either a b = Left a | Right b
+                           
 type alias Components = { system : SystemC }
 type alias Models = { currentC : Maybe ComponentSym
                     , readonly : CommonModelReadOnly
@@ -19,6 +22,8 @@ type alias Models = { currentC : Maybe ComponentSym
                     , system : SystemModel
                     }
 
+type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | None
+    
 components : Components
 components = { system = SystemC.new }
 
@@ -28,7 +33,7 @@ root = program { init = init
                , subscriptions = subscriptions
                }
 
-init : (Models, Cmd MsgToRoot)
+init : (Models, Cmd PrivateRootMsg)
 init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
@@ -37,54 +42,68 @@ init = let x = components
                }
        in (m, Cmd.none)
 
---mergeModel : ComponentSym -> Models
---mergeModel (x,r,wr) ()
-
 updateComponent : Models
                 -> msg
-                -> (msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), Cmd msg))
-                -> (msg -> MsgToRoot)
+                -> (msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), NextMsg msg))
+                -> (msg -> PrivateRootMsg)
                 -> model
                 -> (Models -> model -> Models)
-                -> (Models, Cmd MsgToRoot)
-updateComponent models msg_ f_update f_castToMsgToRoot model f_model_updater =
-    f_update msg_ (model, models.readonly, models.editable) |> \((m,wr),cmd) -> ( f_model_updater {models | editable = wr} m, Cmd.map f_castToMsgToRoot cmd )
-    
-update : MsgToRoot -> Models -> (Models, Cmd MsgToRoot)
+                -> (Models, Either PrivateRootMsg (Cmd PrivateRootMsg))
+updateComponent models msg_ f_update f_castToPrivateRootMsg model f_model_updater =
+    f_update msg_ (model, models.readonly, models.editable)
+        |> \((m,wr),nextmsg) ->
+            let rootmsg =
+                    case nextmsg of
+                        ToRoot  msg -> Left  <| ToRootPrivate msg
+                        Direct  msg -> Left  <| f_castToPrivateRootMsg msg
+                        NextCmd cmd -> Right <| Cmd.map f_castToPrivateRootMsg cmd
+                        NoNext      -> Left None
+            in ( f_model_updater {models | editable = wr} m, rootmsg )
+
+update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     let updateComponent__ = updateComponent models
-        always = (models,Cmd.none)
+        none = (models,Cmd.none)
     in case msg of
-           FromSystem system_msg ->
-               updateComponent__ system_msg components.system.update FromSystem models.system (\ms_ m_ -> {ms_ | system = m_})
-           SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
-           NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
-           ShowHttpError httperr ->  always
+           ToRootPrivate rootmsg ->
+               case rootmsg of
+                   SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
+                   NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
+                   ShowHttpError httperr -> none
+           ToSystem system_msg ->
+               let (m,res) = updateComponent__ system_msg components.system.update ToSystem models.system (\ms_ m_ -> {ms_ | system = m_})
+               in case res of
+                      Left msg  -> update msg m
+                      Right cmd -> (m,cmd)
+           None -> none
 
-subscriptions : Models -> Sub MsgToRoot
+subscriptions : Models -> Sub PrivateRootMsg
 subscriptions m = Sub.none
 
-switchTo : ComponentSym -> MsgToRoot
-switchTo sym = SwitchTo sym
+switchTo : ComponentSym -> PrivateRootMsg
+switchTo = ToRootPrivate << SwitchTo
 
-componentView : Models -> Html MsgToRoot
+noComponentSelected : PrivateRootMsg
+noComponentSelected = ToRootPrivate NoComponentSelected
+           
+componentView : Models -> Html PrivateRootMsg
 componentView models =
     case models.currentC of
-        Just sym -> invoke sym models
+        Just sym -> invokeView sym models
         Nothing  -> H.div [] [
                      (H.button [E.onClick (switchTo SystemCSym)] [H.text "システム設定へ"])
                     ]
 
-view : Models -> Html MsgToRoot
+view : Models -> Html PrivateRootMsg
 view models = H.div [class [NavBar]] [
                H.header [] [
                     H.div [][H.text <| (++) "カウンター : " <| toString models.editable.counter]
-                   ,if models.currentC == Nothing then H.span [] [] else H.button [E.onClick NoComponentSelected] [H.text "選択解除へ"]
+                   ,if models.currentC == Nothing then H.span [] [] else H.button [E.onClick noComponentSelected] [H.text "選択解除へ"]
                    ]
               ,componentView models
               ,H.footer [] []
               ]
-invoke : ComponentSym -> Models -> Html MsgToRoot
-invoke sym m =
+invokeView : ComponentSym -> Models -> Html PrivateRootMsg
+invokeView sym m =
     case sym of
-        SystemCSym -> Html.map FromSystem <| components.system.view (m.system,m.readonly,m.editable)
+        SystemCSym -> Html.map ToSystem <| components.system.view (m.system,m.readonly,m.editable)
