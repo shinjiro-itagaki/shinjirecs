@@ -33,15 +33,16 @@ init = {system_record = System.new, system_schema = Nothing}
 update : Msg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> ((SystemModel,CommonModelEditable), Cmd Msg)
 update msg (model,r,wr) =
     let always = ((model,wr),Cmd.none)
+        sendErrMsg errmsg = ((model, { wr | errmsg = Just errmsg }),Cmd.none)
     in case msg of
            CountUp -> ((model,{ wr | counter = wr.counter + 1 }),Cmd.none)
            LoadSchema -> ((model,wr),Cmd.map LoadSchemaResult r.api.system.info)
-           LoadSchemaResult (Ok res) -> always -- not impl (({model | system_schema = res}, wr), Cmd.none)
-           LoadSchemaResult (Err httperr) -> always
+           LoadSchemaResult (Ok res) -> (({model | system_schema = Just res}, wr), Cmd.none)
+           LoadSchemaResult (Err httperr) -> sendErrMsg "load schema error"
            SystemInput target val ->
-               case updateSystem model.system_record target val of -- : System -> ColumnTarget -> String -> Result (String,ColumnTarget) System
+               case updateSystem model.system_record target val of
                    Ok newsystem -> (({ model | system_record = newsystem },wr),Cmd.none)
-                   Err (colname,target2) -> always -- not impl ((model, { wr | errmsg = colname ++ " input error" }),Cmd.none)
+                   Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
            _ -> always
 
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Msg
@@ -54,8 +55,10 @@ view (model,r,wr) = div [] <| [
                     ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
                     ,div [] (case model.system_schema of
                                  Nothing -> []
-                                 Just scm -> [formByColumns <| cast scm]
-                            )
+                                 Just scm -> [formByColumns <| cast scm])
+                    ,div [] <| case wr.errmsg of
+                                   Just errmsg -> [text <| errmsg]
+                                   Nothing     -> []
                     ]
 
 -- Dict String ColumnInfo =>  =>  =>  => List (String, (ColumnInfo,func)) => Dict String (ColumnInfo,func)
