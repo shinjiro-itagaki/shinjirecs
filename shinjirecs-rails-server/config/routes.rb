@@ -1,5 +1,5 @@
 Rails.application.routes.draw do
-  root to: "systems#root"
+#  root to: "systems#root"
 
   [ :systems,
     :areas,

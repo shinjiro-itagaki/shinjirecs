@@ -20,3 +20,4 @@
 .byebug_history
 /vendor/bundle/*
 !/vendor/bundle/.keep
+/public/*

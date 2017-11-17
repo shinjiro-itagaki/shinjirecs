@@ -52,5 +52,6 @@ view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html Msg
 view (model,r,wr) = div [] [
                      text <| "システム設定"
                     ,button [ onClick CountUp ] [text <| "カウントアップ"]
+                    ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
                     ]
     
