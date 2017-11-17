@@ -33,7 +33,7 @@ init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
                , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000" }
-               , editable = { counter = 0 }
+               , editable = { counter = 0, errmsg = Nothing }
                }
        in (m, Cmd.none)
 

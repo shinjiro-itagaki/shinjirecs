@@ -1,4 +1,4 @@
-module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..))
+module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..),stringToTarget,updateSystem)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
@@ -8,6 +8,18 @@ import Result exposing (map,mapError)
 
 type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
 
+stringToTarget : String -> Maybe ColumnTarget
+stringToTarget str =
+    case str of
+        "area_id"             -> Just AreaId
+        "active"              -> Just Active
+        "setup"               -> Just Setup
+        "gr_tuner_count"      -> Just (TunerCount GR)
+        "bs_tuner_count"      -> Just (TunerCount BS)
+        "rest_gr_tuner_count" -> Just (RestTunerCount GR)
+        "rest_bs_tuner_count" -> Just (RestTunerCount BS)
+        _                     -> Nothing
+    
 toBool : String -> Result String Bool
 toBool = Result.map (\x -> x > 0) << String.toInt
 

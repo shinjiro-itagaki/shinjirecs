@@ -4,7 +4,7 @@ import API exposing (API,getAPI)
 import Components.SystemMsg exposing (SystemMsg)
 
 type alias CommonModelReadOnly = { config : Int, api : API }
-type alias CommonModelEditable = { counter : Int }
+type alias CommonModelEditable = { counter : Int, errmsg : Maybe String }
 
 type alias Component model msg = { init          : model -- (model, Cmd msg)
                                  , update        : msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), Cmd msg)

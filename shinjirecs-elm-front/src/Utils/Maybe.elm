@@ -8,8 +8,6 @@ or x y = case x of
 catMaybes : List (Maybe a) -> List a
 catMaybes xs = case xs of
                    []            -> []
-                   (Just x)::[]  -> [x]
-                   Nothing::[]   -> []
-                   (Just x)::xs_ -> [x] ++ catMaybes xs_
-                   Nothing::xs_  -> catMaybes xs_
+                   (Just x)::xs_ -> x :: (catMaybes xs_)
+                   Nothing ::xs_ -> catMaybes xs_
                      

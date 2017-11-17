@@ -5,6 +5,7 @@ import Html.Attributes as A exposing (..)
 import Html.Events as E exposing (..)
 import Utils.Maybe exposing (or,catMaybes)
 import Utils.DateTime exposing (weekdayLabel,weekdayToInt,weekdays,monthToInt,months,weekdayFlagsToInt,intToWeekdayFlags)
+import Dict exposing (Dict)
     
 {-
   nullable  : Bool
@@ -79,10 +80,10 @@ defaultInput (name,info) =
 mkInput : String -> C.ColumnInfo -> (String -> msg) -> H.Html msg
 mkInput name info to_msg = (\(f,attrs,children) -> f ([E.onInput to_msg, E.onCheck <| to_msg << (\b -> if b then "1" else "0" )] ++ attrs) children ) <| defaultInput (name,info)
 
-formByColumns : List (String, C.ColumnInfo,(String -> msg)) -> H.Html msg
+formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> H.Html msg
 formByColumns colmap =
     H.form [] <| List.singleton <|
-        H.dl [] <| List.concat <| List.map (\(nm,info,f) -> [ H.dt [] [H.text nm]
+        H.dl [] <| List.concat <| List.map (\(nm,(info,f)) -> [ H.dt [] [H.text nm]
                                                   , H.dd [] [mkInput nm info f]
                                                   ]
-                                           ) colmap
+                                           ) <| Dict.toList colmap
