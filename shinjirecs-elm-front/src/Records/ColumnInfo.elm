@@ -68,8 +68,8 @@ minimum info =
 maximum : ColumnInfo -> Maybe Int
 maximum info =
     case info.tipe of
-        StringT   -> or info.minimum info.limit
-        TextT     -> or info.minimum info.limit
-        IntegerT  -> or info.minimum <| Maybe.map (\byte -> (\x -> x - 1) <| if byte < 1 then 1 else 2^(byte * 8 - 1)) info.limit
-        FloatT    -> info.minimum 
+        StringT   -> or info.maximum info.limit
+        TextT     -> or info.maximum info.limit
+        IntegerT  -> or info.maximum <| Maybe.map (\byte -> (\x -> x - 1) <| if byte < 1 then 1 else 2^(byte * 8 - 1)) info.limit
+        FloatT    -> info.maximum 
         _         -> Nothing
