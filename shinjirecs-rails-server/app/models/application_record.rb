@@ -29,7 +29,7 @@ class ApplicationRecord < ActiveRecord::Base
     self.permitted_params.each do |k|
       k = k.to_s
       if c = cols[k] then
-        info[k] = {"type" => c.type, "null" => c.null, "default" => c.default, "limit" => c.limit, "precision" => c.precision, "scale" => c.scale }
+        info[k] = {"type" => c.type, "nullable" => c.null, "default" => c.default, "limit" => c.limit, "precision" => c.precision, "scale" => c.scale }
       else
         info[k] = {}
       end
