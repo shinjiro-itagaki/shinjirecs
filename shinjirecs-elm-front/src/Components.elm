@@ -10,6 +10,7 @@ import List exposing (singleton)
 import API exposing (getAPI)
 import Components.SystemC as SystemC
 import Components.SystemMsg exposing (SystemMsg)
+import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
 
 { id, class, classList } = withNamespace "root"
 
@@ -64,7 +65,16 @@ showErrMsg : Models -> String -> Models
 showErrMsg models msg =
     let editable = models.editable
     in { models | editable = { editable | errmsg = Just msg}}
-                
+
+httpErrorToMsg : Http.Error -> String
+httpErrorToMsg err =
+    case err of
+        BadUrl url -> "BadUrl: " ++ url
+        Timeout -> "Timeout"
+        NetworkError -> "NetworkError"
+        BadStatus response -> response.body
+        BadPayload str response -> "error message = " ++ str ++ " , body = " ++ response.body
+            
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     let updateComponent__ = updateComponent models
@@ -74,7 +84,7 @@ update msg models =
                case rootmsg of
                    SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
                    NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
-                   ShowHttpError httperr -> (showErrMsg models "ShowHttpError", Cmd.none)
+                   ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
            ToSystem system_msg ->
                let (m,res) = updateComponent__ system_msg components.system.update ToSystem models.system (\ms_ m_ -> {ms_ | system = m_})
                in case res of
