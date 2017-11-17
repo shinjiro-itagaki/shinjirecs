@@ -27,19 +27,19 @@ type alias ProgramTitle =
 programTitleDecoder : D.Decoder ProgramTitle
 programTitleDecoder =
     map15 ProgramTitle
-        (D.at ["start_at"] D.int) -- 0 ~ (24 * 3600 - 1), from second from 00:00:00
-        (D.at ["duration"] D.int)
-        (D.at ["channel_id"] D.int)
-        (D.at ["title"] D.string)
-        (D.at ["desc"] D.string)
-        (D.at ["program_category_id"] D.int)
-        (D.at ["next_counter"] D.int)
-        (D.at ["weekdays"] D.int)
-        (D.at ["auto_next"] D.bool)
-        (D.at ["label_format"] D.string)
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
-        (D.at ["begin_on"]  (D.maybe fromTimeToDateDecoder))
-        (D.at ["finish_on"] (D.maybe fromTimeToDateDecoder))
-        (D.at ["dayoffs"]   (D.list  fromTimeToDateDecoder))
+        (D.field "start_at"             D.int) -- 0 ~ (24 * 3600 - 1), from second from 00:00:00
+        (D.field "duration"             D.int)
+        (D.field "channel_id"           D.int)
+        (D.field "title"                D.string)
+        (D.field "desc"                 D.string)
+        (D.field "program_category_id"  D.int)
+        (D.field "next_counter"         D.int)
+        (D.field "weekdays"             D.int)
+        (D.field "auto_next"            D.bool)
+        (D.field "label_format"         D.string)
+        (D.field "created_at"           D.float)
+        (D.field "updated_at"           D.float)
+        (D.field "begin_on"            (D.maybe fromTimeToDateDecoder))
+        (D.field "finish_on"           (D.maybe fromTimeToDateDecoder))
+        (D.field "dayoffs"             (D.list  fromTimeToDateDecoder))
     

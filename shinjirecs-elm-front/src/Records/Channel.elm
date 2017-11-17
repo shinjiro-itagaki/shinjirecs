@@ -35,13 +35,13 @@ channelDecoder : D.Decoder Channel
 channelDecoder =
     D.map7
         Channel
-        (D.at ["number"] D.int)
-        (D.at ["area_id"] D.int)
-        (D.at ["ctype"] channelTypeDecoder)
-        (D.at ["display_name"] D.string)
-        (D.at ["order"] D.int)
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
+        (D.field "number"        D.int)
+        (D.field "area_id"       D.int)
+        (D.field "ctype"         channelTypeDecoder)
+        (D.field "display_name"  D.string)
+        (D.field "order"         D.int)
+        (D.field "created_at"    D.float)
+        (D.field "updated_at"    D.float)
 
 channelEncoder : Encoder Channel
 channelEncoder x =

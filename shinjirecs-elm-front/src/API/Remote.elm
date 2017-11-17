@@ -13,7 +13,7 @@ import Dict exposing (Dict)
 
 common : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
 common d mkReq =
-    let req = mkReq <| D.at ["body"] d
+    let req = mkReq <| D.field "body" d
     in Http.send (\res -> res) req
 
 head : String -> D.Decoder a -> Cmd (Result Http.Error a)

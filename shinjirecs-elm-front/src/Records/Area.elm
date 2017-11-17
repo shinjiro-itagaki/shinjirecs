@@ -12,7 +12,7 @@ type alias Area = { label : String
 areaDecoder : D.Decoder Area
 areaDecoder =
     D.map4 Area
-        (D.at ["label"] D.string)
-        (D.at ["channels_checked"] D.bool)
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
+        (D.field "label"            D.string)
+        (D.field "channels_checked" D.bool)
+        (D.field "created_at"       D.float)
+        (D.field "updated_at"       D.float)

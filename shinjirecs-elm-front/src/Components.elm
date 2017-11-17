@@ -73,7 +73,7 @@ httpErrorToMsg err =
         Timeout -> "Timeout"
         NetworkError -> "NetworkError"
         BadStatus response -> response.body
-        BadPayload str response -> "error message = " ++ str ++ " , body = " ++ response.body
+        BadPayload str response -> "bad payload error message = " ++ str ++ " , body = " ++ response.body
             
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =

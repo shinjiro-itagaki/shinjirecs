@@ -20,12 +20,12 @@ programDecoder : D.Decoder EpgProgram
 programDecoder =
     map9
         EpgProgram
-        (D.at ["start_time"] D.float)
-        (D.at ["stop_time"] D.float)
-        (D.at ["channel_id"] D.int)
-        (D.at ["title"] D.string)
-        (D.at ["desc"] D.string)
-        (D.at ["event_id"] D.int)
-        (D.at ["epg_program_category_id"] D.int)
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
+        (D.field "start_time"               D.float)
+        (D.field "stop_time"                D.float)
+        (D.field "channel_id"               D.int)
+        (D.field "title"                    D.string)
+        (D.field "desc"                     D.string)
+        (D.field "event_id"                 D.int)
+        (D.field "epg_program_category_id"  D.int)
+        (D.field "created_at"               D.float)
+        (D.field "updated_at"               D.float)

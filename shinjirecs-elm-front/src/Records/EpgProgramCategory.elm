@@ -14,9 +14,9 @@ type alias EpgProgramCategory =
 epgProgramCategoryDecoder : D.Decoder EpgProgramCategory
 epgProgramCategoryDecoder =
     D.map5 EpgProgramCategory
-        (D.at ["label_ja"] D.string)
-        (D.at ["label_en"] D.string)
-        (D.at ["parent_id"] (D.maybe D.int))
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
+        (D.field "label_ja"    D.string)
+        (D.field "label_en"    D.string)
+        (D.field "parent_id"  (D.maybe  D.int))
+        (D.field "created_at"  D.float)
+        (D.field "updated_at"  D.float)
     

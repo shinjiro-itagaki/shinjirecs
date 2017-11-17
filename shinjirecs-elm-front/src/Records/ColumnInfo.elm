@@ -45,15 +45,15 @@ columnInfoDecoder : D.Decoder ColumnInfo
 columnInfoDecoder =
     map9
         ColumnInfo
-        (D.at ["nullable"]  D.bool)
-        (D.at ["default"]   (D.nullable D.string))
-        (D.at ["limit"]     (D.nullable D.int))
-        (D.at ["precision"] (D.nullable D.int))
-        (D.at ["scale"]     (D.nullable D.int))
-        (D.at ["type"]      (D.map stringToTyp D.string))
-        (D.at ["maximum"]   (D.nullable D.int))
-        (D.at ["minimum"]   (D.nullable D.int))
-        (D.at ["list"]      (D.nullable <| D.list D.string))
+        (D.field "nullable"  (D.bool))
+        (D.field "default"   (D.maybe D.string))
+        (D.field "limit"     (D.maybe D.int))
+        (D.field "precision" (D.maybe D.int))
+        (D.field "scale"     (D.maybe D.int))
+        (D.field "type"      (D.map stringToTyp D.string))
+        (D.field "maximum"   (D.maybe D.int))
+        (D.field "minimum"   (D.maybe D.int))
+        (D.field "list"      (D.maybe <| D.list D.string))
             
 
 minimum : ColumnInfo -> Maybe Int

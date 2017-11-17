@@ -97,15 +97,15 @@ systemDecoder : D.Decoder System
 systemDecoder =
     map9
         System
-        (D.at ["area_id"] D.int)
-        (D.at ["active"] D.bool)
-        (D.at ["setup"] D.bool)
-        (D.at ["gr_tuner_count"] D.int)
-        (D.at ["bs_tuner_count"] D.int)
-        (D.at ["rest_gr_tuner_count"] D.int)
-        (D.at ["rest_bs_tuner_count"] D.int)
-        (D.at ["created_at"] D.float)
-        (D.at ["updated_at"] D.float)
+        (D.field "area_id"              D.int)
+        (D.field "active"               D.bool)
+        (D.field "setup"                D.bool)
+        (D.field "gr_tuner_count"       D.int)
+        (D.field "bs_tuner_count"       D.int)
+        (D.field "rest_gr_tuner_count"  D.int)
+        (D.field "rest_bs_tuner_count"  D.int)
+        (D.field "created_at"           D.float)
+        (D.field "updated_at"           D.float)
 
 systemEncoder : Encoder System
 systemEncoder x = E.object
