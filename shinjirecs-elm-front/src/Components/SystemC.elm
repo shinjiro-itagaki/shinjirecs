@@ -32,21 +32,21 @@ init = {system_record = System.new, system_schema = Nothing}
 update : SystemMsg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> ((SystemModel,CommonModelEditable), NextMsg SystemMsg)
 update msg (model,r,wr) =
     let always = ((model,wr),NoNext)
+        notimpl = ((model,wr),NoNext)
         sendErrMsg errmsg = ((model, { wr | errmsg = Just errmsg }), NoNext)
     in case msg of
            CountUp -> ((model,{ wr | counter = wr.counter + 1 }),NoNext)
            None -> always
            LoadSchema -> ((model,wr), NextCmd <| Cmd.map LoadSchemaResult r.api.system.info)
            LoadSchemaResult (Ok res) -> (({model | system_schema = Just res}, wr), NoNext)
-           LoadSchemaResult (Err httperr) -> sendErrMsg "load schema error"
-           -- LoadSchemaResult (Err httperr) -> ((model,wr), ShowHttpError httperr)
-           ShowAll -> always
-           Show id -> always
-           ShowNew -> always
-           PostNew params -> always
-           Edit entity -> always
-           Put entity -> always
-           Delete entity -> always
+           LoadSchemaResult (Err httperr) -> ((model,wr),ToRoot <| ShowHttpError httperr)
+           ShowAll -> notimpl
+           Show id -> notimpl
+           ShowNew -> notimpl
+           PostNew params -> notimpl
+           Edit entity -> notimpl
+           Put entity -> notimpl
+           Delete entity -> notimpl
            SystemInput target val ->
                case updateSystem model.system_record target val of
                    Ok newsystem -> (({ model | system_record = newsystem },wr),NoNext)

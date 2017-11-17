@@ -60,6 +60,11 @@ updateComponent models msg_ f_update f_castToPrivateRootMsg model f_model_update
                         NoNext      -> Left None
             in ( f_model_updater {models | editable = wr} m, rootmsg )
 
+showErrMsg : Models -> String -> Models
+showErrMsg models msg =
+    let editable = models.editable
+    in { models | editable = { editable | errmsg = Just msg}}
+                
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     let updateComponent__ = updateComponent models
@@ -69,7 +74,7 @@ update msg models =
                case rootmsg of
                    SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
                    NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
-                   ShowHttpError httperr -> none
+                   ShowHttpError httperr -> (showErrMsg models "ShowHttpError", Cmd.none)
            ToSystem system_msg ->
                let (m,res) = updateComponent__ system_msg components.system.update ToSystem models.system (\ms_ m_ -> {ms_ | system = m_})
                in case res of
