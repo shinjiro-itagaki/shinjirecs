@@ -11,27 +11,28 @@ import Records.System  exposing (System  ,systemDecoder  ,systemEncoder)
 import Records.Channel exposing (Channel ,channelDecoder ,channelEncoder)
 import Dict exposing (Dict)
 
-common : Http.Request a -> Cmd (Result Http.Error a)
-common req =
-    Http.send (\res -> res) req
+common : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
+common d mkReq =
+    let req = mkReq d
+    in Http.send (\res -> res) req
 
 head : String -> D.Decoder a -> Cmd (Result Http.Error a)
-head s d = common <| Http.get s d
+head s d = common d <| Http.get s
           
 options : String -> D.Decoder a -> Cmd (Result Http.Error a)
-options s d = common <| Http.get s d
+options s d = common d <| Http.get s
           
 get : String -> D.Decoder a -> Cmd (Result Http.Error a)
-get s d = common <| Http.get s d
+get s d = common d <| Http.get s
           
 post : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
-post s b d = common <| Http.post s b d
+post s b d = common d <| Http.post s b
           
 patch : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
-patch s b d = common <| Http.post s b d
+patch s b d = common d <| Http.post s b
 
 delete : String -> D.Decoder a -> Cmd (Result Http.Error a)
-delete s d = common <| Http.get s d
+delete s d = common d <| Http.get s
 
 mkEntityDecoder : Maybe Int -> D.Decoder a -> D.Decoder (Entity a)
 mkEntityDecoder maybe_id decoder =
