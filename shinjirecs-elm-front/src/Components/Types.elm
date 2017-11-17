@@ -2,6 +2,7 @@ module Components.Types exposing (..)
 import Html exposing (Html,div,input,text,li,Attribute)
 import API exposing (API,getAPI)
 import Components.SystemMsg exposing (SystemMsg)
+import Http exposing (Error)
 
 type alias CommonModelReadOnly = { config : Int, api : API }
 type alias CommonModelEditable = { counter : Int, errmsg : Maybe String }
@@ -14,3 +15,4 @@ type ComponentSym = SystemCSym
 type MsgToRoot = SwitchTo ComponentSym
                | NoComponentSelected
                | FromSystem SystemMsg
+               | ShowHttpError Http.Error

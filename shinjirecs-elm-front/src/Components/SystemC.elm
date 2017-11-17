@@ -1,5 +1,5 @@
 module Components.SystemC exposing (SystemModel,SystemC,new,Msg) -- ,newSystemC)
-import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,MsgToRoot(SwitchTo,NoComponentSelected,FromSystem,ShowHttpError))
 import Components.SystemMsg exposing (SystemMsg(None,CountUp,LoadSchema,LoadSchemaResult,ShowAll,Show,ShowNew,PostNew,Edit,Put,Delete,SystemInput))
 import Records.ColumnInfo exposing (ColumnInfo)
 import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),updateSystem,stringToTarget)
@@ -36,14 +36,22 @@ update msg (model,r,wr) =
         sendErrMsg errmsg = ((model, { wr | errmsg = Just errmsg }),Cmd.none)
     in case msg of
            CountUp -> ((model,{ wr | counter = wr.counter + 1 }),Cmd.none)
+           None -> always
            LoadSchema -> ((model,wr),Cmd.map LoadSchemaResult r.api.system.info)
            LoadSchemaResult (Ok res) -> (({model | system_schema = Just res}, wr), Cmd.none)
            LoadSchemaResult (Err httperr) -> sendErrMsg "load schema error"
+           -- LoadSchemaResult (Err httperr) -> ((model,wr), ShowHttpError httperr)
+           ShowAll -> always
+           Show id -> always
+           ShowNew -> always
+           PostNew params -> always
+           Edit entity -> always
+           Put entity -> always
+           Delete entity -> always
            SystemInput target val ->
                case updateSystem model.system_record target val of
                    Ok newsystem -> (({ model | system_record = newsystem },wr),Cmd.none)
                    Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
-           _ -> always
 
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Msg
 subscriptions (m,r,wr) = Sub.none

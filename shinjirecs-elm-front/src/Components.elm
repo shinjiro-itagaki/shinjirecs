@@ -2,7 +2,7 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
-import Components.Types exposing (MsgToRoot(SwitchTo,NoComponentSelected,FromSystem),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (MsgToRoot(SwitchTo,NoComponentSelected,FromSystem,ShowHttpError),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -53,11 +53,13 @@ updateComponent models msg_ f_update f_castToMsgToRoot model f_model_updater =
 update : MsgToRoot -> Models -> (Models, Cmd MsgToRoot)
 update msg models =
     let updateComponent__ = updateComponent models
+        always = (models,Cmd.none)
     in case msg of
            FromSystem system_msg ->
                updateComponent__ system_msg components.system.update FromSystem models.system (\ms_ m_ -> {ms_ | system = m_})
            SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
            NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
+           ShowHttpError httperr ->  always
 
 subscriptions : Models -> Sub MsgToRoot
 subscriptions m = Sub.none
