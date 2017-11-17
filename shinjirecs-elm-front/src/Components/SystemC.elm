@@ -63,9 +63,6 @@ view (model,r,wr) = div [] <| [
                     ,div [] (case model.system_schema of
                                  Nothing -> []
                                  Just scm -> [formByColumns <| cast scm])
-                    ,div [] <| case wr.errmsg of
-                                   Just errmsg -> [text <| errmsg]
-                                   Nothing     -> []
                     ]
 
 -- Dict String ColumnInfo =>  =>  =>  => List (String, (ColumnInfo,func)) => Dict String (ColumnInfo,func)

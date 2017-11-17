@@ -11,6 +11,8 @@ import API exposing (getAPI)
 import Components.SystemC as SystemC
 import Components.SystemMsg exposing (SystemMsg)
 import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
+import Result exposing (Result(Ok,Err))
+import Json.Decode as D
 
 { id, class, classList } = withNamespace "root"
 
@@ -116,6 +118,13 @@ view models = H.div [class [NavBar]] [
                    ,if models.currentC == Nothing then H.span [] [] else H.button [E.onClick noComponentSelected] [H.text "選択解除へ"]
                    ]
               ,componentView models
+              ,H.div [] <| case models.editable.errmsg of
+                             Just errmsg -> [H.text <| errmsg]
+                             Nothing     -> []
+              ,H.div [] [H.text <| case D.decodeString (D.maybe <| D.field "hoge" D.int) """{ "root":{"name": "tom", "age": 42 }}""" of
+                                       Ok x -> "ok"
+                                       Err x -> "err"
+                        ]
               ,H.footer [] []
               ]
 invokeView : ComponentSym -> Models -> Html PrivateRootMsg
