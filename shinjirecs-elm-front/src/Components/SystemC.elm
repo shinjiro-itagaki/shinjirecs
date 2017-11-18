@@ -49,7 +49,7 @@ update msg (model,r,wr) =
            Delete entity -> notimpl
            SystemInput target val ->
                case updateSystem model.system_record target val of
-                   Ok newsystem -> (({ model | system_record = newsystem },wr),NoNext)
+                   Ok newsystem -> (({ model | system_record = newsystem }, {wr | errmsg = Nothing} ),NoNext)
                    Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
 
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub SystemMsg
