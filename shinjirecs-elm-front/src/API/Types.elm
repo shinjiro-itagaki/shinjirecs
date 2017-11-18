@@ -55,4 +55,7 @@ type alias EpgProgramsI          = ResourcesI EpgProgram
 type alias EpgProgramCategoriesI = ResourcesI EpgProgramCategory
 type alias ProgramTitlesI     = ResourcesI ProgramTitle
 type alias ReservationsI      = ResourcesI Reservation
-type alias SystemI            = ResourcesI System
+type alias SystemI            = { get    : Cmd (Result Http.Error System)
+                                , modify : Entity System -> Cmd (Result Http.Error System)
+                                , info   : Cmd (Result Http.Error (Dict String ColumnInfo))
+                                }-- ResourcesI System

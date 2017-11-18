@@ -70,7 +70,12 @@ mkResourcesI domain path decoder encoder =
     }
 
 mkSystemI : String -> T.SystemI
-mkSystemI domain = mkResourcesI domain "systems"  systemDecoder  systemEncoder
+mkSystemI domain =
+    let path = "system"
+    in { get    = get (join "/" [domain,path]) systemDecoder
+       , modify = rModify domain path systemDecoder systemEncoder
+       , info   = rInfo   domain path columnInfoDecoder
+       }
                    
 mkChannelsI : String -> T.ChannelsI                   
 mkChannelsI domain = mkResourcesI domain "channels" channelDecoder channelEncoder
