@@ -1,6 +1,6 @@
 module Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder,minimum,maximum,Typ(..))
 import Json.Decode as D
-import Utils.Maybe exposing (or)
+import Utils.Maybe exposing (or,(<|>))
 import Utils.Json exposing (map9)
 import Json.Decode.Pipeline exposing (decode,required,optional)
 
@@ -59,17 +59,17 @@ columnInfoDecoder =
 minimum : ColumnInfo -> Maybe Int
 minimum info =
     case info.tipe of
-        StringT   -> or info.minimum info.limit
-        TextT     -> or info.minimum info.limit
-        IntegerT  -> or info.minimum <| Maybe.map (\byte -> if byte < 1 then 0 else negate <| 2^(byte * 8 - 1)) info.limit
+        StringT   -> info.minimum <|> info.limit
+        TextT     -> info.minimum <|> info.limit
+        IntegerT  -> info.minimum <|> (Maybe.map (\byte -> if byte < 1 then 0 else negate <| 2^(byte * 8 - 1)) info.limit)
         FloatT    -> info.minimum 
         _         -> Nothing
 
 maximum : ColumnInfo -> Maybe Int
 maximum info =
     case info.tipe of
-        StringT   -> or info.maximum info.limit
-        TextT     -> or info.maximum info.limit
-        IntegerT  -> or info.maximum <| Maybe.map (\byte -> (\x -> x - 1) <| if byte < 1 then 1 else 2^(byte * 8 - 1)) info.limit
-        FloatT    -> info.maximum 
+        StringT   -> info.maximum <|> info.limit
+        TextT     -> info.maximum <|> info.limit
+        IntegerT  -> info.maximum <|> (Maybe.map (\byte -> (\x -> x - 1) <| if byte < 1 then 1 else 2^(byte * 8 - 1)) info.limit)
+        FloatT    -> info.maximum
         _         -> Nothing

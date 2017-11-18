@@ -5,6 +5,9 @@ or x y = case x of
              Just _ -> x
              Nothing -> y
 
+(<|>) a b = or a b
+infixl 1 <|>
+                        
 catMaybes : List (Maybe a) -> List a
 catMaybes xs = case xs of
                    []            -> []
