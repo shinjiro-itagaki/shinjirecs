@@ -36,6 +36,15 @@ class System < ApplicationRecord
     self.area.channels
   end
 
+  def self.list_records_of(sym)
+    case sym
+    when :area_id then
+      Area.all.to_a
+    else
+      nil
+    end
+  end
+
   private
   def refresh_instance
     if @@instance and !(@@instance.object_id == self.object_id)

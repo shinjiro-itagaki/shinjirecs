@@ -64,6 +64,10 @@ class ApplicationRecord < ActiveRecord::Base
         if enums = self.defined_enums[k]
           info[k]["list"] = enums.values
         end
+
+        if recs = self.list_records_of(k.to_sym)
+          info[k]["list"] = recs.map(&:as_json)
+        end
       else
         info[k] = {}
       end
@@ -78,6 +82,14 @@ class ApplicationRecord < ActiveRecord::Base
       res[k] = v.to_f if v.kind_of? Time
     end
     res
+  end
+
+  def self.list_records_of(sym)
+    nil
+  end
+
+  def display
+    self.id.to_s
   end
 
   protected
