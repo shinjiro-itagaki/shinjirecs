@@ -7,12 +7,16 @@ class System < ApplicationRecord
 
   after_save :refresh_instance
 
-  min = {length: { minimum: 0 }, numericality: { only_integer: true }}
-
-  validates :gr_tuner_count,      min
-  validates :bs_tuner_count,      min
-  validates :rest_gr_tuner_count, min
-  validates :rest_bs_tuner_count, min
+  # min = {length: { minimum: 0 }, numericality: { only_integer: true }}
+  min = 0
+  #validates :gr_tuner_count,      min
+  minimum :gr_tuner_count, min
+  # validates :bs_tuner_count,      min
+  minimum :bs_tuner_count, min
+  # validates :rest_gr_tuner_count, min
+  minimum :rest_gr_tuner_count, min
+  # validates :rest_bs_tuner_count, min
+  minimum :rest_bs_tuner_count, min
 
   validate do |rec|
     rec.errors[:rest_gr_tuner_count] << "inconsistent rest_gr_tuner_count" if rec.gr_tuner_count < rec.rest_gr_tuner_count

@@ -20,3 +20,17 @@ https://docs.haskellstack.org/en/stable/README/
 % hoogle server --port 30000
 # GHCiのコマンド群
 % ghci> :browse! Data.Maybe
+
+
+# Elm ( Mac OS X )
+% https://www.npmjs.com/package/elm
+% brew install npm
+% npm install -g elm
+% npm install -g elm-css
+
+
+# Emacs elm-mode
+% use MELPA => M-x package-list-packages
+% (require 'elm-mode)
+% (setq auto-mode-alist (append '(("\\.elm$" . elm-mode)) auto-mode-alist))
+% https://github.com/jcollard/elm-mode

@@ -3,6 +3,31 @@ class ApplicationRecord < ActiveRecord::Base
 
   after_initialize :set_default, if: :new_record?
 
+  @@maximums = {}
+  @@minimums = {}
+
+  def self.maximum(column,value)
+    column = column.to_sym
+    @@maximums[column] = value.to_i
+    validates column, length: { maximum: value }, numericality: { only_integer: true }
+  end
+
+  def self.maximum_of(column)
+    column = column.to_sym
+    @@maximums[column]
+  end
+
+  def self.minimum(column,value)
+    column = column.to_sym
+    @@minimums[column] = value.to_i
+    validates column, length: { minimum: value }, numericality: { only_integer: true }
+  end
+
+  def self.minimum_of(column)
+    column = column.to_sym
+    @@minimums[column]
+  end
+
   # nil -> permitted all default params
   # []  -> not permitted all default params
   # [a,...] -> permitted only these params
@@ -30,6 +55,15 @@ class ApplicationRecord < ActiveRecord::Base
       k = k.to_s
       if c = cols[k] then
         info[k] = {"type" => c.type, "nullable" => c.null, "default" => c.default, "limit" => c.limit, "precision" => c.precision, "scale" => c.scale }
+        if max = (self.maximum_of k) then
+          info[k]["maximum"] = max
+        end
+        if min = (self.minimum_of k) then
+          info[k]["minimum"] = min
+        end
+        if enums = self.defined_enums[k]
+          info[k]["list"] = enums.values
+        end
       else
         info[k] = {}
       end

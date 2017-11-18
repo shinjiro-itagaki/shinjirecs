@@ -17,8 +17,10 @@ class Reservation < ApplicationRecord
   belongs_to :channel
   belongs_to :program_title
 
-  validates :duration, length: { minimum: 1 }, numericality: { only_integer: true }
-  validates :counter,  length: { minimum: 0 }, numericality: { only_integer: true }
+  # validates :duration, length: { minimum: 1 }, numericality: { only_integer: true }
+  minimum :duration, 1
+  # validates :counter,  length: { minimum: 0 }, numericality: { only_integer: true }
+  minimum :counter, 1
 
   enum state: { waiting: 0, preparing: 1, recording: 2, success: 3, failed: -1, canceled: -2 }
 

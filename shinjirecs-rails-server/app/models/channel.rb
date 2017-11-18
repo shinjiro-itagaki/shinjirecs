@@ -7,7 +7,8 @@ class Channel < ApplicationRecord
 
   def self.minimum_number() 1 end
 
-  validates :number, length: { minimum: self.minimum_number }, numericality: { only_integer: true }
+  # validates :number, length: { minimum: self.minimum_number }, numericality: { only_integer: true }
+  minimum :number, self.minimum_number
   validates :display_name, presence: false
 
   def self.params_info

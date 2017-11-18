@@ -13,8 +13,11 @@ class ProgramTitle < ApplicationRecord
   belongs_to :channel
   belongs_to :program_category
   has_many :reservations
-  validates :weekdays, length: { minimum: 0, maximum: 0b1111111 }, numericality: { only_integer: true }
-  validates :next_counter, length: { minimum: 1 }, numericality: { only_integer: true }
+  # validates :weekdays, length: { minimum: 0, maximum: 0b1111111 }, numericality: { only_integer: true }
+  minimum :weekdays, 0
+  maximum :weekdays, 0b1111111
+  # validates :next_counter, length: { minimum: 1 }, numericality: { only_integer: true }
+  minimum :next_count, 1
 #  validate do |rec|
 #    rec.errors[:finish_on] << "inconsistent finish date" if not rec.begin_on < rec.finish_on
 #  end
