@@ -121,10 +121,6 @@ view models = H.div [class [NavBar]] [
               ,H.div [] <| case models.editable.errmsg of
                              Just errmsg -> [H.text <| errmsg]
                              Nothing     -> []
-              ,H.div [] [H.text <| case D.decodeString (D.maybe <| D.field "hoge" D.int) """{ "root":{"name": "tom", "age": 42 }}""" of
-                                       Ok x -> "ok"
-                                       Err x -> "err"
-                        ]
               ,H.footer [] []
               ]
 invokeView : ComponentSym -> Models -> Html PrivateRootMsg
