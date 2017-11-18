@@ -86,13 +86,17 @@ showAction (m, r, rw) = Right (m,rw)
 
 editAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
 editAction (m, r, rw) =
+    case m.system_schema of
+        Just x  -> Right (m,rw)
+        Nothing -> Left <| reloadSchema m r rw
+
+reloadSchema : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
+reloadSchema m r rw =
     let f res = case res of
                     (Ok scm)      -> ({m|system_schema = Just scm},rw)
                     (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
-    in case m.system_schema of
-           Just x  -> Right (m,rw)
-           Nothing -> Left <| Cmd.map f r.api.system.info
-                                            
+    in Cmd.map f r.api.system.info
+                      
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub SystemMsg
 subscriptions (m,r,wr) = Sub.none
 
