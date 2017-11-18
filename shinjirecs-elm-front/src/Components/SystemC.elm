@@ -93,7 +93,7 @@ editAction (m, r, rw) =
         Just x  -> Right (m,rw)
         Nothing -> Left <|
             let f res = case res of
-                            (Ok e)        -> ({m|show_record = Just e} ,rw)
+                            (Ok e)        -> ({m|edit_record = Just e} ,rw)
                             (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
             in Cmd.map f r.api.system.get
 
