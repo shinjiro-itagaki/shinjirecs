@@ -72,7 +72,7 @@ mkResourcesI domain path decoder encoder =
 mkSystemI : String -> T.SystemI
 mkSystemI domain =
     let path = "systems"
-    in { get    = httpGet (join "/" [domain,path]) systemDecoder
+    in { get    = httpGet (join "/" [domain,path]) <| mkEntityDecoder Nothing systemDecoder
        , modify = rModify domain path systemDecoder systemEncoder
        , info   = rInfo   domain path columnInfoDecoder
        }

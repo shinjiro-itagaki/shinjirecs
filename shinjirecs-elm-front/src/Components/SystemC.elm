@@ -74,8 +74,18 @@ indexAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (C
 indexAction (m, r, rw) = Right (m,rw)
 
 showAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
-showAction (m, r, rw) = Right (m,rw)
+showAction (m, r, rw) =
+    case m.show_record of
+        Just x -> Right (m,rw)
+        Nothing -> Left <| reloadSystem m r rw
 
+reloadSystem : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
+reloadSystem m r rw =
+    let f res = case res of
+                    (Ok e)      -> ({m|show_record = Just e },rw)
+                    (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+    in Cmd.map f r.api.system.get
+    
 editAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
 editAction (m, r, rw) =
     case m.system_schema of
