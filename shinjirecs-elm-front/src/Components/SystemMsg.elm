@@ -5,4 +5,5 @@ import Records.ColumnInfo exposing (ColumnInfo)
 import Dict exposing (Dict)
 import Http exposing (Error)
 
-type SystemMsg = CountUp | None | LoadSchema | LoadSchemaResult (Result Http.Error (Dict String ColumnInfo)) | ShowAll | Show Int | ShowNew | PostNew System | Edit (Entity System) | Put (Entity System) | Delete (Entity System) | SystemInput ColumnTarget String
+type ViewType = IndexView | ShowView | EditView
+type SystemMsg = CountUp | None | LoadSchema | LoadSchemaResult (Result Http.Error (Dict String ColumnInfo)) | Load | AfterLoad (Result Http.Error System) | Edit (Entity System) | Put (Entity System) | SystemInput ColumnTarget String | ChangeView ViewType

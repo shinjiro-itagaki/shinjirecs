@@ -13,10 +13,8 @@ import Components.SystemMsg exposing (SystemMsg)
 import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
 import Result exposing (Result(Ok,Err))
 import Json.Decode as D
-
+import Utils.Either exposing (Either(Left,Right))
 { id, class, classList } = withNamespace "root"
-
-type Either a b = Left a | Right b
                            
 type alias Components = { system : SystemC }
 type alias Models = { currentC : Maybe ComponentSym

@@ -1,6 +1,6 @@
 module Components.SystemC exposing (SystemModel,SystemC,new) -- ,newSystemC)
 import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext))
-import Components.SystemMsg exposing (SystemMsg(None,CountUp,LoadSchema,LoadSchemaResult,ShowAll,Show,ShowNew,PostNew,Edit,Put,Delete,SystemInput))
+import Components.SystemMsg exposing (SystemMsg(None,CountUp,LoadSchema,LoadSchemaResult,Load,AfterLoad,Edit,Put,SystemInput,ChangeView),ViewType(IndexView,ShowView,EditView))
 import Records.ColumnInfo exposing (ColumnInfo)
 import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),updateSystem,stringToTarget)
 import Records.System as System exposing (new)
@@ -10,7 +10,7 @@ import Components.Partials exposing (formByColumns)
 import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
 
-type alias SystemModel = { system_record : System, system_schema : Maybe (Dict String ColumnInfo) }
+type alias SystemModel = { system_record : System, system_schema : Maybe (Dict String ColumnInfo), viewType : ViewType }
 type alias SystemC = Component SystemModel SystemMsg
 
 new : SystemC
@@ -20,7 +20,7 @@ new = { init          = init
       , view          = view
       }
 init : SystemModel
-init = {system_record = System.new, system_schema = Nothing}
+init = {system_record = System.new, system_schema = Nothing, viewType = IndexView }
 
 
 -- { index   : Maybe Int -> Cmd (Result Http.Error (List (Entity a))) -- Int => limit
@@ -34,19 +34,20 @@ update msg (model,r,wr) =
     let always = ((model,wr),NoNext)
         notimpl = ((model,wr),NoNext)
         sendErrMsg errmsg = ((model, { wr | errmsg = Just errmsg }), NoNext)
+        showErr httperr_ = ((model,wr),ToRoot <| ShowHttpError httperr_)
+        changeView viewtype = (({ model | viewType = viewtype },wr),NoNext)
     in case msg of
            CountUp -> ((model,{ wr | counter = wr.counter + 1 }),NoNext)
            None -> always
            LoadSchema -> ((model,wr), NextCmd <| Cmd.map LoadSchemaResult r.api.system.info)
            LoadSchemaResult (Ok res) -> (({model | system_schema = Just res}, wr), NoNext)
-           LoadSchemaResult (Err httperr) -> ((model,wr),ToRoot <| ShowHttpError httperr)
-           ShowAll -> notimpl
-           Show id -> notimpl
-           ShowNew -> notimpl
-           PostNew params -> notimpl
+           LoadSchemaResult (Err httperr) -> showErr httperr
+           Load -> ((model,wr),NextCmd <| Cmd.map AfterLoad r.api.system.get)
+           AfterLoad (Ok res) -> (({model | system_record = res}, wr), NoNext)
+           AfterLoad (Err httperr) -> showErr httperr
            Edit entity -> notimpl
            Put entity -> notimpl
-           Delete entity -> notimpl
+           ChangeView v -> changeView v
            SystemInput target val ->
                case updateSystem model.system_record target val of
                    Ok newsystem -> (({ model | system_record = newsystem }, {wr | errmsg = Nothing} ),NoNext)
@@ -56,14 +57,28 @@ subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub Sys
 subscriptions (m,r,wr) = Sub.none
 
 view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html SystemMsg
-view (model,r,wr) = div [] <| [
-                     text <| "システム設定"
-                    ,button [ onClick CountUp ] [text <| "カウントアップ"]
-                    ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
-                    ,div [] (case model.system_schema of
-                                 Nothing -> []
-                                 Just scm -> [formByColumns <| cast scm])
-                    ]
+view (model,r,wr) =
+    case model.viewType of
+        IndexView -> indexView model
+        ShowView  -> showView model
+        EditView  -> editView model
+
+indexView : SystemModel -> Html SystemMsg
+indexView model = div [] <| [
+                   text <| "システム設定"
+                  ,button [ onClick CountUp ] [text <| "カウントアップ"]
+                  ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
+--                  ,div [] (case model.system_schema of
+--                               Nothing -> []
+--                               Just scm -> [formByColumns <| cast scm])
+                  ,button [ onClick Load ] [text <| "データ表示"]
+                  ]
+
+showView : SystemModel -> Html SystemMsg
+showView model = div [] [text <| "システム情報"]
+
+editView : SystemModel -> Html SystemMsg                 
+editView model = div [] [text <| "システム編集"]
 
 -- Dict String ColumnInfo =>  =>  =>  => List (String, (ColumnInfo,func)) => Dict String (ColumnInfo,func)
 cast : Dict String ColumnInfo -> Dict String (ColumnInfo,(String -> SystemMsg))
