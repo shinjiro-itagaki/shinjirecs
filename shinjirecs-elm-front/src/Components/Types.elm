@@ -5,7 +5,7 @@ import Components.SystemMsg exposing (SystemMsg)
 import Http exposing (Error)
 import Utils.Either exposing (Either(Left,Right))
 
-type alias CommonModelReadOnly = { config : Int, api : API }
+type alias CommonModelReadOnly = { config : Int, api : API, httpErrorToString : (Http.Error -> String) }
 type alias CommonModelEditable = { counter : Int, errmsg : Maybe String }
 
 type ComponentSym = SystemCSym
@@ -18,8 +18,7 @@ type NextMsg msg = ToRoot RootMsg
                  | Direct msg
                  | NoNext
                    
-type alias Component model msg = { init          : model -- (model, Cmd msg)
---                                 , update        : msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), NextMsg msg)
+type alias Component model msg = { init          : model
                                  , update        : msg -> (model,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (model,CommonModelEditable)) (model,CommonModelEditable)
                                  , subscriptions : (model,CommonModelReadOnly,CommonModelEditable) -> Sub msg
                                  , view          : (model,CommonModelReadOnly,CommonModelEditable) -> Html msg }

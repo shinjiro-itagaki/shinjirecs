@@ -47,10 +47,7 @@ update : SystemMsg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> E
 update msg (model,r,wr) =
     let -- always = ((model,wr),NoNext)
         always = Right (model,wr)
-        -- notimpl = ((model,wr),NoNext)
         sendErrMsg errmsg = Right (model, { wr | errmsg = Just errmsg })
-        -- showErr httperr_ = ((model,wr),ToRoot <| ShowHttpError httperr_)
-        -- changeView viewtype = (({ model | viewType = viewtype },wr),NoNext)
     in case msg of
            CountUp -> Right (model,{ wr | counter = wr.counter + 1 })
 --           LoadSchema -> ((model,wr), NextCmd <| Cmd.map LoadSchemaResult r.api.system.info)
@@ -88,7 +85,13 @@ showAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cm
 showAction (m, r, rw) = Right (m,rw)
 
 editAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
-editAction (m, r, rw) = Right (m,rw)
+editAction (m, r, rw) =
+    let f res = case res of
+                    (Ok scm)      -> ({m|system_schema = Just scm},rw)
+                    (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+    in case m.system_schema of
+           Just x  -> Right (m,rw)
+           Nothing -> Left <| Cmd.map f r.api.system.info
                                             
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub SystemMsg
 subscriptions (m,r,wr) = Sub.none
@@ -106,7 +109,7 @@ indexView model r rw =
     div [] <| [
          text <| "システム設定"
         ,button [ onClick CountUp ] [text <| "カウントアップ"]
-        ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
+--        ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
 --                  ,div [] (case model.system_schema of
 --                               Nothing -> []
 --                               Just scm -> [formByColumns <| cast scm])

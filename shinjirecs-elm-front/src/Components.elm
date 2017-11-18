@@ -38,7 +38,7 @@ init : (Models, Cmd PrivateRootMsg)
 init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
-               , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000" }
+               , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg }
                , editable = { counter = 0, errmsg = Nothing }
                }
        in (m, Cmd.none)
