@@ -11,10 +11,10 @@ import Components.Partials exposing (formByColumns)
 import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
 import Utils.Either exposing (Either(Left,Right))
+import Utils.Cmd exposing ((>>=),(=<<))
 
-type alias SystemModel = { system_record : System
-                         , show_record : Maybe (Entity System)
-                         , edit_record : Either (Maybe Int) (Entity System)
+type alias SystemModel = { show_record : Maybe (Entity System)
+                         , edit_record : Maybe (Entity System)
                          , system_schema : Maybe (Dict String ColumnInfo)
                          , previousAction : ActionType
                          , actionType : ActionType
@@ -28,9 +28,8 @@ new = { init          = init
       , view          = view
       }
 init : SystemModel
-init = { system_record = System.new
-       , show_record = Nothing
-       , edit_record = Left Nothing
+init = { show_record = Nothing
+       , edit_record = Nothing
        , system_schema = Nothing
        , previousAction = IndexAction
        , actionType = IndexAction
@@ -58,11 +57,13 @@ update msg (model,r,wr) =
                                  EditAction  -> editAction
                in action (model_,r,wr)
            SystemInput target val ->
-               case updateSystem model.system_record target val of
-                   Ok newsystem -> Right ({ model | system_record = newsystem }, {wr | errmsg = Nothing})
-                   Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
+               let edit_rec = model.edit_record
+               in case edit_rec of
+                      Nothing -> always
+                      Just erec -> case updateSystem erec.val target val of
+                                       Ok newsystem -> Right ({ model | edit_record = Just { erec | val = newsystem }}, {wr | errmsg = Nothing})
+                                       Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
 --           _ -> sendErrMsg "another action !!"
-
     -- { index   : Maybe Int -> Cmd (Result Http.Error (List (Entity a))) -- Int => limit
     -- , get     : Int       -> Cmd (Result Http.Error a) 
     -- , create  : a         -> Cmd (Result Http.Error (Entity a)) 
@@ -82,15 +83,19 @@ showAction (m, r, rw) =
 reloadSystem : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
 reloadSystem m r rw =
     let f res = case res of
-                    (Ok e)      -> ({m|show_record = Just e },rw)
+                    (Ok e)      -> ({m|show_record = Just e} ,rw)
                     (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
     in Cmd.map f r.api.system.get
     
 editAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
 editAction (m, r, rw) =
-    case m.system_schema of
+    case m.edit_record of
         Just x  -> Right (m,rw)
-        Nothing -> Left <| reloadSchema m r rw
+        Nothing -> Left <|
+            let f res = case res of
+                            (Ok e)        -> ({m|show_record = Just e} ,rw)
+                            (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+            in Cmd.map f r.api.system.get
 
 reloadSchema : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
 reloadSchema m r rw =
@@ -140,9 +145,8 @@ editView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html Sys
 editView model r rw =
     div [] <| [
          case model.edit_record of
-             Left Nothing          -> div [] [text <| "システム編集 id指定されていない"]
-             Left (Just id)        -> div [] [text <| "システム編集 id指定されているがロードされていない"]
-             Right e -> div [] [text <| "システム編集 ロードすみ"]
+             Nothing -> div [] [text <| "システム編集 ロードされていない"]
+             Just rec -> div [] [text <| "システム編集 ロードすみ"]
         ,linkToIndexButton
         ]
 
