@@ -11,28 +11,28 @@ import Records.System  exposing (System  ,systemDecoder  ,systemEncoder)
 import Records.Channel exposing (Channel ,channelDecoder ,channelEncoder)
 import Dict exposing (Dict)
 
-common : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
-common d mkReq =
+httpCommon : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
+httpCommon d mkReq =
     let req = mkReq <| D.field "body" d
     in Http.send (\res -> res) req
 
-head : String -> D.Decoder a -> Cmd (Result Http.Error a)
-head s d = common d <| Http.get s
+httpHead : String -> D.Decoder a -> Cmd (Result Http.Error a)
+httpHead s d = httpCommon d <| Http.get s
           
-options : String -> D.Decoder a -> Cmd (Result Http.Error a)
-options s d = common d <| Http.get s
+httpOptions : String -> D.Decoder a -> Cmd (Result Http.Error a)
+httpOptions s d = httpCommon d <| Http.get s
           
-get : String -> D.Decoder a -> Cmd (Result Http.Error a)
-get s d = common d <| Http.get s
+httpGet : String -> D.Decoder a -> Cmd (Result Http.Error a)
+httpGet s d = httpCommon d <| Http.get s
           
-post : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
-post s b d = common d <| Http.post s b
+httpPost : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
+httpPost s b d = httpCommon d <| Http.post s b
           
-patch : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
-patch s b d = common d <| Http.post s b
+httpPatch : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
+httpPatch s b d = httpCommon d <| Http.post s b
 
-delete : String -> D.Decoder a -> Cmd (Result Http.Error a)
-delete s d = common d <| Http.get s
+httpDelete : String -> D.Decoder a -> Cmd (Result Http.Error a)
+httpDelete s d = httpCommon d <| Http.get s
 
 mkEntityDecoder : Maybe Int -> D.Decoder a -> D.Decoder (Entity a)
 mkEntityDecoder maybe_id decoder =
@@ -42,22 +42,22 @@ mkEntityDecoder maybe_id decoder =
     
     
 rIndex : String -> String -> D.Decoder a -> Maybe Int -> Cmd (Result Http.Error (List (Entity a)))
-rIndex domain path decoder mlimit = get (join "/" [domain,path,"index"]) (D.list <| mkEntityDecoder Nothing decoder)
+rIndex domain path decoder mlimit = httpGet (join "/" [domain,path,"index"]) (D.list <| mkEntityDecoder Nothing decoder)
                                            
 rGet : String -> String -> D.Decoder a -> Int -> Cmd (Result Http.Error a)
-rGet domain path decoder id  = get (join "/" [domain,path,(toString id)]) decoder
+rGet domain path decoder id  = httpGet (join "/" [domain,path,(toString id)]) decoder
                                            
 rCreate : String -> String -> D.Decoder a -> Encoder a -> a -> Cmd (Result Http.Error (Entity a))
-rCreate domain path decoder encoder val = post (join "/" [domain,path]) (jsonBody <| encoder val) (mkEntityDecoder Nothing decoder)
+rCreate domain path decoder encoder val = httpPost (join "/" [domain,path]) (jsonBody <| encoder val) (mkEntityDecoder Nothing decoder)
                                            
 rModify : String -> String -> D.Decoder a -> Encoder a -> Entity a -> Cmd (Result Http.Error a)
-rModify domain path decoder encoder e = patch (join "/" [domain,path,(toString e.id)]) (jsonBody <| encoder e.val) decoder
+rModify domain path decoder encoder e = httpPatch (join "/" [domain,path,(toString e.id)]) (jsonBody <| encoder e.val) decoder
                                            
 rDestroy : String -> String -> D.Decoder a -> Entity a -> Cmd (Result Http.Error Bool)
-rDestroy domain path decoder e = delete (join "/" [domain,path,(toString e.id)]) D.bool
+rDestroy domain path decoder e = httpDelete (join "/" [domain,path,(toString e.id)]) D.bool
 
 rInfo : String -> String -> D.Decoder ColumnInfo -> Cmd (Result Http.Error (Dict String ColumnInfo))
-rInfo domain path decoder = get (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
+rInfo domain path decoder = httpGet (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
            
 mkResourcesI : String -> String -> D.Decoder a -> Encoder a -> T.ResourcesI a
 mkResourcesI domain path decoder encoder =
@@ -72,7 +72,7 @@ mkResourcesI domain path decoder encoder =
 mkSystemI : String -> T.SystemI
 mkSystemI domain =
     let path = "system"
-    in { get    = get (join "/" [domain,path]) systemDecoder
+    in { get    = httpGet (join "/" [domain,path]) systemDecoder
        , modify = rModify domain path systemDecoder systemEncoder
        , info   = rInfo   domain path columnInfoDecoder
        }
