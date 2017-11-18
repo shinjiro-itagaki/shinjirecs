@@ -55,10 +55,16 @@ defaultInput : (String,C.ColumnInfo) -> ((List (Attribute msg) -> List (Html msg
 defaultInput (name,info) =
     let aname = A.name name
         attrs = (++) [aname] <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
+        stringsToOption s = H.option [A.value <| s] [H.text <| s]
+        integersToOptions = List.map (stringsToOption << toString)
+        maybe_options = Maybe.map integersToOptions <| Maybe.map2 List.range info.minimum info.maximum
     in case info.tipe of
            C.StringT   -> (H.input    , attrs ++ [A.type_ "text"]          ,[])
            C.TextT     -> (H.textarea , attrs ++ [A.type_ "text"]          ,[])
-           C.IntegerT  -> (H.input    , attrs ++ [A.type_ "number"]        ,[])
+           C.IntegerT  ->
+               case maybe_options of
+                   Just options -> (H.select   , attrs                       ,options)
+                   Nothing      -> (H.input    , attrs ++ [A.type_ "number"] ,[])
            C.FloatT    -> (H.input    , attrs ++ [A.type_ "number"]        ,[])
            C.DateT     -> (H.input    , attrs ++ [A.type_ "date"]          ,[])
            C.TimeT     -> (H.input    , attrs ++ [A.type_ "time"]          ,[])
