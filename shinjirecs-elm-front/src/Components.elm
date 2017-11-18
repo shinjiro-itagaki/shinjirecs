@@ -23,7 +23,7 @@ type alias Models = { currentC : Maybe ComponentSym
                     , system : SystemModel
                     }
 
-type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | None
+type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModel Models
     
 components : Components
 components = { system = SystemC.new }
@@ -43,24 +43,6 @@ init = let x = components
                }
        in (m, Cmd.none)
 
-updateComponent : Models
-                -> msg
-                -> (msg -> (model,CommonModelReadOnly,CommonModelEditable) -> ((model,CommonModelEditable), NextMsg msg))
-                -> (msg -> PrivateRootMsg)
-                -> model
-                -> (Models -> model -> Models)
-                -> (Models, Either PrivateRootMsg (Cmd PrivateRootMsg))
-updateComponent models msg_ f_update f_castToPrivateRootMsg model f_model_updater =
-    f_update msg_ (model, models.readonly, models.editable)
-        |> \((m,wr),nextmsg) ->
-            let rootmsg =
-                    case nextmsg of
-                        ToRoot  msg -> Left  <| ToRootPrivate msg
-                        Direct  msg -> Left  <| f_castToPrivateRootMsg msg
-                        NextCmd cmd -> Right <| Cmd.map f_castToPrivateRootMsg cmd
-                        NoNext      -> Left None
-            in ( f_model_updater {models | editable = wr} m, rootmsg )
-
 showErrMsg : Models -> String -> Models
 showErrMsg models msg =
     let editable = models.editable
@@ -77,8 +59,7 @@ httpErrorToMsg err =
             
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
-    let updateComponent__ = updateComponent models
-        none = (models,Cmd.none)
+    let i = 0
     in case msg of
            ToRootPrivate rootmsg ->
                case rootmsg of
@@ -86,11 +67,11 @@ update msg models =
                    NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
                    ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
            ToSystem system_msg ->
-               let (m,res) = updateComponent__ system_msg components.system.update ToSystem models.system (\ms_ m_ -> {ms_ | system = m_})
+               let res = components.system.update system_msg (models.system,models.readonly, models.editable)
                in case res of
-                      Left msg  -> update msg m
-                      Right cmd -> (m,cmd)
-           None -> none
+                      Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
+                      Left cmd     -> (,) models <| Cmd.map (\(m,rw) -> UpdateModel {models | editable = rw, system = m}) cmd
+           UpdateModel m -> (m,Cmd.none)
 
 subscriptions : Models -> Sub PrivateRootMsg
 subscriptions m = Sub.none
