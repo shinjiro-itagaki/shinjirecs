@@ -1,6 +1,7 @@
 module Records.EpgProgramCategory exposing (EpgProgramCategory,EpgProgramCategoryId)
 import Time exposing (Time)
 import Json.Decode as D
+import Json.Decode.Pipeline exposing (decode,required,optional)
 
 type EpgProgramCategoryId = EpgProgramCategoryId Int
 type alias EpgProgramCategory =
@@ -13,10 +14,10 @@ type alias EpgProgramCategory =
 
 epgProgramCategoryDecoder : D.Decoder EpgProgramCategory
 epgProgramCategoryDecoder =
-    D.map5 EpgProgramCategory
-        (D.field "label_ja"    D.string)
-        (D.field "label_en"    D.string)
-        (D.field "parent_id"  (D.maybe  D.int))
-        (D.field "created_at"  D.float)
-        (D.field "updated_at"  D.float)
+    decode EpgProgramCategory
+        |> required "label_ja"    D.string
+        |> required "label_en"    D.string
+        |> required "parent_id"   (D.maybe <| D.int)
+        |> required "created_at"  D.float
+        |> required "updated_at"  D.float
     

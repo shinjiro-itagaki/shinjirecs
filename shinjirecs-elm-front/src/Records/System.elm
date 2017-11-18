@@ -5,6 +5,7 @@ import Json.Encode as E
 import Utils.Json exposing (map9,Encoder)
 import Records.Types exposing (ChannelType(GR,BS))
 import Result exposing (map,mapError)
+import Json.Decode.Pipeline exposing (decode,required,optional)
 
 type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
 
@@ -105,17 +106,16 @@ new = { area_id = 0
     
 systemDecoder : D.Decoder System
 systemDecoder =
-    map9
-        System
-        (D.field "area_id"              D.int)
-        (D.field "active"               D.bool)
-        (D.field "setup"                D.bool)
-        (D.field "gr_tuner_count"       D.int)
-        (D.field "bs_tuner_count"       D.int)
-        (D.field "rest_gr_tuner_count"  D.int)
-        (D.field "rest_bs_tuner_count"  D.int)
-        (D.field "created_at"           D.float)
-        (D.field "updated_at"           D.float)
+    decode System
+        |> required "area_id"              D.int
+        |> required "active"               D.bool
+        |> required "setup"                D.bool
+        |> required "gr_tuner_count"       D.int
+        |> required "bs_tuner_count"       D.int
+        |> required "rest_gr_tuner_count"  D.int
+        |> required "rest_bs_tuner_count"  D.int
+        |> required "created_at"           D.float
+        |> required "updated_at"           D.float
 
 systemEncoder : Encoder System
 systemEncoder x = E.object

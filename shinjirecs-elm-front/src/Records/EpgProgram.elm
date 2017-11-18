@@ -2,6 +2,7 @@ module Records.EpgProgram exposing (EpgProgram,EpgProgramId)
 import Time exposing (Time)
 import Json.Decode as D
 import Utils.Json exposing (map9,Encoder)
+import Json.Decode.Pipeline exposing (decode,required,optional)
 
 type EpgProgramId = EpgProgramId Int
 type alias EpgProgram =
@@ -18,14 +19,13 @@ type alias EpgProgram =
 
 programDecoder : D.Decoder EpgProgram
 programDecoder =
-    map9
-        EpgProgram
-        (D.field "start_time"               D.float)
-        (D.field "stop_time"                D.float)
-        (D.field "channel_id"               D.int)
-        (D.field "title"                    D.string)
-        (D.field "desc"                     D.string)
-        (D.field "event_id"                 D.int)
-        (D.field "epg_program_category_id"  D.int)
-        (D.field "created_at"               D.float)
-        (D.field "updated_at"               D.float)
+    decode EpgProgram
+        |> required "start_time"               D.float
+        |> required "stop_time"                D.float
+        |> required "channel_id"               D.int
+        |> required "title"                    D.string
+        |> required "desc"                     D.string
+        |> required "event_id"                 D.int
+        |> required "epg_program_category_id"  D.int
+        |> required "created_at"               D.float
+        |> required "updated_at"               D.float

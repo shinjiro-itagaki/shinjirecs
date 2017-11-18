@@ -3,6 +3,7 @@ import Utils.Json exposing (map15,fromTimeToDateDecoder)
 import Time exposing (Time)
 import Json.Decode as D
 import Date exposing (Date)
+import Json.Decode.Pipeline exposing (decode,required,optional)
 
 type ProgramTitleId = ProgramTitleId Int
 type alias ProgramTitle =
@@ -23,23 +24,22 @@ type alias ProgramTitle =
     , dayoffs : List Date
     }
 
-    
 programTitleDecoder : D.Decoder ProgramTitle
 programTitleDecoder =
-    map15 ProgramTitle
-        (D.field "start_at"             D.int) -- 0 ~ (24 * 3600 - 1), from second from 00:00:00
-        (D.field "duration"             D.int)
-        (D.field "channel_id"           D.int)
-        (D.field "title"                D.string)
-        (D.field "desc"                 D.string)
-        (D.field "program_category_id"  D.int)
-        (D.field "next_counter"         D.int)
-        (D.field "weekdays"             D.int)
-        (D.field "auto_next"            D.bool)
-        (D.field "label_format"         D.string)
-        (D.field "created_at"           D.float)
-        (D.field "updated_at"           D.float)
-        (D.field "begin_on"            (D.maybe fromTimeToDateDecoder))
-        (D.field "finish_on"           (D.maybe fromTimeToDateDecoder))
-        (D.field "dayoffs"             (D.list  fromTimeToDateDecoder))
+    decode ProgramTitle
+        |> required "start_at"             D.int -- 0 ~ (24 * 3600 - 1), from second from 00:00:00
+        |> required "duration"             D.int
+        |> required "channel_id"           D.int
+        |> required "title"                D.string
+        |> required "desc"                 D.string
+        |> required "program_category_id"  D.int
+        |> required "next_counter"         D.int
+        |> required "weekdays"             D.int
+        |> required "auto_next"            D.bool
+        |> required "label_format"         D.string
+        |> required "created_at"           D.float
+        |> required "updated_at"           D.float
+        |> optional "begin_on"             (D.maybe fromTimeToDateDecoder) Nothing
+        |> optional "finish_on"            (D.maybe fromTimeToDateDecoder) Nothing
+        |> optional "dayoffs"              (D.list fromTimeToDateDecoder) []
     

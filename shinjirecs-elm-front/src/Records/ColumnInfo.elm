@@ -2,6 +2,7 @@ module Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder,minimum,maximum
 import Json.Decode as D
 import Utils.Maybe exposing (or)
 import Utils.Json exposing (map9)
+import Json.Decode.Pipeline exposing (decode,required,optional)
 
 type Typ = StringT | TextT | PasswordT | HiddenT | IntegerT | FloatT | DateT | TimeT | DateTimeT | BooleanT | BelongsTo | HasMany | Tel | URL | Email | Month | Week | Weeks | Range | Color
     
@@ -43,17 +44,16 @@ type alias ColumnInfo = { nullable  : Bool
 
 columnInfoDecoder : D.Decoder ColumnInfo
 columnInfoDecoder =
-    map9
-        ColumnInfo
-        (D.field "nullable"  (D.bool))
-        (D.field "default"   (D.maybe D.string))
-        (D.field "limit"     (D.maybe D.int))
-        (D.field "precision" (D.maybe D.int))
-        (D.field "scale"     (D.maybe D.int))
-        (D.field "type"      (D.map stringToTyp D.string))
-        (D.field "maximum"   (D.maybe D.int))
-        (D.field "minimum"   (D.maybe D.int))
-        (D.field "list"      (D.maybe <| D.list D.string))
+    decode ColumnInfo
+        |> required "nullable"  (D.bool)
+        |> optional "default"   (D.maybe D.string) Nothing
+        |> optional "limit"     (D.maybe D.int) Nothing
+        |> optional "precision" (D.maybe D.int) Nothing
+        |> optional "scale"     (D.maybe D.int) Nothing
+        |> required "type"      (D.map stringToTyp D.string)
+        |> optional "maximum"   (D.maybe D.int) Nothing
+        |> optional "minimum"   (D.maybe D.int) Nothing
+        |> optional "list"      (D.maybe <| D.list D.string) Nothing
             
 
 minimum : ColumnInfo -> Maybe Int

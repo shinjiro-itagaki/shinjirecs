@@ -3,6 +3,7 @@ import Records.Types exposing (ChannelType(BS,GR))
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
+import Json.Decode.Pipeline exposing (decode,required,optional)
 import Utils.Json exposing (map9,Encoder)
 
 toType : String -> ChannelType
@@ -33,15 +34,14 @@ channelTypeDecoder = D.string |> D.andThen (D.succeed << toType)
     
 channelDecoder : D.Decoder Channel
 channelDecoder =
-    D.map7
-        Channel
-        (D.field "number"        D.int)
-        (D.field "area_id"       D.int)
-        (D.field "ctype"         channelTypeDecoder)
-        (D.field "display_name"  D.string)
-        (D.field "order"         D.int)
-        (D.field "created_at"    D.float)
-        (D.field "updated_at"    D.float)
+    decode Channel
+        |> required "number"        D.int
+        |> required "area_id"       D.int
+        |> required "ctype"         channelTypeDecoder
+        |> required "display_name"  D.string
+        |> required "order"         D.int
+        |> required "created_at"    D.float
+        |> required "updated_at"    D.float
 
 channelEncoder : Encoder Channel
 channelEncoder x =
