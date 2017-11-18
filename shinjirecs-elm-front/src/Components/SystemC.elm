@@ -1,6 +1,6 @@
 module Components.SystemC exposing (SystemModel,SystemC,new) -- ,newSystemC)
 import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext))
-import Components.SystemMsg exposing (SystemMsg(None,CountUp,LoadSchema,LoadSchemaResult,Load,AfterLoad,Edit,Put,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction))
+import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
 import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),updateSystem,stringToTarget)
@@ -13,7 +13,7 @@ import Utils.Maybe exposing (catMaybes)
 import Utils.Either exposing (Either(Left,Right))
 
 type alias SystemModel = { system_record : System
-                         , show_record : Either (Maybe Int) (Entity System)
+                         , show_record : Maybe (Entity System)
                          , edit_record : Either (Maybe Int) (Entity System)
                          , system_schema : Maybe (Dict String ColumnInfo)
                          , previousAction : ActionType
@@ -29,7 +29,7 @@ new = { init          = init
       }
 init : SystemModel
 init = { system_record = System.new
-       , show_record = Left Nothing
+       , show_record = Nothing
        , edit_record = Left Nothing
        , system_schema = Nothing
        , previousAction = IndexAction
@@ -50,14 +50,6 @@ update msg (model,r,wr) =
         sendErrMsg errmsg = Right (model, { wr | errmsg = Just errmsg })
     in case msg of
            CountUp -> Right (model,{ wr | counter = wr.counter + 1 })
---           LoadSchema -> ((model,wr), NextCmd <| Cmd.map LoadSchemaResult r.api.system.info)
---           LoadSchemaResult (Ok res) -> (({model | system_schema = Just res}, wr), NoNext)
---           LoadSchemaResult (Err httperr) -> showErr httperr
---           Load -> ((model,wr),NextCmd <| Cmd.map AfterLoad r.api.system.get)
---           AfterLoad (Ok res) -> (({model | system_record = res}, wr), NoNext)
---           AfterLoad (Err httperr) -> showErr httperr
---           Edit entity -> notimpl
---           Put entity -> notimpl
            DoAction act ->
                let  model_ = { model | previousAction = model.actionType, actionType = act }
                     action = case act of
@@ -69,7 +61,7 @@ update msg (model,r,wr) =
                case updateSystem model.system_record target val of
                    Ok newsystem -> Right ({ model | system_record = newsystem }, {wr | errmsg = Nothing})
                    Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
-           _ -> sendErrMsg "another action !!"
+--           _ -> sendErrMsg "another action !!"
 
     -- { index   : Maybe Int -> Cmd (Result Http.Error (List (Entity a))) -- Int => limit
     -- , get     : Int       -> Cmd (Result Http.Error a) 
@@ -107,32 +99,42 @@ view (m,r,rw) =
          ShowAction  -> showView
          EditAction  -> editView
     ) m r rw
-    
+
+linkToButton : ActionType -> String -> Html SystemMsg
+linkToButton tgt label = button [ onClick <| DoAction tgt ] [text label]
+
+linkToIndexButton = linkToButton IndexAction "システムメニュー"
+linkToShowButton  = linkToButton ShowAction  "システム情報"
+linkToEditButton  = linkToButton EditAction  "システム情報編集"
+
+                   
 indexView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
 indexView model r rw =
     div [] <| [
          text <| "システム設定"
         ,button [ onClick CountUp ] [text <| "カウントアップ"]
---        ,button [ onClick LoadSchema ] [text <| "スキーマのロード"]
---                  ,div [] (case model.system_schema of
---                               Nothing -> []
---                               Just scm -> [formByColumns <| cast scm])
-        ,button [ onClick Load ] [text <| "データ表示"]
+        ,linkToShowButton
+        ,linkToEditButton
         ]
 
 showView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
 showView model r rw =
-    case model.show_record of
-        Left Nothing          -> div [] [text <| "システム表示 id指定されていない"]
-        Left (Just id)        -> div [] [text <| "システム表示 id指定されているがロードされていない"]
-        Right e -> div [] [text <| "システム表示 ロードすみ"]
+    div [] <| [
+         case model.show_record of
+             Nothing -> div [] [text <| "システム表示 ロードされていない"]
+             Just e  -> div [] [text <| "システム表示 ロードすみ"]
+        ,linkToIndexButton
+        ]
 
 editView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
 editView model r rw =
-    case model.edit_record of
-        Left Nothing          -> div [] [text <| "システム編集 id指定されていない"]
-        Left (Just id)        -> div [] [text <| "システム編集 id指定されているがロードされていない"]
-        Right e -> div [] [text <| "システム編集 ロードすみ"]
+    div [] <| [
+         case model.edit_record of
+             Left Nothing          -> div [] [text <| "システム編集 id指定されていない"]
+             Left (Just id)        -> div [] [text <| "システム編集 id指定されているがロードされていない"]
+             Right e -> div [] [text <| "システム編集 ロードすみ"]
+        ,linkToIndexButton
+        ]
 
 -- Dict String ColumnInfo =>  =>  =>  => List (String, (ColumnInfo,func)) => Dict String (ColumnInfo,func)
 cast : Dict String ColumnInfo -> Dict String (ColumnInfo,(String -> SystemMsg))
