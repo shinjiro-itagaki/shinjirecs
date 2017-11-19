@@ -13,4 +13,3 @@ catMaybes xs = case xs of
                    []            -> []
                    (Just x)::xs_ -> x :: (catMaybes xs_)
                    Nothing ::xs_ -> catMaybes xs_
-                     

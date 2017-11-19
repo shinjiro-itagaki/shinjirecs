@@ -70,7 +70,7 @@ update msg models =
                let res = components.system.update system_msg (models.system,models.readonly, models.editable)
                in case res of
                       Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
-                      Left cmd     -> (,) models <| Cmd.map (\(m,rw) -> UpdateModel {models | editable = rw, system = m}) cmd
+                      Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModel {models | editable = rw, system = m}) cmd) 
            UpdateModel m -> (m,Cmd.none)
 
 subscriptions : Models -> Sub PrivateRootMsg

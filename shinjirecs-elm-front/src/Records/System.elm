@@ -1,4 +1,4 @@
-module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..),stringToTarget,updateSystem)
+module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..),stringToTarget,updateSystem,toStringMap)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
@@ -6,6 +6,7 @@ import Utils.Json exposing (map9,Encoder)
 import Records.Types exposing (ChannelType(GR,BS))
 import Result exposing (map,mapError)
 import Json.Decode.Pipeline exposing (decode,required,optional)
+import Dict exposing (Dict,fromList)
 
 type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
 
@@ -103,7 +104,7 @@ new = { area_id = 0
       , created_at = 0
       , updated_at = 0
       }
-    
+
 systemDecoder : D.Decoder System
 systemDecoder =
     decode System
@@ -117,6 +118,7 @@ systemDecoder =
         |> required "created_at"           D.float
         |> required "updated_at"           D.float
 
+
 systemEncoder : Encoder System
 systemEncoder x = E.object
                   [ ("area_id", E.int  x.area_id)
@@ -129,3 +131,16 @@ systemEncoder x = E.object
                   , ("created_at", E.float x.created_at)
                   , ("updated_at", E.float x.updated_at)
                   ]
+
+toStringMap : System -> Dict String String
+toStringMap x =  Dict.fromList [
+                  ("area_id", toString x.area_id)
+                 ,("active" , toString x.active )
+                 ,("setup"  , toString x.setup  )
+                 ,("gr_tuner_count", toString x.gr_tuner_count)
+                 ,("bs_tuner_count", toString x.bs_tuner_count)
+                 ,("rest_gr_tuner_count", toString x.rest_gr_tuner_count)
+                 ,("rest_bs_tuner_count", toString x.rest_bs_tuner_count)
+                 ,("created_at", toString x.created_at)
+                 ,("updated_at", toString x.updated_at)
+                ]

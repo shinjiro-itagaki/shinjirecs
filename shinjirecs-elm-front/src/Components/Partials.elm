@@ -51,10 +51,13 @@ weekdayOptions = List.map (\w -> H.option [A.value <| toString <| weekdayToInt w
 
 weekdayChecks = List.map (\w -> H.input [A.type_ "checkbox", A.value <| toString <| weekdayToInt w] [H.text <| (weekdayLabel w).ja] ) weekdays
                  
-defaultInput : (String,C.ColumnInfo) -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
-defaultInput (name,info) =
+defaultInput : (String,C.ColumnInfo,Maybe String) -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
+defaultInput (name,info,mval) =
     let aname = A.name name
-        attrs = (++) [aname] <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
+        attr_value = case mval of
+                         Nothing -> []
+                         Just v  -> [A.value v]                
+        attrs = (++) ([aname] ++ attr_value) <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
         stringsToOption s = H.option [A.value <| s] [H.text <| s]
         integersToOptions = List.map (stringsToOption << toString)
         maybe_options = Maybe.map integersToOptions <| Maybe.map2 List.range info.minimum info.maximum
@@ -83,13 +86,13 @@ defaultInput (name,info) =
            C.Range     -> (H.input    , attrs ++ [A.type_ "range"]         ,[])
            C.Color     -> (H.input    , attrs ++ [A.type_ "color"]         ,[])
             
-mkInput : String -> C.ColumnInfo -> (String -> msg) -> H.Html msg
-mkInput name info to_msg = (\(f,attrs,children) -> f ([E.onInput to_msg, E.onCheck <| to_msg << (\b -> if b then "1" else "0" )] ++ attrs) children ) <| defaultInput (name,info)
+mkInput : Maybe String -> String -> C.ColumnInfo -> (String -> msg) -> H.Html msg
+mkInput mval name info to_msg = (\(f,attrs,children) -> f ([E.onInput to_msg, E.onCheck <| to_msg << (\b -> if b then "1" else "0" )] ++ attrs) children ) <| defaultInput (name,info,mval)
 
-formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> H.Html msg
-formByColumns colmap =
+formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> Dict String String -> H.Html msg
+formByColumns colmap valmap =
     H.form [] <| List.singleton <|
         H.dl [] <| List.concat <| List.map (\(nm,(info,f)) -> [ H.dt [] [H.text nm]
-                                                  , H.dd [] [mkInput nm info f]
+                                                  , H.dd [] [mkInput (Dict.get nm valmap) nm info f]
                                                   ]
                                            ) <| Dict.toList colmap
