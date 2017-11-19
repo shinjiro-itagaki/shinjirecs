@@ -11,7 +11,6 @@ import Components.Partials exposing (formByColumns)
 import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
 import Utils.Either exposing (Either(Left,Right))
-import Utils.Cmd exposing ((>>=),(=<<))
 
 type alias SystemModel = { show_record : Maybe (Entity System)
                          , edit_record : Maybe (Entity System)
@@ -58,32 +57,42 @@ update msg (model,r,wr) =
                                        Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
                                                                 
 indexAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
-indexAction (m, r, rw) = Right (m,rw)
+indexAction (m, r, rw) = Right ({m | system_schema = Nothing, show_record = Nothing, edit_record = Nothing},rw)
 
 showAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
 showAction (m, r, rw) =
     case m.show_record of
         Just x -> Right (m,rw)
-        Nothing -> Left <| reloadSystem m r rw
+        Nothing -> Left <| reloadShowRecord m r rw
 
-reloadSystem : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
-reloadSystem m r rw =
-    let f res = case res of
-                    (Ok e)      -> ({m|show_record = Just e} ,rw)
-                    (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
-    in Cmd.map f r.api.system.get
-    
+
+rewriteShowRecord : SystemModel -> Entity System -> SystemModel
+rewriteShowRecord m rec = {m|show_record = Just rec}
+
+rewriteEditRecord : SystemModel -> Entity System -> SystemModel
+rewriteEditRecord m rec = {m|edit_record = Just rec}
+
+reloadRecord : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> (SystemModel -> Entity System -> SystemModel) -> Cmd (SystemModel,CommonModelEditable)
+reloadRecord m r rw f =
+    let caster res = case res of
+                         (Ok e)        -> (f m e ,rw)
+                         (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+    in Cmd.map caster r.api.system.get
+                          
+reloadShowRecord : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
+reloadShowRecord m r rw = reloadRecord m r rw (\m2 e -> {m2|show_record = Just e} )
+
+reloadEditRecord : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
+reloadEditRecord m r rw = reloadRecord m r rw (\m2 e -> {m2|edit_record = Just e} )
+                      
 editAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable)) (SystemModel,CommonModelEditable)
 editAction (m, r, rw) =
     case (m.system_schema, m.edit_record) of
         (Just scm, Just rec) -> Right (m,rw)
-        (Just scm, Nothing)  ->
-            let f res = case res of
-                            (Ok e)        -> ({m|edit_record = Just e} ,rw)
-                            (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
-            in Left <| Cmd.map f r.api.system.get
-        (Nothing, _) -> Left <| reloadSchema m r rw
-                        
+        (Just scm, Nothing)  -> Left <| reloadEditRecord m r rw
+        (Nothing, Just rec)  -> Left <| reloadSchema m r {rw|errmsg = Just "tried to load schema"} 
+        (Nothing, Nothing)   -> Left <| reloadSchema m r {rw|errmsg = Just "jfoefe"}
+                                              
 reloadSchema : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
 reloadSchema m r rw =
     let f res = case res of
@@ -112,7 +121,7 @@ linkToShowButton  = linkToButton ShowAction  "システム情報"
 linkToEditButton  = linkToButton EditAction  "システム情報編集"
 
 viewIfSchemaNotLoaded : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
-viewIfSchemaNotLoaded model r rw = div [] [text <| "スキーマがロードれていない"]
+viewIfSchemaNotLoaded model r rw = div [] [text <| "スキーマがロードされていない"]
     
 indexView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
 indexView model r rw =

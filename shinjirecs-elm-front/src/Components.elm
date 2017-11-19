@@ -23,7 +23,7 @@ type alias Models = { currentC : Maybe ComponentSym
                     , system : SystemModel
                     }
 
-type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModel Models
+type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModelAndNextMsg Models PrivateRootMsg
     
 components : Components
 components = { system = SystemC.new }
@@ -59,19 +59,18 @@ httpErrorToMsg err =
             
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
-    let i = 0
-    in case msg of
-           ToRootPrivate rootmsg ->
-               case rootmsg of
-                   SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
-                   NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
-                   ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
-           ToSystem system_msg ->
-               let res = components.system.update system_msg (models.system,models.readonly, models.editable)
-               in case res of
-                      Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
-                      Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModel {models | editable = rw, system = m}) cmd) 
-           UpdateModel m -> (m,Cmd.none)
+    case msg of
+        ToRootPrivate rootmsg ->
+            case rootmsg of
+                SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
+                NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
+                ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
+        ToSystem system_msg ->
+            let res = components.system.update system_msg (models.system,models.readonly, models.editable)
+            in case res of
+                   Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
+                   Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModelAndNextMsg {models | editable = rw , system = m} msg ) cmd)
+        UpdateModelAndNextMsg m nextmsg -> update nextmsg m
 
 subscriptions : Models -> Sub PrivateRootMsg
 subscriptions m = Sub.none
