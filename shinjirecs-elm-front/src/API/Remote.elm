@@ -8,7 +8,12 @@ import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
 import Records.Types exposing (Entity)
 import Utils.Json exposing (Encoder)
 import Records.System  exposing (System  ,systemDecoder  ,systemEncoder)
+import Records.Area exposing (Area, areaDecoder, areaEncoder)
 import Records.Channel exposing (Channel ,channelDecoder ,channelEncoder)
+import Records.EpgProgram exposing (EpgProgram, epgProgramDecoder, epgProgramEncoder)
+import Records.EpgProgramCategory exposing (EpgProgramCategory, epgProgramCategoryDecoder, epgProgramCategoryEncoder)
+import Records.ProgramTitle exposing (ProgramTitle, programTitleDecoder, programTitleEncoder)
+import Records.Reservation exposing (Reservation, reservationDecoder, reservationEncoder)
 import Dict exposing (Dict)
 
 httpCommon : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
@@ -76,11 +81,32 @@ mkSystemI domain =
        , modify = rModify domain path systemDecoder systemEncoder
        , info   = rInfo   domain path columnInfoDecoder
        }
-                   
+
+mkAreasI : String -> T.AreasI
+mkAreasI domain = mkResourcesI domain "areas" areaDecoder areaEncoder
+        
 mkChannelsI : String -> T.ChannelsI                   
 mkChannelsI domain = mkResourcesI domain "channels" channelDecoder channelEncoder
-        
+
+mkEpgProgramsI : String -> T.EpgProgramsI
+mkEpgProgramsI domain = mkResourcesI domain "epg_programs" epgProgramDecoder epgProgramEncoder
+
+mkEpgProgramCategoriesI : String -> T.EpgProgramCategoriesI
+mkEpgProgramCategoriesI domain = mkResourcesI domain "epg_program_categories" epgProgramCategoryDecoder epgProgramCategoryEncoder
+
+mkProgramTitlesI : String -> T.ProgramTitlesI
+mkProgramTitlesI domain = mkResourcesI domain "program_titles" programTitleDecoder programTitleEncoder
+
+mkReservationsI : String -> T.ReservationsI
+mkReservationsI domain = mkResourcesI domain "reservations" reservationDecoder reservationEncoder
+                          
 getImpl : String -> T.API
 getImpl domain = { system   = mkSystemI   domain
-                 , channels = mkChannelsI domain }
+                 , areas    = mkAreasI    domain
+                 , channels = mkChannelsI domain
+                 , epgPrograms = mkEpgProgramsI domain
+                 , epgProgramCategories = mkEpgProgramCategoriesI domain
+                 , programTitles = mkProgramTitlesI domain
+                 , reservations  = mkReservationsI domain
+                 }
 

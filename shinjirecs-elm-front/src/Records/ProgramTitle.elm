@@ -1,9 +1,12 @@
-module Records.ProgramTitle exposing (ProgramTitle,ProgramTitleId)
-import Utils.Json exposing (map15,fromTimeToDateDecoder)
+module Records.ProgramTitle exposing (ProgramTitle,ProgramTitleId,programTitleDecoder,programTitleEncoder)
+import Utils.Json exposing (fromTimeToDateDecoder,dateEncoder)
 import Time exposing (Time)
 import Json.Decode as D
 import Date exposing (Date)
 import Json.Decode.Pipeline exposing (decode,required,optional)
+import Json.Encode as E
+import Utils.Maybe exposing (ifJust)
+import Utils.Json exposing (Encoder)
 
 type ProgramTitleId = ProgramTitleId Int
 type alias ProgramTitle =
@@ -43,3 +46,21 @@ programTitleDecoder =
         |> optional "finish_on"            (D.maybe fromTimeToDateDecoder) Nothing
         |> optional "dayoffs"              (D.list fromTimeToDateDecoder) []
     
+programTitleEncoder : Encoder ProgramTitle
+programTitleEncoder x = E.object
+                  [ ("start_at",              E.int x.start_at)
+                  , ("duration",              E.int x.duration)
+                  , ("channel_id",            E.int x.channel_id)
+                  , ("title",                 E.string x.title)
+                  , ("desc",                  E.string x.desc)
+                  , ("program_category_id",   E.int x.program_category_id)
+                  , ("next_counter",          E.int x.next_counter)
+                  , ("weekdays",              E.int x.weekdays)
+                  , ("auto_next",             E.bool x.auto_next)
+                  , ("label_format",          E.string x.label_format)
+                  , ("created_at",            E.float x.created_at)
+                  , ("updated_at",            E.float x.updated_at)
+                  , ("begin_on",              ifJust dateEncoder x.begin_on  E.null)
+                  , ("finish_on",             ifJust dateEncoder x.finish_on E.null)
+                  , ("dayoffs",               E.list <| List.map dateEncoder x.dayoffs)
+                  ]

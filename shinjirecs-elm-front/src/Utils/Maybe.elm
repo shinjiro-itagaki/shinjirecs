@@ -13,3 +13,10 @@ catMaybes xs = case xs of
                    []            -> []
                    (Just x)::xs_ -> x :: (catMaybes xs_)
                    Nothing ::xs_ -> catMaybes xs_
+
+
+ifJust : (a -> b) -> Maybe a -> b -> b
+ifJust caster mv ifNothing =
+    case mv of
+        Just v -> caster v
+        Nothing -> ifNothing

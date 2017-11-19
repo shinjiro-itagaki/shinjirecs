@@ -1,7 +1,7 @@
 module Utils.Json exposing (..)
 import Json.Decode as D
-import Json.Encode exposing (Value)
-import Date exposing (fromTime)
+import Json.Encode exposing (Value,float)
+import Date exposing (fromTime,toTime)
 
 type alias Encoder a = (a -> Value)
     
@@ -148,3 +148,4 @@ map16 f16 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11 d12 d13 d14 d15 d16 =
 
 fromTimeToDateDecoder = D.float |> D.andThen (D.succeed << fromTime)
 
+dateEncoder = float << toTime

@@ -2,7 +2,7 @@ module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
-import Utils.Json exposing (map9,Encoder)
+import Utils.Json exposing (Encoder)
 import Records.Types exposing (ChannelType(GR,BS))
 import Result exposing (map,mapError)
 import Json.Decode.Pipeline exposing (decode,required,optional)
