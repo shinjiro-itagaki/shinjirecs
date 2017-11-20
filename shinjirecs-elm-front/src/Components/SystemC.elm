@@ -1,6 +1,6 @@
 module Components.SystemC exposing (SystemModel,SystemC,new)
 import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext))
-import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction))
+import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
 import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),setValue,stringToTarget,toStringMap)
@@ -34,7 +34,6 @@ init = { show_record = Nothing
        , actionType = IndexAction
        }
 
-
 update : SystemMsg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable)) (SystemModel,CommonModelEditable)
 update msg (model,r,wr) =
     let always = Right (model,wr)
@@ -47,6 +46,7 @@ update msg (model,r,wr) =
                                  IndexAction -> indexAction
                                  ShowAction  -> showAction
                                  EditAction  -> editAction
+                                 ModifyAction -> editAction
                in action (model_,r,wr)
            SystemInput target val ->
                let edit_rec = model.edit_record
@@ -92,7 +92,10 @@ editAction (m, r, rw) =
         (Just scm, Nothing)  -> Left <| reloadEditRecord m r rw
         (Nothing, Just rec)  -> Left <| reloadSchema m r {rw|errmsg = Just "tried to load schema"} 
         (Nothing, Nothing)   -> Left <| reloadSchema m r {rw|errmsg = Just "jfoefe"}
-                                              
+
+
+                                
+
 reloadSchema : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
 reloadSchema m r rw =
     let f res = case res of
@@ -108,9 +111,8 @@ viewMain (m,r,rw) =
     (case m.actionType of
          IndexAction -> indexView
          ShowAction  -> showView
-         EditAction  -> case m.system_schema of
-                            Just scm -> editView scm
-                            Nothing  -> viewIfSchemaNotLoaded
+         EditAction  -> editView m.system_schema
+         ModifyAction -> editView m.system_schema
     ) m r rw
 
 view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html SystemMsg
@@ -127,6 +129,8 @@ linkToIndexButton = linkToButton IndexAction "システムメニュー"
 linkToShowButton  = linkToButton ShowAction  "システム情報"
 linkToEditButton  = linkToButton EditAction  "システム情報編集"
 
+submitEditButton = linkToButton ModifyAction "システム情報更新"
+                    
 viewIfSchemaNotLoaded : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
 viewIfSchemaNotLoaded model r rw = div [] [text <| "スキーマがロードされていない"]
     
@@ -148,15 +152,27 @@ showView model r rw =
         ,linkToIndexButton
         ]
 
-editView : Dict String ColumnInfo -> SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
-editView scm model r rw =
+editView : Maybe (Dict String ColumnInfo) -> SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
+editView mscm = case mscm of
+                   Just scm -> editViewImpl scm
+                   Nothing  -> viewIfSchemaNotLoaded          
+
+editViewImpl : Dict String ColumnInfo -> SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
+editViewImpl scm model r rw =
     div [] <| [
          case model.edit_record of
              Nothing   -> div [] [text <| "システム編集 ロードされていない"]
              Just erec -> formByColumns (cast scm) (toStringMap erec.val) Nothing
+        , submitEditButton
         , linkToIndexButton
         ]
 
+modifyView : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html SystemMsg
+modifyView model r rw =
+    div [] <| [
+         div [] [text <| "システム更新中"]
+        ]
+             
 cast : Dict String ColumnInfo -> Dict String (ColumnInfo,(String -> SystemMsg))
 cast = Dict.fromList
        << catMaybes
