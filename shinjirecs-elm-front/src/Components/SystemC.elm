@@ -146,7 +146,7 @@ editView scm model r rw =
     div [] <| [
          case model.edit_record of
              Nothing   -> div [] [text <| "システム編集 ロードされていない"]
-             Just erec -> formByColumns (cast scm) (toStringMap erec.val)
+             Just erec -> formByColumns (cast scm) (toStringMap erec.val) Nothing
         , linkToIndexButton
         ]
 

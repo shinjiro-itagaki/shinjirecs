@@ -89,10 +89,12 @@ defaultInput (name,info,mval) =
 mkInput : Maybe String -> String -> C.ColumnInfo -> (String -> msg) -> H.Html msg
 mkInput mval name info to_msg = (\(f,attrs,children) -> f ([E.onInput to_msg, E.onCheck <| to_msg << (\b -> if b then "1" else "0" )] ++ attrs) children ) <| defaultInput (name,info,mval)
 
-formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> Dict String String -> H.Html msg
-formByColumns colmap valmap =
-    H.form [] <| List.singleton <|
-        H.dl [] <| List.concat <| List.map (\(nm,(info,f)) -> [ H.dt [] [H.text nm]
-                                                  , H.dd [] [mkInput (Dict.get nm valmap) nm info f]
-                                                  ]
-                                           ) <| Dict.toList colmap
+formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> Dict String String -> Maybe Int -> H.Html msg
+formByColumns colmap valmap mid =
+    H.form [] [ 
+         H.dl [] <| List.concat <| List.map (\(nm,(info,f)) -> [ H.dt [] [H.text nm]
+                                                               , H.dd [] [mkInput (Dict.get nm valmap) nm info f]
+                                                               ]
+                                            ) <| Dict.toList colmap
+        ,H.button [] [H.text "保存"]
+        ]
