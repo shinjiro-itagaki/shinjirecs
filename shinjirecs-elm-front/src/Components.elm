@@ -2,7 +2,8 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
-import Components.Types exposing (NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
+-- import Components.ReservationC exposing (ReservationC,ReservationModel)
+import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -24,6 +25,9 @@ type alias Models = { currentC : Maybe ComponentSym
                     , system : SystemModel
                     }
 
+-- type ComponentWrapper = SystemW      SystemC      SystemModel
+--                      | ReservationW ReservationC ReservationModel
+    
 type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModelAndNextMsg Models PrivateRootMsg | UpdateModel Models
     
 components : Components
@@ -62,7 +66,14 @@ updateCache : Models -> Cache -> Models
 updateCache models newcache =
     let r = models.readonly
     in {models | readonly = {r|cache = newcache}}
-                      
+
+updateImpl : Models -> Component model msg -> model -> msg -> (model -> models -> models) -> Either (Cmd (model,CommonModelEditable)) (model,CommonModelEditable)
+updateImpl models comp model msg updater =
+    let res = comp.update msg (model,models.readonly, models.editable)
+    in case res of
+           Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
+           Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModelAndNextMsg <| updater m <| {models | editable = rw} msg ) cmd)    
+        
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     case msg of
@@ -77,10 +88,7 @@ update msg models =
                                                 Err httperr -> showErrMsg_ <| httpErrorToMsg httperr
             in (models, Cmd.map caster models.readonly.api.system.all)
         ToSystem system_msg ->
-            let res = components.system.update system_msg (models.system,models.readonly, models.editable)
-            in case res of
-                   Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
-                   Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModelAndNextMsg {models | editable = rw , system = m} msg ) cmd)
+            updateImpl models components.system models.system system_msg (\m ms -> {ms|system = m})
         UpdateModelAndNextMsg m nextmsg -> update nextmsg m
         UpdateModel m -> (m,Cmd.none)
 

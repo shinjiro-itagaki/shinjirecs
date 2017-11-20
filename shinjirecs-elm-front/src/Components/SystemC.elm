@@ -103,8 +103,8 @@ reloadSchema m r rw =
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub SystemMsg
 subscriptions (m,r,wr) = Sub.none
 
-view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html SystemMsg
-view (m,r,rw) =
+viewMain : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html SystemMsg
+viewMain (m,r,rw) =
     (case m.actionType of
          IndexAction -> indexView
          ShowAction  -> showView
@@ -113,6 +113,13 @@ view (m,r,rw) =
                             Nothing  -> viewIfSchemaNotLoaded
     ) m r rw
 
+view : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Html SystemMsg
+view (m,r,rw) =
+    div [] [
+         viewMain (m,r,rw)
+        ]
+    
+    
 linkToButton : ActionType -> String -> Html SystemMsg
 linkToButton tgt label = button [ onClick <| DoAction tgt ] [text label]
 

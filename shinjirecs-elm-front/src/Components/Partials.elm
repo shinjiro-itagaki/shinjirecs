@@ -6,7 +6,8 @@ import Html.Events as E exposing (..)
 import Utils.Maybe exposing (or,catMaybes)
 import Utils.DateTime exposing (weekdayLabel,weekdayToInt,weekdays,monthToInt,months,weekdayFlagsToInt,intToWeekdayFlags)
 import Dict exposing (Dict)
-    
+import Utils.Either exposing (Either(Left,Right))
+
 {-
   nullable  : Bool
 , default   : Maybe String
@@ -98,3 +99,31 @@ formByColumns colmap valmap mid =
                                             ) <| Dict.toList colmap
         ,H.button [] [H.text "保存"]
         ]
+
+-- type Partial = SetValue String String | Submited
+
+type Request = SetValue String String | Submit (Dict String (Either String (List String)))
+type Response msg = Succeed | BadRequest (Dict String String) | RedirectTo msg
+
+type Input = StringInput   String String
+           | IntInput      String Int
+           | DateInput     String (Int,Int,Int)
+           | TimeInput     String (Int,Int,Int)
+           | DateTimeInput String (Int,Int,Int,Int,Int,Int)
+    
+--mkForm : List (String,(C.ColumnInfo,Maybe String)) -> (Request -> Response msg) -> () -> H.Html msg
+--mkForm info = 
+--    let f = 1
+--    in 
+
+type LocalMsg = Multi String
+type alias LocalModel = {val : String}
+    
+sample : LocalModel -> (LocalMsg -> msg) -> H.Html msg
+sample m f = H.map f <|
+             H.div [] [H.input [ A.type_ "number"
+                               , E.onInput (\v -> Multi v)
+                               ] []
+                      ,H.div [] [text <| m.val]
+                      ]
+
