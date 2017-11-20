@@ -66,18 +66,16 @@ updateCache models newcache =
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     case msg of
-        ToRootPrivate rootmsg ->
-            case rootmsg of
-                SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
-                NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
-                ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
-                RefreshAPICache ->
-                    let updateCache_ = updateCache models
-                        showErrMsg_  = showErrMsg models
-                        caster res = UpdateModel <| case res of
-                                                        Ok newcache -> updateCache_ newcache
-                                                        Err httperr -> showErrMsg_ <| httpErrorToMsg httperr
-                    in (models, Cmd.map caster models.readonly.api.system.all)
+        ToRootPrivate (SwitchTo sym) -> ({ models | currentC = Just sym }, Cmd.none)
+        ToRootPrivate NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
+        ToRootPrivate (ShowHttpError httperr) -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
+        ToRootPrivate RefreshAPICache ->
+            let updateCache_ = updateCache models
+                showErrMsg_  = showErrMsg models
+                caster res = UpdateModel <| case res of
+                                                Ok newcache -> updateCache_ newcache
+                                                Err httperr -> showErrMsg_ <| httpErrorToMsg httperr
+            in (models, Cmd.map caster models.readonly.api.system.all)
         ToSystem system_msg ->
             let res = components.system.update system_msg (models.system,models.readonly, models.editable)
             in case res of
