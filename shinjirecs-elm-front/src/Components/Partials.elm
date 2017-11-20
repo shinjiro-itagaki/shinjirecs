@@ -116,10 +116,10 @@ type Input = StringInput   String String
 --    let f = 1
 --    in 
 
-type LocalMsg = Multi String
-type alias LocalModel = {val : String}
-    
-sample : LocalModel -> (LocalMsg -> msg) -> H.Html msg
+type SampleMsg = Multi String
+type alias SampleModel = {val : String}
+
+sample : SampleModel -> (SampleMsg -> msg) -> H.Html msg
 sample m f = H.map f <|
              H.div [] [H.input [ A.type_ "number"
                                , E.onInput (\v -> Multi v)

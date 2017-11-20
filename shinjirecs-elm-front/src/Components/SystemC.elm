@@ -3,11 +3,11 @@ import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEdita
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
-import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),updateSystem,stringToTarget,toStringMap)
+import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),setValue,stringToTarget,toStringMap)
 import Records.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
-import Components.Partials exposing (formByColumns)
+import Components.Partials exposing (formByColumns,sample,SampleMsg,SampleModel)
 import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
 import Utils.Either exposing (Either(Left,Right))
@@ -52,7 +52,7 @@ update msg (model,r,wr) =
                let edit_rec = model.edit_record
                in case edit_rec of
                       Nothing -> always
-                      Just erec -> case updateSystem erec.val target val of
+                      Just erec -> case setValue erec.val target val of
                                        Ok newsystem -> Right ({ model | edit_record = Just { erec | val = newsystem }}, {wr | errmsg = Nothing})
                                        Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
                                                                 

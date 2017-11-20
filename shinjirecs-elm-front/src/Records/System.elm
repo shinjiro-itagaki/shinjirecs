@@ -1,12 +1,12 @@
-module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..),stringToTarget,updateSystem,toStringMap)
+module Records.System exposing (System, SystemId,systemDecoder,systemEncoder,new,ColumnTarget(..),stringToTarget,setValue,toStringMap)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
 import Utils.Json exposing (Encoder)
-import Records.Types exposing (ChannelType(GR,BS))
+import Records.Types exposing (ChannelType(GR,BS),Errors,toBool)
 import Result exposing (map,mapError)
-import Json.Decode.Pipeline exposing (decode,required,optional)
-import Dict exposing (Dict,fromList)
+import Json.Decode.Pipeline exposing (decode,required,optional,hardcoded)
+import Dict exposing (Dict,fromList,empty)
 
 type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
 
@@ -22,24 +22,11 @@ stringToTarget str =
         "rest_bs_tuner_count" -> Just (RestTunerCount BS)
         _                     -> Nothing
     
-toBool : String -> Result String Bool
-toBool str =
-    case String.toLower str of
-        "on"    -> Ok True
-        "t"     -> Ok True
-        "true"  -> Ok True
-        "yes"   -> Ok True
-        "off"   -> Ok False
-        "f"     -> Ok False
-        "false" -> Ok False
-        "no"    -> Ok False
-        x       -> Result.map (\x -> x > 0) <| String.toInt x
-
 common : String -> tgt -> rec -> (rec -> a -> rec) -> (String -> Result String a) -> Result (String,tgt) rec
 common valstr target rec replacer caster = Result.map (replacer rec) <| mapError (\s -> (s,target)) <| caster valstr
 
-updateSystem : System -> ColumnTarget -> String -> Result (String,ColumnTarget) System
-updateSystem rec target valstr =
+setValue : System -> ColumnTarget -> String -> Result (String,ColumnTarget) System
+setValue rec target valstr =
     let common_ = common valstr target rec
     in case target of
            AreaId            -> common_ replace_area_id             String.toInt
@@ -91,6 +78,7 @@ type alias System =
     , rest_bs_tuner_count : Int
     , created_at : Time
     , updated_at : Time
+    , errors : Errors
     }
         
 new : System
@@ -103,6 +91,7 @@ new = { area_id = 0
       , rest_bs_tuner_count = 0
       , created_at = 0
       , updated_at = 0
+      , errors = Dict.empty
       }
 
 systemDecoder : D.Decoder System
@@ -117,6 +106,7 @@ systemDecoder =
         |> required "rest_bs_tuner_count"  D.int
         |> required "created_at"           D.float
         |> required "updated_at"           D.float
+        |> hardcoded Dict.empty
 
 
 systemEncoder : Encoder System
@@ -128,8 +118,6 @@ systemEncoder x = E.object
                   , ("bs_tuner_count", E.int x.bs_tuner_count)
                   , ("rest_gr_tuner_count", E.int x.rest_gr_tuner_count)
                   , ("rest_bs_tuner_count", E.int x.rest_bs_tuner_count)
-                  , ("created_at", E.float x.created_at)
-                  , ("updated_at", E.float x.updated_at)
                   ]
 
 toStringMap : System -> Dict String String
