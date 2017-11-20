@@ -5,7 +5,7 @@ import Http exposing (get,post,jsonBody)
 import Json.Decode as D
 import Time exposing (Time)
 import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
-import Records.Types exposing (Entity)
+import Records.Types exposing (Entity,entitiesToDict)
 import Utils.Json exposing (Encoder)
 import Records.System  exposing (System  ,systemDecoder  ,systemEncoder)
 import Records.Area exposing (Area, areaDecoder, areaEncoder)
@@ -15,6 +15,7 @@ import Records.EpgProgramCategory exposing (EpgProgramCategory, epgProgramCatego
 import Records.ProgramTitle exposing (ProgramTitle, programTitleDecoder, programTitleEncoder)
 import Records.Reservation exposing (Reservation, reservationDecoder, reservationEncoder)
 import Dict exposing (Dict)
+import Json.Decode.Pipeline exposing (decode,optional,required)
 
 httpCommon : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Cmd (Result Http.Error a)
 httpCommon d mkReq =
@@ -74,12 +75,24 @@ mkResourcesI domain path decoder encoder =
     , info    = rInfo     domain path columnInfoDecoder
     }
 
+mkAllEntityDecoder : D.Decoder T.Cache
+mkAllEntityDecoder =
+    decode T.Cache
+    |> optional "system"                 (D.map Just <|                               mkEntityDecoder Nothing systemDecoder             ) Nothing
+    |> optional "areas"                  (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing areaDecoder               ) Nothing
+    |> optional "channels"               (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing channelDecoder            ) Nothing
+    |> optional "epg_programs"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramDecoder         ) Nothing
+    |> optional "epg_program_categories" (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramCategoryDecoder ) Nothing
+    |> optional "program_titles"         (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing programTitleDecoder       ) Nothing
+    |> optional "reservations"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing reservationDecoder        ) Nothing
+        
 mkSystemI : String -> T.SystemI
 mkSystemI domain =
     let path = "systems"
     in { get    = httpGet (join "/" [domain,path]) <| mkEntityDecoder Nothing systemDecoder
        , modify = rModify domain path systemDecoder systemEncoder
        , info   = rInfo   domain path columnInfoDecoder
+       , all    = httpGet (join "/" [domain,path,"all"]) mkAllEntityDecoder
        }
 
 mkAreasI : String -> T.AreasI

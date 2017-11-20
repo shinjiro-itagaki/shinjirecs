@@ -20,7 +20,7 @@ epgProgramCategoryDecoder =
     decode EpgProgramCategory
         |> required "label_ja"    D.string
         |> required "label_en"    D.string
-        |> required "parent_id"   (D.maybe <| D.int)
+        |> optional "parent_id"   (D.maybe <| D.int) Nothing
         |> required "created_at"  D.float
         |> required "updated_at"  D.float
     

@@ -2,12 +2,13 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemC exposing (SystemC,SystemModel)
-import Components.Types exposing (NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
 import List exposing (singleton)
 import API exposing (getAPI)
+import API.Types exposing (Cache, emptyCache)
 import Components.SystemC as SystemC
 import Components.SystemMsg exposing (SystemMsg)
 import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
@@ -23,7 +24,7 @@ type alias Models = { currentC : Maybe ComponentSym
                     , system : SystemModel
                     }
 
-type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModelAndNextMsg Models PrivateRootMsg
+type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModelAndNextMsg Models PrivateRootMsg | UpdateModel Models
     
 components : Components
 components = { system = SystemC.new }
@@ -38,7 +39,7 @@ init : (Models, Cmd PrivateRootMsg)
 init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
-               , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg }
+               , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg , cache=emptyCache}
                , editable = { counter = 0, errmsg = Nothing }
                }
        in (m, Cmd.none)
@@ -56,7 +57,12 @@ httpErrorToMsg err =
         NetworkError -> "NetworkError"
         BadStatus response -> response.body
         BadPayload str response -> "bad payload error message = " ++ str ++ " , body = " ++ response.body
-            
+
+updateCache : Models -> Cache -> Models
+updateCache models newcache =
+    let r = models.readonly
+    in {models | readonly = {r|cache = newcache}}
+                      
 update : PrivateRootMsg -> Models -> (Models, Cmd PrivateRootMsg)
 update msg models =
     case msg of
@@ -65,12 +71,20 @@ update msg models =
                 SwitchTo sym -> ({ models | currentC = Just sym }, Cmd.none)
                 NoComponentSelected -> ({ models | currentC = Nothing }, Cmd.none)
                 ShowHttpError httperr -> (showErrMsg models <| httpErrorToMsg httperr, Cmd.none)
+                RefreshAPICache ->
+                    let updateCache_ = updateCache models
+                        showErrMsg_  = showErrMsg models
+                        caster res = UpdateModel <| case res of
+                                                        Ok newcache -> updateCache_ newcache
+                                                        Err httperr -> showErrMsg_ <| httpErrorToMsg httperr
+                    in (models, Cmd.map caster models.readonly.api.system.all)
         ToSystem system_msg ->
             let res = components.system.update system_msg (models.system,models.readonly, models.editable)
             in case res of
                    Right (m,rw) -> ({models | editable = rw, system = m}, Cmd.none)
                    Left cmd     -> (models, Cmd.map (\(m,rw) -> UpdateModelAndNextMsg {models | editable = rw , system = m} msg ) cmd)
         UpdateModelAndNextMsg m nextmsg -> update nextmsg m
+        UpdateModel m -> (m,Cmd.none)
 
 subscriptions : Models -> Sub PrivateRootMsg
 subscriptions m = Sub.none
@@ -87,6 +101,7 @@ componentView models =
         Just sym -> invokeView sym models
         Nothing  -> H.div [] [
                      (H.button [E.onClick (switchTo SystemCSym)] [H.text "システム設定へ"])
+                    ,(H.button [E.onClick (ToRootPrivate RefreshAPICache)] [H.text "APIキャッシュ更新"])
                     ]
 
 view : Models -> Html PrivateRootMsg
