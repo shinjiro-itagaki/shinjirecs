@@ -4,13 +4,14 @@ import Html as H
 import Components.SystemC exposing (SystemC)
 import Components.SystemModel exposing (SystemModel)
 -- import Components.ReservationC exposing (ReservationC,ReservationModel)
-import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd))
+import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest),Request(ToSystemReq))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
 import List exposing (singleton)
 import API exposing (getAPI)
 import API.Types exposing (Cache, emptyCache)
+import Components.Types exposing (Models)
 import Components.SystemC as SystemC
 import Components.SystemMsg exposing (SystemMsg)
 import Components.SystemMsg as SystemMsg exposing (ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
@@ -21,11 +22,6 @@ import Utils.Either exposing (Either(Left,Right))
 { id, class, classList } = withNamespace "root"
                            
 type alias Components = { system : SystemC }
-type alias Models = { currentC : Maybe ComponentSym
-                    , readonly : CommonModelReadOnly
-                    , editable : CommonModelEditable
-                    , system : SystemModel
-                    }
 
 -- type ComponentWrapper = SystemW      SystemC      SystemModel
 --                      | ReservationW ReservationC ReservationModel
@@ -139,18 +135,31 @@ invokeView sym m =
     case sym of
         SystemCSym -> Html.map ToSystem <| components.system.view (m.system,m.readonly,m.editable)
 
-type Request = ToSystemReq SystemMsg.ActionType
 
-dispatch : Request -> Models -> Html RootMsg2
+
+type alias PrivateModel =
+    { m : Models
+    , f : (Models -> Html RootMsg2)
+    , req : Request
+    }
+    
+dispatch : Request -> Models -> RootMsg2
 dispatch req models =
     case req of
-        ToSystemReq tipe -> SystemC.accept tipe models.system models.readonly models.editable
---    let res = case req of
---    in 
+        ToSystemReq tipe -> SystemC.accept tipe models
 
-
-update2 : RootMsg2 -> Models -> (Models, Cmd RootMsg2)
-update2 msg models =
+replaceAnyModel : Request -> Models -> Models -> Models
+replaceAnyModel req old new =
+    case req of
+        ToSystemReq _ -> {old| system = new.system }
+                            
+update2 : RootMsg2 -> PrivateModel -> (PrivateModel, Cmd RootMsg2)
+update2 msg oldpm =
     case msg of
-        DirectMsg rw -> (models,Cmd.none)
-        HasCmd cmd -> (models,cmd)
+        DirectMsg rtnm f ->
+            let oldm = oldpm.m
+                newm = replaceAnyModel oldpm.req oldm rtnm -- replace only a model of target component
+                newpm = {oldpm| m = { newm | editable = rtnm.editable }, f = f}
+            in (newpm ,Cmd.none)
+        HasCmd cmd -> (oldpm,cmd)
+        SendRequest req -> update2 (dispatch req oldpm.m) {oldpm|req=req}

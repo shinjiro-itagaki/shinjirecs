@@ -1,6 +1,6 @@
 module Components.SystemC exposing (SystemC,new,accept)
 import Components.SystemModel exposing (SystemModel)
-import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg2)
+import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg2(DirectMsg,HasCmd))
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
@@ -191,12 +191,12 @@ cast = Dict.fromList
                    )
        << Dict.toList
 
-accept : ActionType -> SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html RootMsg2
-accept tipe m r rw =
+accept : ActionType -> Models -> RootMsg2
+accept tipe m =
     let html =
             case tipe of
-                IndexAction   -> div [] [text <| ""]
-                ShowAction    -> div [] [text <| ""]
-                EditAction    -> div [] [text <| ""]
-                ModifyAction  -> div [] [text <| ""]
+                IndexAction   -> DirectMsg m (\x -> div [] [text <| ""])
+                ShowAction    -> DirectMsg m (\x -> div [] [text <| ""])
+                EditAction    -> DirectMsg m (\x ->  div [] [text <| ""])
+                ModifyAction  -> DirectMsg m (\x ->  div [] [text <| ""])
     in html
