@@ -4,7 +4,7 @@ import Html as H
 import Components.SystemC exposing (SystemC)
 import Components.SystemModel exposing (SystemModel)
 -- import Components.ReservationC exposing (ReservationC,ReservationModel)
-import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest),Request(ToSystemReq))
+import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel2),Request(ToSystemReq))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -152,14 +152,23 @@ replaceAnyModel : Request -> Models -> Models -> Models
 replaceAnyModel req old new =
     case req of
         ToSystemReq _ -> {old| system = new.system }
-                            
+
+updatePrivateModel : PrivateModel -> Models -> PrivateModel
+updatePrivateModel oldpm rtnm =
+    let oldm = oldpm.m
+        newm = replaceAnyModel oldpm.req oldm rtnm -- replace only a model of target component
+        newpm = {oldpm| m = { newm | editable = rtnm.editable }}
+    in newpm
+                         
 update2 : RootMsg2 -> PrivateModel -> (PrivateModel, Cmd RootMsg2)
 update2 msg oldpm =
-    case msg of
-        DirectMsg rtnm f ->
-            let oldm = oldpm.m
-                newm = replaceAnyModel oldpm.req oldm rtnm -- replace only a model of target component
-                newpm = {oldpm| m = { newm | editable = rtnm.editable }, f = f}
-            in (newpm ,Cmd.none)
+    let updatePrivateModel_ = updatePrivateModel oldpm
+    in case msg of
+        UpdateModel2 rtnm   -> (updatePrivateModel_ rtnm, Cmd.none)
+        DirectMsg    rtnm f -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
         HasCmd cmd -> (oldpm,cmd)
         SendRequest req -> update2 (dispatch req oldpm.m) {oldpm|req=req}
+        DoNothing -> (oldpm,Cmd.none)
+
+view2 : PrivateModel -> Html RootMsg2
+view2 pm = pm.f pm.m

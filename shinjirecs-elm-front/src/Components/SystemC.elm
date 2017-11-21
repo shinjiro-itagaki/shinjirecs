@@ -191,6 +191,9 @@ cast = Dict.fromList
                    )
        << Dict.toList
 
+castToRootMsg : Models -> SystemModel -> Models
+castToRootMsg m sysm = {m|system = sysm}
+           
 accept : ActionType -> Models -> RootMsg2
 accept tipe m =
     let html =

@@ -37,4 +37,4 @@ type alias Component model msg = { init          : model
 --type Ls a = Car a | Cdr (Ls a)
 --type CmdWrapper a = CmdW (Cmd a) | HasNext (CmdWrapper a)
 type Request = ToSystemReq SystemMsg.ActionType
-type RootMsg2 = DirectMsg Models (Models -> Html RootMsg2) | HasCmd (Cmd RootMsg2) | SendRequest Request
+type RootMsg2 = DirectMsg Models (Models -> Html RootMsg2) | HasCmd (Cmd RootMsg2) | SendRequest Request | DoNothing | UpdateModel2 Models
