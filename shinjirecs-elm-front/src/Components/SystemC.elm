@@ -1,9 +1,10 @@
-module Components.SystemC exposing (SystemModel,SystemC,new)
-import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext))
+module Components.SystemC exposing (SystemC,new,accept)
+import Components.SystemModel exposing (SystemModel)
+import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg2)
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
-import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount),setValue,stringToTarget,toStringMap)
+import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount{- ,RestTunerCount -}),setValue,stringToTarget,toStringMap)
 import Records.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
@@ -12,12 +13,6 @@ import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
 import Utils.Either exposing (Either(Left,Right))
 
-type alias SystemModel = { show_record : Maybe (Entity System)
-                         , edit_record : Maybe (Entity System)
-                         , system_schema : Maybe (Dict String ColumnInfo)
-                         , previousAction : ActionType
-                         , actionType : ActionType
-                         }
 type alias SystemC = Component SystemModel SystemMsg
 
 new : SystemC
@@ -34,10 +29,13 @@ init = { show_record = Nothing
        , actionType = IndexAction
        }
 
+redirectTo : ActionType -> SystemModel -> SystemModel
+redirectTo act m = { m | previousAction = m.actionType, actionType = act }
+    
 update : SystemMsg -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable)) (SystemModel,CommonModelEditable)
 update msg (model,r,wr) =
     let always = Right (model,wr)
-        sendErrMsg errmsg = Right (model, { wr | errmsg = Just errmsg })
+        sendErrMsg errmsg = Right (model, { wr | errmsg = errmsg })
     in case msg of
            CountUp -> Right (model,{ wr | counter = wr.counter + 1 })
            DoAction act ->
@@ -46,14 +44,14 @@ update msg (model,r,wr) =
                                  IndexAction -> indexAction
                                  ShowAction  -> showAction
                                  EditAction  -> editAction
-                                 ModifyAction -> editAction
+                                 ModifyAction -> modifyAction
                in action (model_,r,wr)
            SystemInput target val ->
                let edit_rec = model.edit_record
                in case edit_rec of
                       Nothing -> always
                       Just erec -> case setValue erec.val target val of
-                                       Ok newsystem -> Right ({ model | edit_record = Just { erec | val = newsystem }}, {wr | errmsg = Nothing})
+                                       Ok newsystem -> Right ({ model | edit_record = Just { erec | val = newsystem }}, {wr | errmsg = val })
                                        Err (colname,target2) -> sendErrMsg <| colname ++ " input error"
                                                                 
 indexAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable))  (SystemModel,CommonModelEditable)
@@ -76,7 +74,7 @@ reloadRecord : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> (Sys
 reloadRecord m r rw f =
     let caster res = case res of
                          (Ok e)        -> (f m e ,rw)
-                         (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+                         (Err httperr) -> (m,{rw|errmsg = r.httpErrorToString httperr})
     in Cmd.map caster r.api.system.get
                           
 reloadShowRecord : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
@@ -90,17 +88,28 @@ editAction (m, r, rw) =
     case (m.system_schema, m.edit_record) of
         (Just scm, Just rec) -> Right (m,rw)
         (Just scm, Nothing)  -> Left <| reloadEditRecord m r rw
-        (Nothing, Just rec)  -> Left <| reloadSchema m r {rw|errmsg = Just "tried to load schema"} 
-        (Nothing, Nothing)   -> Left <| reloadSchema m r {rw|errmsg = Just "jfoefe"}
+        (Nothing, Just rec)  -> Left <| reloadSchema m r {rw|errmsg = "tried to load schema"} 
+        (Nothing, Nothing)   -> Left <| reloadSchema m r {rw|errmsg = "jfoefe"}
 
+modifyAction : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (SystemModel,CommonModelEditable)) (SystemModel,CommonModelEditable)
+modifyAction (m, r, rw) =
+    case m.edit_record of
+        Just erec -> Left <| modifyActionImpl erec (m,r,rw)
+        Nothing   -> Right (m, {rw|errmsg="edit record is not found"})
 
                                 
-
+modifyActionImpl : Entity System -> (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Cmd (SystemModel,CommonModelEditable)
+modifyActionImpl erec (m,r,rw) =
+    Cmd.map (\res -> case res of
+                         Ok newsys   -> let e = Just <| Entity erec.id newsys in ({m| show_record = e, edit_record = e} |> redirectTo ShowAction, rw)
+                         Err httperr -> (redirectTo EditAction m, {rw| errmsg=r.httpErrorToString httperr })
+            ) <| r.api.system.modify erec
+        
 reloadSchema : SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Cmd (SystemModel,CommonModelEditable)
 reloadSchema m r rw =
     let f res = case res of
                     (Ok scm)      -> ({m|system_schema = Just scm},rw)
-                    (Err httperr) -> (m,{rw|errmsg = Just <| r.httpErrorToString httperr})
+                    (Err httperr) -> (m,{rw|errmsg = r.httpErrorToString httperr})
     in Cmd.map f r.api.system.info
                       
 subscriptions : (SystemModel,CommonModelReadOnly,CommonModelEditable) -> Sub SystemMsg
@@ -181,3 +190,13 @@ cast = Dict.fromList
                         <| stringToTarget colname
                    )
        << Dict.toList
+
+accept : ActionType -> SystemModel -> CommonModelReadOnly -> CommonModelEditable -> Html RootMsg2
+accept tipe m r rw =
+    let html =
+            case tipe of
+                IndexAction   -> div [] [text <| ""]
+                ShowAction    -> div [] [text <| ""]
+                EditAction    -> div [] [text <| ""]
+                ModifyAction  -> div [] [text <| ""]
+    in html

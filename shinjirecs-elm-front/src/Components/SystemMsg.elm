@@ -1,5 +1,5 @@
 module Components.SystemMsg exposing (..)
-import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount,RestTunerCount))
+import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount)) -- ,RestTunerCount))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
 import Dict exposing (Dict)

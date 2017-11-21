@@ -1,9 +1,10 @@
 module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
-import Components.SystemC exposing (SystemC,SystemModel)
+import Components.SystemC exposing (SystemC)
+import Components.SystemModel exposing (SystemModel)
 -- import Components.ReservationC exposing (ReservationC,ReservationModel)
-import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable)
+import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -12,6 +13,7 @@ import API exposing (getAPI)
 import API.Types exposing (Cache, emptyCache)
 import Components.SystemC as SystemC
 import Components.SystemMsg exposing (SystemMsg)
+import Components.SystemMsg as SystemMsg exposing (ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
 import Result exposing (Result(Ok,Err))
 import Json.Decode as D
@@ -44,14 +46,14 @@ init = let x = components
            m = { currentC = Nothing
                , system = x.system.init
                , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg , cache=emptyCache}
-               , editable = { counter = 0, errmsg = Nothing }
+               , editable = { counter = 0, errmsg = "" }
                }
        in (m, Cmd.none)
 
 showErrMsg : Models -> String -> Models
 showErrMsg models msg =
     let editable = models.editable
-    in { models | editable = { editable | errmsg = Just msg}}
+    in { models | editable = { editable | errmsg = msg}}
 
 httpErrorToMsg : Http.Error -> String
 httpErrorToMsg err =
@@ -124,11 +126,31 @@ view models = H.div [class [NavBar]] [
                    ]
               ,componentView models
               ,H.div [] <| case models.editable.errmsg of
-                             Just errmsg -> [H.text <| errmsg]
-                             Nothing     -> []
+                             ""     -> []
+                             errmsg -> [H.text <| errmsg]
+              ,H.div [] [H.text <| case String.toInt "" of
+                                     Ok i -> "ok = " ++ toString i
+                                     Err s -> "err => " ++ s
+                        ]
               ,H.footer [] []
               ]
 invokeView : ComponentSym -> Models -> Html PrivateRootMsg
 invokeView sym m =
     case sym of
         SystemCSym -> Html.map ToSystem <| components.system.view (m.system,m.readonly,m.editable)
+
+type Request = ToSystemReq SystemMsg.ActionType
+
+dispatch : Request -> Models -> Html RootMsg2
+dispatch req models =
+    case req of
+        ToSystemReq tipe -> SystemC.accept tipe models.system models.readonly models.editable
+--    let res = case req of
+--    in 
+
+
+update2 : RootMsg2 -> Models -> (Models, Cmd RootMsg2)
+update2 msg models =
+    case msg of
+        DirectMsg rw -> (models,Cmd.none)
+        HasCmd cmd -> (models,cmd)

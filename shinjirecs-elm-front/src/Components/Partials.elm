@@ -52,13 +52,16 @@ weekdayOptions = List.map (\w -> H.option [A.value <| toString <| weekdayToInt w
 
 weekdayChecks = List.map (\w -> H.input [A.type_ "checkbox", A.value <| toString <| weekdayToInt w] [H.text <| (weekdayLabel w).ja] ) weekdays
                  
-defaultInput : (String,C.ColumnInfo,Maybe String) -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
-defaultInput (name,info,mval) =
+defaultInput : (String,C.ColumnInfo,Maybe String) -> (String -> msg) -> ((List (Attribute msg) -> List (Html msg) -> Html msg) , List (Attribute msg) ,  List (Html msg))
+defaultInput (name,info,mval) to_msg =
     let aname = A.name name
+        attr_on = case info.tipe of
+                      C.BooleanT -> E.onCheck <| to_msg << (\b -> if b then "1" else "0" )
+                      _          -> E.onInput to_msg 
         attr_value = case mval of
                          Nothing -> []
                          Just v  -> [A.value v]                
-        attrs = (++) ([aname] ++ attr_value) <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
+        attrs = (++) ([aname,attr_on] ++ attr_value) <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
         stringsToOption s = H.option [A.value <| s] [H.text <| s]
         integersToOptions = List.map (stringsToOption << toString)
         maybe_options = Maybe.map integersToOptions <| Maybe.map2 List.range info.minimum info.maximum
@@ -88,7 +91,7 @@ defaultInput (name,info,mval) =
            C.Color     -> (H.input    , attrs ++ [A.type_ "color"]         ,[])
             
 mkInput : Maybe String -> String -> C.ColumnInfo -> (String -> msg) -> H.Html msg
-mkInput mval name info to_msg = (\(f,attrs,children) -> f ([E.onInput to_msg, E.onCheck <| to_msg << (\b -> if b then "1" else "0" )] ++ attrs) children ) <| defaultInput (name,info,mval)
+mkInput mval name info to_msg = (\(f,attrs,children) -> f attrs children ) <| defaultInput (name,info,mval) to_msg
 
 formByColumns : Dict String (C.ColumnInfo,(String -> msg)) -> Dict String String -> Maybe Int -> H.Html msg
 formByColumns colmap valmap mid =
@@ -97,7 +100,6 @@ formByColumns colmap valmap mid =
                                                                , H.dd [] [mkInput (Dict.get nm valmap) nm info f]
                                                                ]
                                             ) <| Dict.toList colmap
-        ,H.button [] [H.text "保存"]
         ]
 
 -- type Partial = SetValue String String | Submited

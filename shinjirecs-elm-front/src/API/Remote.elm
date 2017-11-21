@@ -2,6 +2,7 @@ module API.Remote exposing (getImpl)
 import String exposing (join)
 import API.Types as T exposing (..)
 import Http exposing (get,post,jsonBody)
+import Utils.Http as Http exposing (patch,delete,head,options)
 import Json.Decode as D
 import Time exposing (Time)
 import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
@@ -23,10 +24,10 @@ httpCommon d mkReq =
     in Http.send (\res -> res) req
 
 httpHead : String -> D.Decoder a -> Cmd (Result Http.Error a)
-httpHead s d = httpCommon d <| Http.get s
+httpHead s d = httpCommon d <| Http.head s
           
 httpOptions : String -> D.Decoder a -> Cmd (Result Http.Error a)
-httpOptions s d = httpCommon d <| Http.get s
+httpOptions s d = httpCommon d <| Http.options s
           
 httpGet : String -> D.Decoder a -> Cmd (Result Http.Error a)
 httpGet s d = httpCommon d <| Http.get s
@@ -35,10 +36,10 @@ httpPost : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
 httpPost s b d = httpCommon d <| Http.post s b
           
 httpPatch : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
-httpPatch s b d = httpCommon d <| Http.post s b
+httpPatch s b d = httpCommon d <| Http.patch s b
 
 httpDelete : String -> D.Decoder a -> Cmd (Result Http.Error a)
-httpDelete s d = httpCommon d <| Http.get s
+httpDelete s d = httpCommon d <| Http.delete s
 
 mkEntityDecoder : Maybe Int -> D.Decoder a -> D.Decoder (Entity a)
 mkEntityDecoder maybe_id decoder =

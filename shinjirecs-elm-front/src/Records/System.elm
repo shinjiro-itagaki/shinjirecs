@@ -8,7 +8,7 @@ import Result exposing (map,mapError)
 import Json.Decode.Pipeline exposing (decode,required,optional,hardcoded)
 import Dict exposing (Dict,fromList,empty)
 
-type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType | RestTunerCount ChannelType
+type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType -- | RestTunerCount ChannelType
 
 stringToTarget : String -> Maybe ColumnTarget
 stringToTarget str =
@@ -18,8 +18,8 @@ stringToTarget str =
         "setup"               -> Just Setup
         "gr_tuner_count"      -> Just (TunerCount GR)
         "bs_tuner_count"      -> Just (TunerCount BS)
-        "rest_gr_tuner_count" -> Just (RestTunerCount GR)
-        "rest_bs_tuner_count" -> Just (RestTunerCount BS)
+--        "rest_gr_tuner_count" -> Just (RestTunerCount GR)
+--        "rest_bs_tuner_count" -> Just (RestTunerCount BS)
         _                     -> Nothing
     
 common : String -> tgt -> rec -> (rec -> a -> rec) -> (String -> Result String a) -> Result (String,tgt) rec
@@ -34,8 +34,8 @@ setValue rec target valstr =
            Setup             -> common_ replace_setup               toBool
            TunerCount GR     -> common_ replace_gr_tuner_count      String.toInt
            TunerCount BS     -> common_ replace_bs_tuner_count      String.toInt
-           RestTunerCount GR -> common_ replace_rest_gr_tuner_count String.toInt
-           RestTunerCount BS -> common_ replace_rest_bs_tuner_count String.toInt
+--           RestTunerCount GR -> common_ replace_rest_gr_tuner_count String.toInt
+--           RestTunerCount BS -> common_ replace_rest_bs_tuner_count String.toInt
 
 replace_area_id : System -> Int -> System
 replace_area_id rec v = {rec | area_id = v }
@@ -47,10 +47,10 @@ replace_gr_tuner_count : System -> Int -> System
 replace_gr_tuner_count rec v = { rec | gr_tuner_count = v }
 replace_bs_tuner_count : System -> Int -> System
 replace_bs_tuner_count rec v = { rec | bs_tuner_count = v }
-replace_rest_gr_tuner_count : System -> Int -> System
-replace_rest_gr_tuner_count rec v = { rec | rest_gr_tuner_count = v }
-replace_rest_bs_tuner_count : System -> Int -> System
-replace_rest_bs_tuner_count rec v = { rec | rest_bs_tuner_count = v }
+-- replace_rest_gr_tuner_count : System -> Int -> System
+-- replace_rest_gr_tuner_count rec v = { rec | rest_gr_tuner_count = v }
+-- replace_rest_bs_tuner_count : System -> Int -> System
+-- replace_rest_bs_tuner_count rec v = { rec | rest_bs_tuner_count = v }
 
 area_id : System -> Int
 area_id rec = rec.area_id
@@ -116,8 +116,8 @@ systemEncoder x = E.object
                   , ("setup"  , E.bool x.setup  )
                   , ("gr_tuner_count", E.int x.gr_tuner_count)
                   , ("bs_tuner_count", E.int x.bs_tuner_count)
-                  , ("rest_gr_tuner_count", E.int x.rest_gr_tuner_count)
-                  , ("rest_bs_tuner_count", E.int x.rest_bs_tuner_count)
+--                  , ("rest_gr_tuner_count", E.int x.rest_gr_tuner_count)
+--                  , ("rest_bs_tuner_count", E.int x.rest_bs_tuner_count)
                   ]
 
 toStringMap : System -> Dict String String
