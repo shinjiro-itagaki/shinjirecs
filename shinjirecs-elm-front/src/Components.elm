@@ -166,10 +166,12 @@ update2 : RootMsg2 -> PrivateModel -> (PrivateModel, Cmd RootMsg2)
 update2 msg oldpm =
     let updatePrivateModel_ = updatePrivateModel oldpm
     in case msg of
-        UpdateModel2 rtnm   -> (updatePrivateModel_ rtnm, Cmd.none)
-        DirectMsg    rtnm f -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
-        HasCmd cmd -> (oldpm,cmd)
-        SendRequest req -> update2 (dispatch req oldpm.m) {oldpm|req=req}
+        UpdateModel2 rtnm -> (updatePrivateModel_ rtnm, Cmd.none)
+        DirectMsg rtnm f  -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
+        HasCmd cmd        -> (oldpm,cmd)
+        SendRequest req   -> case req of
+                                 NoSelect -> ({oldpm| req=req, f = (Tuple.first init2).f},Cmd.none)
+                                 _        -> update2 (dispatch req oldpm.m) {oldpm|req=req}
         DoNothing -> (oldpm,Cmd.none)
 
 view2 : PrivateModel -> Html RootMsg2

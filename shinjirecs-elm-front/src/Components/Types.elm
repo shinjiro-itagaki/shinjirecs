@@ -42,6 +42,12 @@ type RootMsg2 = DirectMsg Models (Models -> Html RootMsg2) | HasCmd (Cmd RootMsg
 redirectTo2 : Request -> RootMsg2
 redirectTo2 = SendRequest
 
---(>>=) : HasCmd (Cmd a -> (a -> Cmd b) -> Cmd (Cmd b)
---(>>=) x y = 
+{- 
+Cmd.map (\res -> case res of
+                      Ok sys -> DirectMsg
+                      Err httperr -> 
+        ) <| api.system.get
+-}
+--(>>=) : (Cmd a) -> (a -> Cmd b) -> Cmd (Cmd b)
+--(>>=) cmd f = Cmd.map f cmd
 --(=<<) x y = y >>= x
