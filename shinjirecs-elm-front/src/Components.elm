@@ -4,7 +4,7 @@ import Html as H
 import Components.SystemC exposing (SystemC)
 import Components.SystemModel exposing (SystemModel)
 -- import Components.ReservationC exposing (ReservationC,ReservationModel)
-import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel2),Request(ToSystemReq))
+import Components.Types exposing (Component,NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg(SwitchTo,NoComponentSelected,ShowHttpError,RefreshAPICache),ComponentSym(SystemCSym),CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel2),Request(ToSystemReq,NoSelect))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -31,10 +31,10 @@ type PrivateRootMsg = ToRootPrivate RootMsg | ToSystem SystemMsg | UpdateModelAn
 components : Components
 components = { system = SystemC.new }
 
-root = program { init = init
-               , view = view
-               , update = update
-               , subscriptions = subscriptions
+root = program { init = init2 --init
+               , view = view2 -- view
+               , update = update2 -- update
+               , subscriptions = subscriptions2 --subscriptions
                }
 
 init : (Models, Cmd PrivateRootMsg)
@@ -146,11 +146,13 @@ type alias PrivateModel =
 dispatch : Request -> Models -> RootMsg2
 dispatch req models =
     case req of
+        NoSelect -> DoNothing
         ToSystemReq tipe -> SystemC.accept tipe models
 
 replaceAnyModel : Request -> Models -> Models -> Models
 replaceAnyModel req old new =
     case req of
+        NoSelect -> old
         ToSystemReq _ -> {old| system = new.system }
 
 updatePrivateModel : PrivateModel -> Models -> PrivateModel
@@ -171,4 +173,31 @@ update2 msg oldpm =
         DoNothing -> (oldpm,Cmd.none)
 
 view2 : PrivateModel -> Html RootMsg2
-view2 pm = pm.f pm.m
+view2 pm = H.div [class [NavBar]] [
+            H.header [] [
+                 H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
+                ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| SendRequest NoSelect] [H.text "選択解除へ"]
+                ,H.button [E.onClick <| SendRequest <| ToSystemReq IndexAction] [H.text "システム設定へ"]
+                ]
+           ,pm.f pm.m
+           ,H.div [] <| case pm.m.editable.errmsg of
+                            ""     -> []
+                            errmsg -> [H.text <| errmsg]
+           ,H.div [] [H.text <| case String.toInt "" of
+                                    Ok i -> "ok = " ++ toString i
+                                    Err s -> "err => " ++ s
+                     ]
+           ,H.footer [] []
+           ]
+
+
+
+init2 : (PrivateModel, Cmd RootMsg2)
+init2 = let x = { m = Tuple.first init
+                , f = (\_ -> H.div [] [])
+                , req = NoSelect
+                }
+        in (x, Cmd.none)
+
+subscriptions2 : PrivateModel -> Sub RootMsg2
+subscriptions2 m = Sub.none            

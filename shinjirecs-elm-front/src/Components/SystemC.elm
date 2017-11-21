@@ -198,8 +198,8 @@ accept : ActionType -> Models -> RootMsg2
 accept tipe m =
     let html =
             case tipe of
-                IndexAction   -> DirectMsg m (\x -> div [] [text <| ""])
-                ShowAction    -> DirectMsg m (\x -> div [] [text <| ""])
-                EditAction    -> DirectMsg m (\x ->  div [] [text <| ""])
-                ModifyAction  -> DirectMsg m (\x ->  div [] [text <| ""])
+                IndexAction   -> DirectMsg m (\x -> div [] [text <| "index"])
+                ShowAction    -> DirectMsg m (\x -> div [] [text <| "show"])
+                EditAction    -> DirectMsg m (\x ->  div [] [text <| "edit"])
+                ModifyAction  -> DirectMsg m (\x ->  div [] [text <| "modify"])
     in html
