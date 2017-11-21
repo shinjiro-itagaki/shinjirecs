@@ -1,6 +1,6 @@
 module Components.SystemC exposing (SystemC,new,accept)
 import Components.SystemModel exposing (SystemModel)
-import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg2(DirectMsg,HasCmd))
+import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,RootMsg(SwitchTo,NoComponentSelected,ShowHttpError),NextMsg(ToRoot,NextCmd,Direct,NoNext),RootMsg2(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel2),Request(NoSelect,ToSystemReq),redirectTo2)
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
@@ -8,6 +8,7 @@ import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCou
 import Records.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
+import Html as H
 import Components.Partials exposing (formByColumns,sample,SampleMsg,SampleModel)
 import Dict exposing (Dict)
 import Utils.Maybe exposing (catMaybes)
@@ -193,13 +194,40 @@ cast = Dict.fromList
 
 castToRootMsg : Models -> SystemModel -> Models
 castToRootMsg m sysm = {m|system = sysm}
-           
+
+
+loadCache : Models -> RootMsg2
+loadCache models = UpdateModel2 models
+    
+                       
 accept : ActionType -> Models -> RootMsg2
 accept tipe m =
     let html =
             case tipe of
-                IndexAction   -> DirectMsg m (\x -> div [] [text <| "index"])
-                ShowAction    -> DirectMsg m (\x -> div [] [text <| "show"])
-                EditAction    -> DirectMsg m (\x ->  div [] [text <| "edit"])
-                ModifyAction  -> DirectMsg m (\x ->  div [] [text <| "modify"])
+                IndexAction   -> DirectMsg m indexView2
+                ShowAction    -> DirectMsg m showView2
+                EditAction    -> DirectMsg m editView2
+                ModifyAction  -> redirectTo2 (ToSystemReq ShowAction)
     in html
+
+indexView2 : Models -> Html RootMsg2
+indexView2 m =
+    div [] [
+         H.span [] [text <| "index"]
+        ,button [onClick <| SendRequest <| ToSystemReq ShowAction] [text "システム情報表示"]
+        ,button [onClick <| SendRequest <| ToSystemReq EditAction] [text "システム情報編集"]
+        ]
+
+showView2 : Models -> Html RootMsg2
+showView2 m =
+    div [] [
+         H.span [] [text <| "show"]
+        ,button [onClick <| SendRequest <| ToSystemReq IndexAction] [text "システム情報インデックスへ"]
+        ]
+
+editView2 : Models -> Html RootMsg2
+editView2 m =
+    div [] [
+         H.span [] [text <| "edit"]
+        ,button [onClick <| SendRequest <| ToSystemReq IndexAction] [text "システム情報インデックスへ"]
+        ]        

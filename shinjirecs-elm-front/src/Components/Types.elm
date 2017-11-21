@@ -38,3 +38,10 @@ type alias Component model msg = { init          : model
 --type CmdWrapper a = CmdW (Cmd a) | HasNext (CmdWrapper a)
 type Request = NoSelect | ToSystemReq SystemMsg.ActionType
 type RootMsg2 = DirectMsg Models (Models -> Html RootMsg2) | HasCmd (Cmd RootMsg2) | SendRequest Request | DoNothing | UpdateModel2 Models
+
+redirectTo2 : Request -> RootMsg2
+redirectTo2 = SendRequest
+
+--(>>=) : HasCmd (Cmd a -> (a -> Cmd b) -> Cmd (Cmd b)
+--(>>=) x y = 
+--(=<<) x y = y >>= x
