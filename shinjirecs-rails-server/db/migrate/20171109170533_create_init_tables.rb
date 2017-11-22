@@ -11,10 +11,10 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.boolean "active"       , null: false, default: true
       t.boolean "setup"        , null: false, default: false
-      t.integer "gr_tuner_count" , null: false, default: 1
-      t.integer "bs_tuner_count" , null: false, default: 0
-      t.integer "rest_gr_tuner_count" , null: false, default: 1
-      t.integer "rest_bs_tuner_count" , null: false, default: 0
+      t.integer "gr_tuner_count" , null: false, default: 1, limit: 1
+      t.integer "bs_tuner_count" , null: false, default: 0, limit: 1
+      t.integer "rest_gr_tuner_count" , null: false, default: 1, limit: 1
+      t.integer "rest_bs_tuner_count" , null: false, default: 0, limit: 1
       t.index ["active"], unique: true
       t.timestamps               null: false
     end

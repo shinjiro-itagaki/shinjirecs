@@ -132,10 +132,10 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "area_id", default: 0, null: false
     t.boolean "active", default: true, null: false
     t.boolean "setup", default: false, null: false
-    t.integer "gr_tuner_count", default: 1, null: false
-    t.integer "bs_tuner_count", default: 0, null: false
-    t.integer "rest_gr_tuner_count", default: 1, null: false
-    t.integer "rest_bs_tuner_count", default: 0, null: false
+    t.integer "gr_tuner_count", limit: 1, default: 1, null: false
+    t.integer "bs_tuner_count", limit: 1, default: 0, null: false
+    t.integer "rest_gr_tuner_count", limit: 1, default: 1, null: false
+    t.integer "rest_bs_tuner_count", limit: 1, default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_systems_on_active", unique: true
