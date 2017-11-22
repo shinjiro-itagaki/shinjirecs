@@ -2,7 +2,7 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemModel exposing (SystemModel)
-import Components.Types exposing (CommonModelReadOnly,CommonModelEditable,RootMsg2(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel2),Request(ToSystemReq,NoSelect))
+import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(ToSystemReq,NoSelect))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -19,10 +19,10 @@ import Json.Decode as D
 import Utils.Either exposing (Either(Left,Right))
 { id, class, classList } = withNamespace "root"
                            
-root = program { init = init2 --init
-               , view = view2 -- view
-               , update = update2 -- update
-               , subscriptions = subscriptions2 --subscriptions
+root = program { init = init --init
+               , view = view -- view
+               , update = update -- update
+               , subscriptions = subscriptions --subscriptions
                }
 
 showErrMsg : Models -> String -> Models
@@ -46,15 +46,16 @@ updateCache models newcache =
 
 type alias PrivateModel =
     { m : Models
-    , f : (Models -> Html RootMsg2)
+    , f : (Models -> Html RootMsg)
+    , components : { system : Component SystemModel SystemMsg.ActionType }
     , req : Request
     }
     
-dispatch : Request -> Models -> RootMsg2
-dispatch req models =
+dispatch : Request -> PrivateModel -> RootMsg
+dispatch req pm =
     case req of
         NoSelect -> DoNothing
-        ToSystemReq tipe -> SystemC.accept tipe models
+        ToSystemReq tipe -> pm.components.system.accept tipe pm.m
 
 replaceAnyModel : Request -> Models -> Models -> Models
 replaceAnyModel req old new =
@@ -69,20 +70,20 @@ updatePrivateModel oldpm rtnm =
         newpm = {oldpm| m = { newm | editable = rtnm.editable }}
     in newpm
                          
-update2 : RootMsg2 -> PrivateModel -> (PrivateModel, Cmd RootMsg2)
-update2 msg oldpm =
+update : RootMsg -> PrivateModel -> (PrivateModel, Cmd RootMsg)
+update msg oldpm =
     let updatePrivateModel_ = updatePrivateModel oldpm
     in case msg of
-        UpdateModel2 rtnm -> (updatePrivateModel_ rtnm, Cmd.none)
+        UpdateModel rtnm -> (updatePrivateModel_ rtnm, Cmd.none)
         DirectMsg rtnm f  -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
         HasCmd cmd        -> (oldpm,cmd)
         SendRequest req   -> case req of
-                                 NoSelect -> ({oldpm| req=req, f = (Tuple.first init2).f},Cmd.none)
-                                 _        -> update2 (dispatch req oldpm.m) {oldpm|req=req}
+                                 NoSelect -> ({oldpm| req=req, f = (Tuple.first init).f},Cmd.none)
+                                 _        -> update (dispatch req oldpm) {oldpm|req=req}
         DoNothing -> (oldpm,Cmd.none)
 
-view2 : PrivateModel -> Html RootMsg2
-view2 pm = H.div [class [NavBar]] [
+view : PrivateModel -> Html RootMsg
+view pm = H.div [class [NavBar]] [
             H.header [] [
                  H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
                 ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| SendRequest NoSelect] [H.text "選択解除へ"]
@@ -101,15 +102,18 @@ view2 pm = H.div [class [NavBar]] [
 
 
 
-init2 : (PrivateModel, Cmd RootMsg2)
-init2 = let x = { m = { system = SystemC.init
+init : (PrivateModel, Cmd RootMsg)
+init =
+    let systemC = SystemC.new
+        x = { m = { system = systemC.init
                       , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg , cache=emptyCache}
                       , editable = { counter = 0, errmsg = "" }
                       }
                 , f = (\_ -> H.div [] [])
+                , components = {system = systemC}
                 , req = NoSelect
                 }
-        in (x, Cmd.none)
+    in (x, Cmd.none)
 
-subscriptions2 : PrivateModel -> Sub RootMsg2
-subscriptions2 m = Sub.none            
+subscriptions : PrivateModel -> Sub RootMsg
+subscriptions m = Sub.none            
