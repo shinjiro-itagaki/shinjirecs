@@ -17,8 +17,12 @@ import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
 import Result exposing (Result(Ok,Err))
 import Json.Decode as D
 import Utils.Either exposing (Either(Left,Right))
+
+type PrivateRootMsg = ReplaceAPICache (Result Http.Error Cache)
+type RootMsg = Private PrivateRootMsg | Public PublicRootMsg
+
 { id, class, classList } = withNamespace "root"
-                           
+                          
 root = program { init = init --init
                , view = view -- view
                , update = update -- update
@@ -39,11 +43,21 @@ httpErrorToMsg err =
         BadStatus response -> response.body
         BadPayload str response -> "bad payload error message = " ++ str ++ " , body = " ++ response.body
 
-updateCache : Models -> Cache -> Models
-updateCache models newcache =
-    let r = models.readonly
-    in {models | readonly = {r|cache = newcache}}
+updateCache : PrivateModel -> Cache -> PrivateModel
+updateCache pm newcache =
+    let models = pm.m
+        r = models.readonly
+    in { pm | m = {models| readonly = {r|cache = newcache}}}
 
+setErrMsg : PrivateModel -> String -> PrivateModel
+setErrMsg pm errmsg =
+    let models = pm.m
+        rw = models.editable
+    in { pm | m = {models| editable = {rw| errmsg = errmsg}}}
+
+setHttpErrMsg : PrivateModel -> Http.Error -> PrivateModel
+setHttpErrMsg pm httperr = setErrMsg pm <| httpErrorToMsg httperr
+        
 type alias PrivateModel =
     { m : Models
     , f : (Models -> Html PublicRootMsg)
@@ -69,28 +83,36 @@ updatePrivateModel oldpm rtnm =
         newm = replaceAnyModel oldpm.req oldm rtnm -- replace only a model of target component
         newpm = {oldpm| m = { newm | editable = rtnm.editable }}
     in newpm
-                         
-update : PublicRootMsg -> PrivateModel -> (PrivateModel, Cmd PublicRootMsg)
+
+update : RootMsg -> PrivateModel -> (PrivateModel, Cmd RootMsg)
 update msg oldpm =
     let updatePrivateModel_ = updatePrivateModel oldpm
     in case msg of
-        UpdateModel rtnm -> (updatePrivateModel_ rtnm, Cmd.none)
-        DirectMsg rtnm f  -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
-        HasCmd cmd        -> (oldpm,cmd)
-        SendRequest req   -> case req of
-                                 NoSelect -> ({oldpm| req=req, f = (Tuple.first init).f},Cmd.none)
-                                 _        -> update (dispatch req oldpm) {oldpm|req=req}
-        DoNothing -> (oldpm,Cmd.none)
-        UpdateAPICache -> (oldpm,Cmd.none)
+           Public public ->
+               case public of
+                   UpdateModel rtnm -> (updatePrivateModel_ rtnm, Cmd.none)
+                   DirectMsg rtnm f  -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
+                   HasCmd cmd        -> (oldpm,Cmd.map Public cmd)
+                   SendRequest req   -> case req of
+                                            NoSelect -> ({oldpm| req=req, f = (Tuple.first init).f},Cmd.none)
+                                            _        -> update (Public <| dispatch req oldpm) {oldpm|req=req}
+                   DoNothing -> (oldpm,Cmd.none)
+                   UpdateAPICache -> (oldpm, Cmd.map (Private << ReplaceAPICache) oldpm.m.readonly.api.system.all)
+           Private private ->
+               case private of
+                   ReplaceAPICache res ->
+                       case res of
+                           Ok cache    -> (updateCache   oldpm cache   ,Cmd.none)
+                           Err httperr -> (setHttpErrMsg oldpm httperr ,Cmd.none)
 
-view : PrivateModel -> Html PublicRootMsg
+view : PrivateModel -> Html RootMsg
 view pm = H.div [class [NavBar]] [
             H.header [] [
                  H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
-                ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| SendRequest NoSelect] [H.text "選択解除へ"]
-                ,H.button [E.onClick <| SendRequest <| ToSystemReq IndexAction] [H.text "システム設定へ"]
+                ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| Public <| SendRequest NoSelect] [H.text "選択解除へ"]
+                ,H.button [E.onClick <| Public <| SendRequest <| ToSystemReq IndexAction] [H.text "システム設定へ"]
                 ]
-           ,pm.f pm.m
+           ,Html.map Public <| pm.f pm.m
            ,H.div [] <| case pm.m.editable.errmsg of
                             ""     -> []
                             errmsg -> [H.text <| errmsg]
@@ -103,7 +125,7 @@ view pm = H.div [class [NavBar]] [
 
 
 
-init : (PrivateModel, Cmd PublicRootMsg)
+init : (PrivateModel, Cmd RootMsg)
 init =
     let systemC = SystemC.new
         x = { m = { system = systemC.init
@@ -116,5 +138,5 @@ init =
                 }
     in (x, Cmd.none)
 
-subscriptions : PrivateModel -> Sub PublicRootMsg
+subscriptions : PrivateModel -> Sub RootMsg
 subscriptions m = Sub.none            
