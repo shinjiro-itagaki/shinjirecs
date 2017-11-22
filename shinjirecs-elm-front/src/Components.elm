@@ -29,11 +29,6 @@ root = program { init = init --init
                , subscriptions = subscriptions --subscriptions
                }
 
-showErrMsg : Models -> String -> Models
-showErrMsg models msg =
-    let editable = models.editable
-    in { models | editable = { editable | errmsg = msg}}
-
 httpErrorToMsg : Http.Error -> String
 httpErrorToMsg err =
     case err of
