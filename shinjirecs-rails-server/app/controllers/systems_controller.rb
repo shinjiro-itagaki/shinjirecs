@@ -17,6 +17,10 @@ class SystemsController < ApplicationController
     render_data @model.instance
   end
 
+  def self.permitted_params
+    [:area_id,:setup,:gr_tuner_count,:bs_tuner_count]
+  end
+
   private
   def system_setup_check
   end

@@ -63,6 +63,10 @@ class ApplicationController < ActionController::API
     @record.destroy
   end
 
+  def self.permitted_params
+    []
+  end
+
   protected
 
   def render_data(obj=nil, options={})
@@ -87,9 +91,6 @@ class ApplicationController < ActionController::API
 
   # Use callbacks to share common setup or constraints between actions.
   def set_record
-    puts "========="
-    puts @parent_fkey
-    puts "========="
     if @parent_model && @parent_fkey then
       @record = @model.where(:id => params[:id], @parent_fkey => @parent_record.id).first
     else
@@ -99,7 +100,7 @@ class ApplicationController < ActionController::API
 
   # Only allow a trusted parameter "white list" through.
   def record_params
-    params.fetch(:record, {})
+    params.require(:record).permit(self.class.permitted_params)
   end
 
   def system_setup_check
