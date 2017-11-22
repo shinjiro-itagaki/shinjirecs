@@ -2,7 +2,7 @@ module Components exposing (root)
 import Html exposing (Html,program)
 import Html as H
 import Components.SystemModel exposing (SystemModel)
-import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,RootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(ToSystemReq,NoSelect))
+import Components.Types exposing (Component,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel,UpdateAPICache),Request(ToSystemReq,NoSelect))
 import MainCssInterface as Css exposing (CssClasses(NavBar),CssIds(Page),mainCssLink)
 import Html.CssHelpers exposing (withNamespace)
 import Html.Events as E
@@ -46,12 +46,12 @@ updateCache models newcache =
 
 type alias PrivateModel =
     { m : Models
-    , f : (Models -> Html RootMsg)
+    , f : (Models -> Html PublicRootMsg)
     , components : { system : Component SystemModel SystemMsg.ActionType }
     , req : Request
     }
     
-dispatch : Request -> PrivateModel -> RootMsg
+dispatch : Request -> PrivateModel -> PublicRootMsg
 dispatch req pm =
     case req of
         NoSelect -> DoNothing
@@ -70,7 +70,7 @@ updatePrivateModel oldpm rtnm =
         newpm = {oldpm| m = { newm | editable = rtnm.editable }}
     in newpm
                          
-update : RootMsg -> PrivateModel -> (PrivateModel, Cmd RootMsg)
+update : PublicRootMsg -> PrivateModel -> (PrivateModel, Cmd PublicRootMsg)
 update msg oldpm =
     let updatePrivateModel_ = updatePrivateModel oldpm
     in case msg of
@@ -81,8 +81,9 @@ update msg oldpm =
                                  NoSelect -> ({oldpm| req=req, f = (Tuple.first init).f},Cmd.none)
                                  _        -> update (dispatch req oldpm) {oldpm|req=req}
         DoNothing -> (oldpm,Cmd.none)
+        UpdateAPICache -> (oldpm,Cmd.none)
 
-view : PrivateModel -> Html RootMsg
+view : PrivateModel -> Html PublicRootMsg
 view pm = H.div [class [NavBar]] [
             H.header [] [
                  H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
@@ -102,7 +103,7 @@ view pm = H.div [class [NavBar]] [
 
 
 
-init : (PrivateModel, Cmd RootMsg)
+init : (PrivateModel, Cmd PublicRootMsg)
 init =
     let systemC = SystemC.new
         x = { m = { system = systemC.init
@@ -115,5 +116,5 @@ init =
                 }
     in (x, Cmd.none)
 
-subscriptions : PrivateModel -> Sub RootMsg
+subscriptions : PrivateModel -> Sub PublicRootMsg
 subscriptions m = Sub.none            

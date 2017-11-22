@@ -17,9 +17,9 @@ type alias Models = { readonly : CommonModelReadOnly
                     }
     
 type Request = NoSelect | ToSystemReq SystemMsg.ActionType
-type RootMsg = DirectMsg Models (Models -> Html RootMsg) | HasCmd (Cmd RootMsg) | SendRequest Request | DoNothing | UpdateModel Models
+type PublicRootMsg = DirectMsg Models (Models -> Html PublicRootMsg) | HasCmd (Cmd PublicRootMsg) | SendRequest Request | DoNothing | UpdateModel Models | UpdateAPICache
 
-redirectTo : Request -> RootMsg
+redirectTo : Request -> PublicRootMsg
 redirectTo = SendRequest
 
-type alias Component m act = { init : m, accept : (act -> Models -> RootMsg) }
+type alias Component m act = { init : m, accept : (act -> Models -> PublicRootMsg) }

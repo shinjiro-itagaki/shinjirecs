@@ -1,6 +1,6 @@
 module Components.SystemC exposing (new)
 import Components.SystemModel exposing (SystemModel)
-import Components.Types exposing (Models,CommonModelReadOnly,CommonModelEditable,RootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToSystemReq),redirectTo)
+import Components.Types exposing (Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToSystemReq),redirectTo)
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
@@ -34,7 +34,7 @@ init = { show_record = Nothing
        , actionType     = IndexAction
        }
                    
-accept : ActionType -> Models -> RootMsg
+accept : ActionType -> Models -> PublicRootMsg
 accept tipe m =
     let html =
             case tipe of
@@ -44,10 +44,10 @@ accept tipe m =
                 ModifyAction  -> redirectTo (ToSystemReq ShowAction)
     in html
 
-execEditAction : Models -> RootMsg
+execEditAction : Models -> PublicRootMsg
 execEditAction m = HasCmd <| Cmd.map execEditActionImpl <| loadSchemaAction m
         
-execEditActionImpl : Models -> RootMsg -- HasCmd (Cmd (DirectMsg Models (Models -> Html RootMsg))) 
+execEditActionImpl : Models -> PublicRootMsg -- HasCmd (Cmd (DirectMsg Models (Models -> Html PublicRootMsg))) 
 execEditActionImpl m =
     let smodel = m.system
         r  = m.readonly
@@ -69,7 +69,7 @@ loadSchemaAction m =
                         )
                ) m.readonly.api.system.info
         
-execShowAction : Models -> RootMsg
+execShowAction : Models -> PublicRootMsg
 execShowAction m =
     let smodel = m.system
         r  = m.readonly
@@ -80,7 +80,7 @@ execShowAction m =
                         ) showView
                ) m.readonly.api.system.get |> HasCmd
         
-indexView : Models -> Html RootMsg
+indexView : Models -> Html PublicRootMsg
 indexView m =
     div [] [
          H.span [] [text <| "index"]
@@ -88,14 +88,14 @@ indexView m =
         ,button [onClick <| SendRequest <| ToSystemReq EditAction] [text "システム情報編集"]
         ]
 
-showView : Models -> Html RootMsg
+showView : Models -> Html PublicRootMsg
 showView m =
     div [] [
          H.span [] [text <| if m.system.show_record == Nothing then "ロード失敗した" else "ロード済み"]
         ,button [onClick <| SendRequest <| ToSystemReq IndexAction] [text "システム情報インデックスへ"]
         ]
 
-editView : Models -> Html RootMsg
+editView : Models -> Html PublicRootMsg
 editView m =
     div [] [
          H.div [] [text <| "システム編集"]
@@ -105,22 +105,22 @@ editView m =
         ,button [onClick <| SendRequest <| ToSystemReq IndexAction] [text "システム情報インデックスへ"] 
         ]
 
-editViewIfSystemSchemaNotFound : SystemModel -> Html RootMsg
+editViewIfSystemSchemaNotFound : SystemModel -> Html PublicRootMsg
 editViewIfSystemSchemaNotFound m =
     div [] [
          H.div [] [text <| "スキーマがロードされていません"]
         ]
-editViewIfSystemSchemaLoaded : Dict String ColumnInfo -> SystemModel -> Html RootMsg
+editViewIfSystemSchemaLoaded : Dict String ColumnInfo -> SystemModel -> Html PublicRootMsg
 editViewIfSystemSchemaLoaded scm m =
     (case  m.edit_record of
          Just rec -> editViewImpl rec
          Nothing  -> editViewIfRecordNotFound) m
 
-editViewIfRecordNotFound : SystemModel -> Html RootMsg
+editViewIfRecordNotFound : SystemModel -> Html PublicRootMsg
 editViewIfRecordNotFound m =
     div [] [
          H.div [] [text <| "データがロードされていません"]
         ]
-editViewImpl : Entity System -> SystemModel -> Html RootMsg
+editViewImpl : Entity System -> SystemModel -> Html PublicRootMsg
 editViewImpl rec m =
     div [] [text <| "データはロード済み"]
