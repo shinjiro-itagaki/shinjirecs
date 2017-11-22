@@ -11,43 +11,13 @@ import Components.SystemMsg as SystemMsg exposing (ActionType(IndexAction,ShowAc
 type alias CommonModelReadOnly = { config : Int, api : API, httpErrorToString : (Http.Error -> String), cache : Cache }
 type alias CommonModelEditable = { counter : Int, errmsg : String }
 
-type alias Models = { currentC : Maybe ComponentSym
-                    , readonly : CommonModelReadOnly
+type alias Models = { readonly : CommonModelReadOnly
                     , editable : CommonModelEditable
                     , system : SystemModel
                     }
     
-type ComponentSym = SystemCSym
-type RootMsg = SwitchTo ComponentSym
-             | NoComponentSelected
-             | ShowHttpError Http.Error
-             | RefreshAPICache
-
-type NextMsg msg = ToRoot RootMsg
-                 | NextCmd (Cmd (msg,CommonModelEditable))
-                 | Direct msg
-                 | NoNext
-                   
-type alias Component model msg = { init          : model
-                                 , update        : msg -> (model,CommonModelReadOnly,CommonModelEditable) -> Either (Cmd (model,CommonModelEditable)) (model,CommonModelEditable)
-                                 , subscriptions : (model,CommonModelReadOnly,CommonModelEditable) -> Sub msg
-                                 , view          : (model,CommonModelReadOnly,CommonModelEditable) -> Html msg }
-
-    -- (Cmd (Cmd (Cmd ... RootMsg2)))
---type Ls a = Car a | Cdr (Ls a)
---type CmdWrapper a = CmdW (Cmd a) | HasNext (CmdWrapper a)
 type Request = NoSelect | ToSystemReq SystemMsg.ActionType
 type RootMsg2 = DirectMsg Models (Models -> Html RootMsg2) | HasCmd (Cmd RootMsg2) | SendRequest Request | DoNothing | UpdateModel2 Models
 
 redirectTo2 : Request -> RootMsg2
 redirectTo2 = SendRequest
-
-{- 
-Cmd.map (\res -> case res of
-                      Ok sys -> DirectMsg
-                      Err httperr -> 
-        ) <| api.system.get
--}
---(>>=) : (Cmd a) -> (a -> Cmd b) -> Cmd (Cmd b)
---(>>=) cmd f = Cmd.map f cmd
---(=<<) x y = y >>= x
