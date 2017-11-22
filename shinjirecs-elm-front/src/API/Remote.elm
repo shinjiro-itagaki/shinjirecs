@@ -4,6 +4,7 @@ import API.Types as T exposing (..)
 import Http exposing (get,post,jsonBody)
 import Utils.Http as Http exposing (patch,delete,head,options)
 import Json.Decode as D
+import Json.Encode as E
 import Time exposing (Time)
 import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
 import Records.Types exposing (Entity,entitiesToDict)
@@ -55,10 +56,10 @@ rGet : String -> String -> D.Decoder a -> Int -> Cmd (Result Http.Error a)
 rGet domain path decoder id  = httpGet (join "/" [domain,path,(toString id)]) decoder
                                            
 rCreate : String -> String -> D.Decoder a -> Encoder a -> a -> Cmd (Result Http.Error (Entity a))
-rCreate domain path decoder encoder val = httpPost (join "/" [domain,path]) (jsonBody <| encoder val) (mkEntityDecoder Nothing decoder)
+rCreate domain path decoder encoder val = httpPost (join "/" [domain,path]) (jsonBody <| E.object[("record",encoder val)]) (mkEntityDecoder Nothing decoder)
                                            
 rModify : String -> String -> D.Decoder a -> Encoder a -> Entity a -> Cmd (Result Http.Error a)
-rModify domain path decoder encoder e = httpPatch (join "/" [domain,path,(toString e.id)]) (jsonBody <| encoder e.val) decoder
+rModify domain path decoder encoder e = httpPatch (join "/" [domain,path,(toString e.id)]) (jsonBody <| E.object[("record", encoder e.val)]) decoder
                                            
 rDestroy : String -> String -> D.Decoder a -> Entity a -> Cmd (Result Http.Error Bool)
 rDestroy domain path decoder e = httpDelete (join "/" [domain,path,(toString e.id)]) D.bool

@@ -8,13 +8,13 @@ import Result exposing (map,mapError)
 import Json.Decode.Pipeline exposing (decode,required,optional,hardcoded)
 import Dict exposing (Dict,fromList,empty)
 
-type ColumnTarget = AreaId | Active | Setup | TunerCount ChannelType -- | RestTunerCount ChannelType
+type ColumnTarget = AreaId | {- Active | -} Setup | TunerCount ChannelType -- | RestTunerCount ChannelType
 
 stringToTarget : String -> Maybe ColumnTarget
 stringToTarget str =
     case str of
         "area_id"             -> Just AreaId
-        "active"              -> Just Active
+--        "active"              -> Just Active
         "setup"               -> Just Setup
         "gr_tuner_count"      -> Just (TunerCount GR)
         "bs_tuner_count"      -> Just (TunerCount BS)
@@ -30,7 +30,7 @@ setValue rec target valstr =
     let common_ = common valstr target rec
     in case target of
            AreaId            -> common_ replace_area_id             String.toInt
-           Active            -> common_ replace_active              toBool
+--           Active            -> common_ replace_active              toBool
            Setup             -> common_ replace_setup               toBool
            TunerCount GR     -> common_ replace_gr_tuner_count      String.toInt
            TunerCount BS     -> common_ replace_bs_tuner_count      String.toInt
@@ -39,8 +39,8 @@ setValue rec target valstr =
 
 replace_area_id : System -> Int -> System
 replace_area_id rec v = {rec | area_id = v }
-replace_active : System -> Bool -> System
-replace_active rec v = { rec | active = v }
+--replace_active : System -> Bool -> System
+--replace_active rec v = { rec | active = v }
 replace_setup : System -> Bool -> System
 replace_setup rec v = { rec | setup = v }
 replace_gr_tuner_count : System -> Int -> System
@@ -112,7 +112,7 @@ systemDecoder =
 systemEncoder : Encoder System
 systemEncoder x = E.object
                   [ ("area_id", E.int  x.area_id)
-                  , ("active" , E.bool x.active )
+--                  , ("active" , E.bool x.active )
                   , ("setup"  , E.bool x.setup  )
                   , ("gr_tuner_count", E.int x.gr_tuner_count)
                   , ("bs_tuner_count", E.int x.bs_tuner_count)
@@ -123,12 +123,12 @@ systemEncoder x = E.object
 toStringMap : System -> Dict String String
 toStringMap x =  Dict.fromList [
                   ("area_id", toString x.area_id)
-                 ,("active" , toString x.active )
+--                 ,("active" , toString x.active )
                  ,("setup"  , toString x.setup  )
                  ,("gr_tuner_count", toString x.gr_tuner_count)
                  ,("bs_tuner_count", toString x.bs_tuner_count)
-                 ,("rest_gr_tuner_count", toString x.rest_gr_tuner_count)
-                 ,("rest_bs_tuner_count", toString x.rest_bs_tuner_count)
-                 ,("created_at", toString x.created_at)
-                 ,("updated_at", toString x.updated_at)
+--                 ,("rest_gr_tuner_count", toString x.rest_gr_tuner_count)
+--                 ,("rest_bs_tuner_count", toString x.rest_bs_tuner_count)
+--                 ,("created_at", toString x.created_at)
+--                 ,("updated_at", toString x.updated_at)
                 ]

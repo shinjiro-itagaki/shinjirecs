@@ -4,7 +4,7 @@ import Components.Types exposing (Models,CommonModelReadOnly,CommonModelEditable
 import Components.SystemMsg exposing (SystemMsg(CountUp,SystemInput,DoAction),ActionType(IndexAction,ShowAction,EditAction,ModifyAction))
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo)
-import Records.System exposing (System,ColumnTarget(AreaId,Active,Setup,TunerCount{- ,RestTunerCount -}),setValue,stringToTarget,toStringMap)
+import Records.System exposing (System,ColumnTarget(AreaId,Setup,TunerCount{- ,RestTunerCount -}),setValue,stringToTarget,toStringMap)
 import Records.System as System exposing (new)
 import Html exposing (Html,div,input,text,li,Attribute,button)
 import Html.Events exposing (onClick)
@@ -41,9 +41,23 @@ accept tipe m =
                 IndexAction   -> DirectMsg m indexView
                 ShowAction    -> execShowAction m
                 EditAction    -> execEditAction m
-                ModifyAction  -> redirectTo (ToSystemReq ShowAction)
+                ModifyAction  -> execModifyAction m
     in html
 
+execModifyAction : Models -> PublicRootMsg
+execModifyAction m =
+    case m.system.edit_record of
+        Just erec ->
+            HasCmd
+            <| Cmd.map
+                (\res ->
+                     case res of
+                         Ok _  -> redirectTo (ToSystemReq ShowAction)
+                         Err _ -> redirectTo (ToSystemReq EditAction)
+                )
+            <| m.readonly.api.system.modify erec
+        Nothing -> redirectTo (ToSystemReq EditAction)
+        
 execEditAction : Models -> PublicRootMsg
 execEditAction m = HasCmd <| Cmd.map execEditActionImpl <| loadSchemaAction m
         
@@ -146,6 +160,6 @@ editViewImpl rec scm models =
                         |> Dict.filter (\_ (b,_,_) -> b)
                         |> Dict.map (\_ (b,x,y) -> (x,y))
                         ) (toStringMap rec.val) Nothing
-        -- ,button [ onClick <| SendRequest <| ToSystemReq EditAction ] [text "リトライ"]
+        ,button [ onClick <| SendRequest <| ToSystemReq ModifyAction ] [text "保存"]
              -- UpdateModel Models
         ]
