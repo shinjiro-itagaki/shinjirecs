@@ -1,5 +1,6 @@
 module Components.Partials exposing (..)
 import Records.ColumnInfo as C exposing (..)
+import Records.Types exposing (toBool2)
 import Html as H exposing (..)
 import Html.Attributes as A exposing (..)
 import Html.Events as E exposing (..)
@@ -60,7 +61,9 @@ defaultInput (name,info,mval) to_msg =
                       _          -> E.onInput to_msg 
         attr_value = case mval of
                          Nothing -> []
-                         Just v  -> [A.value v]                
+                         Just v  -> case info.tipe of
+                                        C.BooleanT -> [A.checked <| toBool2 v False]
+                                        _          -> [A.value v]
         attrs = (++) ([aname,attr_on] ++ attr_value) <| catMaybes <| List.map (\f -> f info) [attr_maximum, attr_minimum, attr_required]
         stringsToOption s = H.option [A.value <| s] [H.text <| s]
         integersToOptions = List.map (stringsToOption << toString)

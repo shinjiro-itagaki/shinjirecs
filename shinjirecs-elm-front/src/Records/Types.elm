@@ -29,3 +29,8 @@ toBool str =
         "false" -> Ok False
         "no"    -> Ok False
         x       -> Result.map (\x -> x > 0) <| String.toInt x
+toBool2 : String -> Bool -> Bool
+toBool2 str dflt =
+    case toBool str of
+        Ok b -> b
+        Err _ -> dflt

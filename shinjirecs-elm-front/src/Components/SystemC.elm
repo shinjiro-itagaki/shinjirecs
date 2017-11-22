@@ -101,26 +101,51 @@ editView m =
          H.div [] [text <| "システム編集"]
         ,(case m.system.system_schema of
               Just rec -> editViewIfSystemSchemaLoaded rec
-              Nothing  -> editViewIfSystemSchemaNotFound) m.system
+              Nothing  -> editViewIfSystemSchemaNotFound) m
         ,button [onClick <| SendRequest <| ToSystemReq IndexAction] [text "システム情報インデックスへ"] 
         ]
 
-editViewIfSystemSchemaNotFound : SystemModel -> Html PublicRootMsg
+editViewIfSystemSchemaNotFound : Models -> Html PublicRootMsg
 editViewIfSystemSchemaNotFound m =
     div [] [
          H.div [] [text <| "スキーマがロードされていません"]
         ]
-editViewIfSystemSchemaLoaded : Dict String ColumnInfo -> SystemModel -> Html PublicRootMsg
-editViewIfSystemSchemaLoaded scm m =
-    (case  m.edit_record of
-         Just rec -> editViewImpl rec
-         Nothing  -> editViewIfRecordNotFound) m
+editViewIfSystemSchemaLoaded : Dict String ColumnInfo -> Models -> Html PublicRootMsg
+editViewIfSystemSchemaLoaded scm models =
+    (case  models.system.edit_record of
+         Just rec -> editViewImpl rec scm
+         Nothing  -> editViewIfRecordNotFound) models
 
-editViewIfRecordNotFound : SystemModel -> Html PublicRootMsg
+editViewIfRecordNotFound : Models -> Html PublicRootMsg
 editViewIfRecordNotFound m =
     div [] [
-         H.div [] [text <| "データがロードされていません"]
+         H.div [] [
+              text <| "データがロードされていません"
+             ,button [ onClick <| SendRequest <| ToSystemReq EditAction ] [text "リトライ"]
+             ]
         ]
-editViewImpl : Entity System -> SystemModel -> Html PublicRootMsg
-editViewImpl rec m =
-    div [] [text <| "データはロード済み"]
+
+setValueResultToEditInputMsg : Models -> Result (String,ColumnTarget) System -> PublicRootMsg
+setValueResultToEditInputMsg models res =
+    let system_model = models.system
+    in case res of
+        Ok system -> case system_model.edit_record of
+                         Just erec -> UpdateModel {models | system = {system_model | edit_record = Just <| Entity erec.id system}}
+                         Nothing   -> DoNothing
+        Err (inputv,tgt) -> DoNothing
+        
+editViewImpl : Entity System -> Dict String ColumnInfo -> Models -> Html PublicRootMsg
+editViewImpl rec scm models =
+    div [] [
+         text <| "データはロード済み"
+         ,formByColumns (Dict.map (\name info ->
+                                       case stringToTarget name of
+                                           Just tgt -> (True,info, (\inputv -> setValueResultToEditInputMsg models <| setValue rec.val tgt inputv))
+                                           Nothing  -> (False,info, (\_      -> DoNothing))
+                                  ) scm
+                        |> Dict.filter (\_ (b,_,_) -> b)
+                        |> Dict.map (\_ (b,x,y) -> (x,y))
+                        ) (toStringMap rec.val) Nothing
+        -- ,button [ onClick <| SendRequest <| ToSystemReq EditAction ] [text "リトライ"]
+             -- UpdateModel Models
+        ]
