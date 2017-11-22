@@ -111,10 +111,6 @@ view pm = H.div [class [NavBar]] [
            ,H.div [] <| case pm.m.editable.errmsg of
                             ""     -> []
                             errmsg -> [H.text <| errmsg]
-           ,H.div [] [H.text <| case String.toInt "" of
-                                    Ok i -> "ok = " ++ toString i
-                                    Err s -> "err => " ++ s
-                     ]
            ,H.footer [] []
            ]
 
