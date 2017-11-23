@@ -7,6 +7,8 @@ class Channel < ApplicationRecord
 
   before_save :auto_set_values
 
+  scope :enables, ->(){ where(enable: true) }
+
   def self.minimum_number() 1 end
 
   # validates :number, length: { minimum: self.minimum_number }, numericality: { only_integer: true }
