@@ -1,3 +1,4 @@
 elm-stuff
 public/*
 !public/index.html
+!public/boot.js
