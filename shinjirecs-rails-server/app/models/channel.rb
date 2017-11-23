@@ -5,6 +5,8 @@ class Channel < ApplicationRecord
   has_many :program_titles
   has_many :programs
 
+  before_save :auto_set_values
+
   def self.minimum_number() 1 end
 
   # validates :number, length: { minimum: self.minimum_number }, numericality: { only_integer: true }
@@ -20,6 +22,13 @@ class Channel < ApplicationRecord
   private
   def set_default
     self.ctype        ||= 'gr'
-    self.display_name ||= "No Name " + Time.now.to_s(:number)
+    # self.display_name ||= "No Name " + Time.now.to_s(:number)
   end
+
+  def auto_set_values
+    if (self.display_name || "").empty?
+      self.display_name = self.number
+    end
+  end
+
 end

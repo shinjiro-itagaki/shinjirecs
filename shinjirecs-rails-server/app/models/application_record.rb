@@ -1,6 +1,20 @@
 class ApplicationRecord < ActiveRecord::Base
   self.abstract_class = true
 
+  @@tasks = {}
+
+  def self.register_task(*args,&block)
+    t = Thread.new do
+      begin
+        block.call args
+      rescue
+      ensure
+        @@tasks[self.id]=nil
+      end
+    end
+    @@tasks[t.id]=nil
+  end
+
   after_initialize :set_default, if: :new_record?
 
   @@maximums = {}

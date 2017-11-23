@@ -35,6 +35,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string  "ctype"        , null: false, default: "gr"
       t.string  "display_name" , null: false
       t.integer "order"        , null: false, default: 0
+      t.boolean "enable"       , null: false, default: true
       t.timestamps               null: false
       t.index ["area_id","number","ctype"], unique: true
       t.index ["area_id","display_name"], unique: true

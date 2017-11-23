@@ -9,10 +9,12 @@
 area = (if Area.exists?
           Area.first
         else
-          Area.new(label: 'デフォルト').save
+          a = Area.new(label: 'デフォルト')
+          a.save
+          a.reload
         end)
 
-System.create area: area , active: true  if not System.where_instance.exists?
-System.create area: area , active: false if not System.where_dummy.exists?
+System.create area_id: area.id , active: true  if not System.where_instance.exists?
+System.create area_id: area.id , active: false if not System.where_dummy.exists?
 categ = EpgProgramCategory.find_or_create_by!(id: 0, label_ja: "その他", label_en: "others")
 EpgProgramMediumCategory.find_or_create_by!(id: 0, label_ja: "その他", label_en: "others", parent_id: categ.id)
