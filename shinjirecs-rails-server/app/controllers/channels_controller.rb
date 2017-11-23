@@ -27,8 +27,8 @@ class ChannelsController < ApplicationController
       }
 
       charr.each do |ch|
-        c = ch
-        cmd = "#{cmdfile} #{ch}"
+        c = ch.number
+        cmd = "#{cmdfile} #{c}"
         puts cmd
         if system cmd then
           puts "command success"
