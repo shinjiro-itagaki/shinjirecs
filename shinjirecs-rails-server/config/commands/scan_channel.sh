@@ -6,19 +6,22 @@ if [ "$sec" = "" ]
 then
     sec=1
 fi
-tmpfile=$(mktemp)
-# echo ${tmpfile}
-rm ${tmpfile}
+
 # sleep 100
+# echo "recpt1 --b25 --strip ${ch} ${sec} ${tmpfile}"
 if type recpt1 ; then
     echo "" > /dev/null; # dummy
 else
     exit 1; # error
 fi
-recpt1 --b25 --strip ${ch} ${sec} ${tmpfile}
+
+tmpfile=$(mktemp)
+# echo ${tmpfile}
+rm ${tmpfile}
 
 if [ -f ${tmpfile} ]; then
-#    echo "success"
+    #    echo "success"
+    echo "recpt1 --b25 --strip ${ch} ${sec} ${tmpfile}"
     exit 0 # success
 else
 #    echo "error"

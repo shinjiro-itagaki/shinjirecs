@@ -42,6 +42,12 @@ class ChannelsController < ApplicationController
         res = false
 
         # io = IO.popen(cmd, "r")
+        io = IO.popen(cmd)
+        cmd = io.read
+        if not $?.to_i == 0
+          puts cmd
+          next
+        end
         pid = spawn(cmd, pgroup: Process.pid)  # io.pid
         watch_thread = Process.detach(pid)
         begin
