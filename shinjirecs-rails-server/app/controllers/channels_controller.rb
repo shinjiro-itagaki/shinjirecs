@@ -39,7 +39,8 @@ class ChannelsController < ApplicationController
 
       charr.each do |ch|
         tempfile = Tempfile.new('for-scan')
-        cmd = "#{cmdfile} #{ch.number} 1 #{tempfile.path}"
+        tempfilepath = tempfile.path
+        cmd = "#{cmdfile} #{ch.number} 1 #{tempfilepath}"
         tempfile.unlink
 
         puts cmd
@@ -59,7 +60,7 @@ class ChannelsController < ApplicationController
           Timeout.timeout(timeout_sec) do
             # waitpid pid
             watch_thread.join
-            res = File.exists?(tempfile.path)
+            res = File.exists?(tempfilepath)
             # puts io.read
             # res = ($?.to_i == 0)
             # puts "command status=" + $?.to_s + " and pid = #{pid}"
