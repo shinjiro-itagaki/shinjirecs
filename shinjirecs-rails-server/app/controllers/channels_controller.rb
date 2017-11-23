@@ -49,10 +49,11 @@ class ChannelsController < ApplicationController
             res = ($?.to_i == 0)
             puts "command status=" + $?.to_s + " and pid = #{pid}"
           end
-          io.close
         rescue => e
           puts e
+        ensure
           Process.kill :QUIT, pid
+          io.close
         end
 
         if res then
