@@ -48,11 +48,11 @@ class ChannelsController < ApplicationController
 
         if res then
           puts "command success"
-          puts $?
+          # puts $?
           ch.enable = true
         else
           ch.enable = false
-          puts "command failed"
+          puts "command failed. Channel '#{ch.number}' was not found."
         end
         ch.scaned = true
         ch.save
