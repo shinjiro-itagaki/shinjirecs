@@ -23,11 +23,12 @@ type RootMsg = Private PrivateRootMsg | Public PublicRootMsg
 
 { id, class, classList } = withNamespace "root"
                           
-root = program { init = init --init
-               , view = view -- view
-               , update = update -- update
-               , subscriptions = subscriptions --subscriptions
-               }
+root str =
+    program { init = init str --init
+            , view = view -- view
+            , update = update -- update
+            , subscriptions = subscriptions --subscriptions
+            }
 
 httpErrorToMsg : Http.Error -> String
 httpErrorToMsg err =
@@ -89,7 +90,7 @@ update msg oldpm =
                    DirectMsg rtnm f  -> ((\x -> {x| f = f}) <| updatePrivateModel_ rtnm, Cmd.none)
                    HasCmd cmd        -> (oldpm,Cmd.map Public cmd)
                    SendRequest req   -> case req of
-                                            NoSelect -> ({oldpm| req=req, f = (Tuple.first init).f},Cmd.none)
+                                            NoSelect -> ({oldpm| req=req, f = emptyView },Cmd.none)
                                             _        -> update (Public <| dispatch req oldpm) {oldpm|req=req}
                    DoNothing -> (oldpm,Cmd.none)
                    UpdateAPICache -> (oldpm, Cmd.map (Private << ReplaceAPICache) oldpm.m.readonly.api.system.all)
@@ -116,14 +117,16 @@ view pm = H.div [class [NavBar]] [
 
 
 
-init : (PrivateModel, Cmd RootMsg)
-init =
+emptyView _ = H.div [] []
+          
+init : String -> (PrivateModel, Cmd RootMsg)
+init address =
     let systemC = SystemC.new
         x = { m = { system = systemC.init
-                      , readonly = { config = 1, api = getAPI "http://127.0.0.1:3000", httpErrorToString = httpErrorToMsg , cache=emptyCache}
+                      , readonly = { config = 1, api = getAPI address, httpErrorToString = httpErrorToMsg , cache=emptyCache}
                       , editable = { counter = 0, errmsg = "" }
                       }
-                , f = (\_ -> H.div [] [])
+                , f = emptyView
                 , components = {system = systemC}
                 , req = NoSelect
                 }
