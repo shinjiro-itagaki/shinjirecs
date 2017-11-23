@@ -40,7 +40,7 @@ class ChannelsController < ApplicationController
         puts cmd
         res = false
         begin
-          timeout(timeout_sec) do
+          Timeout.timeout(timeout_sec) do
             res = system cmd
           end
         rescue
