@@ -64,7 +64,6 @@ class ChannelsController < ApplicationController
           end
         rescue Timeout::Error #  => e
           Process.kill(:TERM, pid)
-          watch_thread.exit
           # puts e
         end
 
