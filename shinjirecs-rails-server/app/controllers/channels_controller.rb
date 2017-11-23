@@ -1,4 +1,5 @@
 require 'timeout'
+require 'open3'
 
 class ChannelsController < ApplicationController
   set_model Channel
@@ -41,7 +42,8 @@ class ChannelsController < ApplicationController
         res = false
         begin
           Timeout.timeout(timeout_sec) do
-            res = system cmd
+            stdo,stde,status = Open3.capture cmd
+            res = status.exited?
           end
         rescue
         end
