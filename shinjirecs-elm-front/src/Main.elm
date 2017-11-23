@@ -11,7 +11,7 @@ import Components exposing (root)
 
 type Msg = Input String | Fail | Enter | Subscribed String
     
-main = root "http://127.0.0.1:3000"
+main = root "." -- "http://127.0.0.1:3000"
 
 {-        
 type alias Model = {list : List String, value : String }
