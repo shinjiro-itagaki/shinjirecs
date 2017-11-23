@@ -57,7 +57,9 @@ class ChannelsController < ApplicationController
         watch_thread = Process.detach(pid)
         begin
           Timeout.timeout(timeout_sec) do
+            # waitpid pid
             watch_thread.join
+            res = File.exists?(tempfile.path)
             # puts io.read
             # res = ($?.to_i == 0)
             # puts "command status=" + $?.to_s + " and pid = #{pid}"
