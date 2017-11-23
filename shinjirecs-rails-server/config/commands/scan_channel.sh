@@ -1,3 +1,8 @@
 #!/usr/bin/env sh
 ch=$1
-recpt1 --b25 --strip ${ch} 1 /dev/null
+sec=$2
+if [ "$sec" = "" ]
+then
+    sec=1
+fi
+recpt1 --b25 --strip ${ch} ${sec} /dev/null
