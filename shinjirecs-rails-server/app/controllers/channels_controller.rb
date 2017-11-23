@@ -40,18 +40,23 @@ class ChannelsController < ApplicationController
         cmd = "#{cmdfile} #{ch.number}"
         puts cmd
         res = false
+
+        io = IO.popen(cmd, "r")
+        pid = io.pid
         begin
           Timeout.timeout(timeout_sec) do
-            stdo,stde,status = Open3.capture3 cmd
-            res = status.success?
+            puts io.read
+            res = ($?.to_i == 0)
+            puts "command status=" + $?.to_s + " and pid = #{pid}"
           end
+          io.close
         rescue => e
           puts e
+          Process.kill :QUIT, pid
         end
 
         if res then
           puts "command success"
-          # puts $?
           ch.enable = true
         else
           ch.enable = false

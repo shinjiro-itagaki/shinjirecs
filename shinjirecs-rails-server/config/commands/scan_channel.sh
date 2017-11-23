@@ -9,6 +9,12 @@ fi
 tmpfile=$(mktemp)
 # echo ${tmpfile}
 rm ${tmpfile}
+# sleep 100
+if type recpt1 ; then
+    echo "" > /dev/null; # dummy
+else
+    exit 1; # error
+fi
 recpt1 --b25 --strip ${ch} ${sec} ${tmpfile}
 
 if [ -f ${tmpfile} ]; then
