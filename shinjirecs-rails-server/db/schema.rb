@@ -64,8 +64,8 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   end
 
   create_table "epg_programs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.timestamp "stop_time", null: false
+    t.datetime "start_time", null: false
+    t.datetime "stop_time", null: false
     t.integer "channel_id", null: false
     t.string "title", null: false
     t.text "desc", null: false
@@ -112,7 +112,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   end
 
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "start_time", null: false
     t.integer "duration", null: false
     t.integer "channel_id", default: 0, null: false
     t.integer "program_title_id", default: 0, null: false

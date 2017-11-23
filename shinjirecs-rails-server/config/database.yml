@@ -13,6 +13,7 @@ default: &default
   pool: 5
   username: root
   socket: /tmp/mysql.sock
+# socket: /var/run/mysqld/mysqld.sock
   password: number4026
 
 development:

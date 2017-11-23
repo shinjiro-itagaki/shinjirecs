@@ -60,8 +60,8 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     end
 
     create_table :epg_programs, unsigned: true do |t|
-      t.timestamp  "start_time"           , null: false
-      t.timestamp  "stop_time"            , null: false
+      t.datetime   "start_time"           , null: false
+      t.datetime   "stop_time"            , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade} # delete all programs if channel is deleted
       t.string     "title"                , null: false
       t.text       "desc"                 , null: false
@@ -115,7 +115,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     end
 
     create_table :reservations, unsigned: true do |t|
-      t.timestamp  "start_time"          , null: false
+      t.datetime   "start_time"          , null: false
       t.integer    "duration"            , null: false # seconds
       t.integer    "channel_id"          , null: false , default: 0, foreign_key: {on_delete: :restrict   , on_update: :cascade}
       t.integer    "program_title_id"    , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
