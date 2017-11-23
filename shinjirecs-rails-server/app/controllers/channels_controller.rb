@@ -1,10 +1,19 @@
+require 'timeout'
+
 class ChannelsController < ApplicationController
   set_model Channel
   def self.permitted_params
     [:number,:area_id,:ctype,:display_name,:order]
   end
 
+  def self.scan_timeout
+    8
+  end
+
   def scan
+    timeout_sec = params[:timeout].to_s.to_i
+    timeout_sec = self.class.scan_timeout if timeout_sec < 1
+
     gr = params[:gr] || []
     bs = params[:bs] || []
 
@@ -29,7 +38,15 @@ class ChannelsController < ApplicationController
       charr.each do |ch|
         cmd = "#{cmdfile} #{ch.number}"
         puts cmd
-        if system cmd then
+        res = false
+        begin
+          timeout(timeout_sec) do
+            res = system cmd
+          end
+        rescue
+        end
+
+        if res then
           puts "command success"
           puts $?
           ch.enable = true
@@ -46,7 +63,7 @@ class ChannelsController < ApplicationController
   protected
   def system_setup_check
     if not System.instance
-      render_data nil, system: ins, setup: false
+      render_data nil, system: System.instance, setup: false
     end
   end
 end
