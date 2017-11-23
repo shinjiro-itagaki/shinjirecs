@@ -17,19 +17,29 @@ class ChannelsController < ApplicationController
     end
 
     {"gr" => gr,"bs" => bs}.each do |type,charr|
-      charr.each do |ch|
+      charr = charr.map {|ch|
         c = Channel.find_or_initialize_by(number: ch, area_id: area_id)
         if c.new_record?
-          cmd = "#{cmdfile} #{ch}"
-          puts cmd
-          if system cmd then
-            puts "command success"
-            puts $?
-            c.save
-          else
-            puts "command failed"
-          end
+          c.scaned = false
+          c.save
         end
+        c
+      }
+
+      charr.each do |ch|
+        c = ch
+        cmd = "#{cmdfile} #{ch}"
+        puts cmd
+        if system cmd then
+          puts "command success"
+          puts $?
+          c.enable = true
+        else
+          c.enable = false
+          puts "command failed"
+        end
+        c.scaned = true
+        c.save
       end
     end
   end
