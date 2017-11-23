@@ -21,7 +21,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   end
 
   create_table "channels", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "number", null: false
+    t.string "number", null: false
     t.integer "area_id", default: 0, null: false
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false

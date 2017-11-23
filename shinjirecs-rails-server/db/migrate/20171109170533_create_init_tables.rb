@@ -30,7 +30,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     execute "ALTER TABLE epgdump_schedules ADD CONSTRAINT chk_schedule_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
 
     create_table :channels, unsigned: true do |t|
-      t.integer "number"       , null: false
+      t.string  "number"       , null: false
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.string  "ctype"        , null: false, default: "gr"
       t.string  "display_name" , null: false
