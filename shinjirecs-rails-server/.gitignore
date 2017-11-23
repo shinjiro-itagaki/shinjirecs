@@ -21,3 +21,4 @@
 /vendor/bundle/*
 !/vendor/bundle/.keep
 /public/*
+/config/database.yml
