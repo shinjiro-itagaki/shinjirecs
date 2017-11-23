@@ -42,10 +42,11 @@ class ChannelsController < ApplicationController
         res = false
         begin
           Timeout.timeout(timeout_sec) do
-            stdo,stde,status = Open3.capture cmd
-            res = status.exited?
+            stdo,stde,status = Open3.capture3 cmd
+            res = status.success?
           end
-        rescue
+        rescue => e
+          puts e
         end
 
         if res then

@@ -6,4 +6,15 @@ if [ "$sec" = "" ]
 then
     sec=1
 fi
-recpt1 --b25 --strip ${ch} ${sec} /dev/null
+tmpfile=$(mktemp)
+# echo ${tmpfile}
+rm ${tmpfile}
+recpt1 --b25 --strip ${ch} ${sec} ${tmpfile}
+
+if [ -f ${tmpfile} ]; then
+#    echo "success"
+    exit 0 # success
+else
+#    echo "error"
+    exit 1 # error
+fi
