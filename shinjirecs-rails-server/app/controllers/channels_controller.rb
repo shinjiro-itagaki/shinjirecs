@@ -41,19 +41,20 @@ class ChannelsController < ApplicationController
         puts cmd
         res = false
 
-        io = IO.popen(cmd, "r")
-        pid = io.pid
+        # io = IO.popen(cmd, "r")
+        pid = spawn(cmd, pgroup: Process.pid)  # io.pid
+        watch_thread = Process.detach(pid)
         begin
           Timeout.timeout(timeout_sec) do
-            puts io.read
-            res = ($?.to_i == 0)
-            puts "command status=" + $?.to_s + " and pid = #{pid}"
+            watch_thread.join
+            # puts io.read
+            # res = ($?.to_i == 0)
+            # puts "command status=" + $?.to_s + " and pid = #{pid}"
           end
-        rescue => e
-          puts e
-        ensure
-          Process.kill :QUIT, pid
-          io.close
+        rescue Timeout::Error #  => e
+          Process.kill(:TERM, pid)
+          watch_thread.exit
+          # puts e
         end
 
         if res then
