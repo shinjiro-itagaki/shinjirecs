@@ -1,5 +1,6 @@
 require 'timeout'
 require 'open3'
+require 'tempfile'
 
 class ChannelsController < ApplicationController
   set_model Channel
@@ -37,18 +38,22 @@ class ChannelsController < ApplicationController
       }
 
       charr.each do |ch|
-        cmd = "#{cmdfile} #{ch.number}"
+        tempfile = Tempfile.new('for-scan')
+        cmd = "#{cmdfile} #{ch.number} 1 #{tempfile.path}"
+        tempfile.unlink
+
         puts cmd
         res = false
 
         # io = IO.popen(cmd, "r")
         io = IO.popen(cmd)
         cmd = io.read
+        puts " => " + cmd
         if not $?.to_i == 0
-          puts cmd
           next
         end
         pid = spawn(cmd, pgroup: Process.pid)  # io.pid
+        puts "pid=#{pid}"
         watch_thread = Process.detach(pid)
         begin
           Timeout.timeout(timeout_sec) do
