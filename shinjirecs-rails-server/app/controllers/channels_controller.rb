@@ -67,10 +67,9 @@ class ChannelsController < ApplicationController
           end
         rescue Timeout::Error #  => e
           Process.kill(:TERM, pid)
-          watch_thread.join
           # puts e
         end
-
+        watch_thread.join
         if res then
           puts "command success"
           ch.enable = true
