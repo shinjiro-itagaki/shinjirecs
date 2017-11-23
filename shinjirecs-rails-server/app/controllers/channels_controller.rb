@@ -27,19 +27,18 @@ class ChannelsController < ApplicationController
       }
 
       charr.each do |ch|
-        c = ch.number
-        cmd = "#{cmdfile} #{c}"
+        cmd = "#{cmdfile} #{ch.number}"
         puts cmd
         if system cmd then
           puts "command success"
           puts $?
-          c.enable = true
+          ch.enable = true
         else
-          c.enable = false
+          ch.enable = false
           puts "command failed"
         end
-        c.scaned = true
-        c.save
+        ch.scaned = true
+        ch.save
       end
     end
   end
