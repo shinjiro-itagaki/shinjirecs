@@ -1,0 +1,6 @@
+Session
+  sid String
+  data Text
+  expiringDate UTCTime
+  UniqueSessionId sid
+  deriving Show

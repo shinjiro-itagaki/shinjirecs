@@ -7,75 +7,187 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Controller where
-import DB
-import Data.Aeson(ToJSON(..))
-import Web.Scotty (ActionM)
-import Control.Monad.IO.Class(liftIO,MonadIO) -- base
-import Database.Persist.Sql(ConnectionPool,SqlPersistT, runSqlPool)  --persistent
-import Database.Persist (PersistEntity (..)) --persistent
-import qualified Database.Persist.Class as PS
-import Data.Enumerator (Enumerator) -- enumerator
-import qualified Data.Text.Lazy as LText
-import Model(ActiveRecord(..), find, saveR, saveE, ToMaybeEntity(..))
-import Database.Persist.Types (Entity(..))
-import Web.Scotty(json,param,jsonData,ActionM,status)
-import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
+import Data.Aeson(ToJSON(..), Result(Error,Success),FromJSON, fromJSON, parseJSON,toJSON,ToJSON,Value(Object), encode)
+import Data.Aeson.Types(parseMaybe)
+import Network.Wai (Request(..))
+import Network.HTTP.Types (Status, status200, status201, status400, status404, status405, status500, StdMethod(..))
+import qualified DB
+import Class.Castable(Castable(..))
+import Class.String(StringClass(toByteString, toByteStringL,toTextL,(+++), toText),toJSON)
+import Routing.Class(RawPathParams, PathParamList(..))
+import Controller.Types(ControllerResponse(..), ActionWrapper(..), Action, Body, ParamGivenAction)
+import qualified Data.Text.Lazy as TL
+import Data.Int(Int64)
+import Data.Maybe(isJust)
+import Data.Text(Text)
+import Data.ByteString(ByteString)
+import Model(ModelClass, SaveResult(SaveSuccess, SaveFailed, SaveCanceled, Rollbacked), create, CreateResult, modify, ModifyResult)
+import Routing.Types(Resource(Resource,listAction,getAction,modifyAction,createAction,destroyAction))
 
-import qualified Database.Persist as P --persistent
-import Control.Monad.Reader(ReaderT) -- mtl
-import Database.Persist.Sql.Types.Internal (SqlBackend)
-import qualified Model as M
-import Data.Bool(bool)
+defaultControllerResponse :: ControllerResponse
+defaultControllerResponse = MkControllerResponse {
+  contentType = "application/json"
+  ,body       = ""
+  ,status     = status200
+  }
 
+toBodyFromTextL :: TL.Text -> Body
+toBodyFromTextL = toByteStringL
 
--- class (Controller c) => (ControllerAction c) ca
+class ToBody a where
+  toBody :: a -> Body
 
-data ActionSymbol = Index | List | Get | Read | Modify | Edit | Create | New | Delete | Destroy
-                  | IndexN Int | ListN Int | GetN Int | ReadN Int | ModifyN Int | EditN Int | CreateN Int | NewN Int | DeleteN Int | DestroyN Int
-                  | S String | I Int | SI String Int deriving Eq
+instance (ToJSON a) => ToBody a where
+  toBody = encode
 
-class Controller a where
-  new :: ConnectionPool -> a
-  conn :: a -> ConnectionPool
-  db :: (MonadIO m) => a -> (SqlPersistT IO b -> m b)
-  db a = DB.run $ conn a
-  beforeAction :: ActionSymbol -> a -> ActionM (Bool, a)
-  beforeAction sym c = return (True, c)
-  afterAction  :: ActionSymbol -> a -> ActionM ()
-  afterAction  sym c = return ()
+fromRequest :: (FromJSON a) => Request -> IO (Either ControllerResponse a)
+fromRequest req = do
+  body <- requestBody req
+  return $ case Class.String.toJSON body of
+    Nothing -> Left $ responseBadRequest body -- parse error
+    Just x -> case fromJSON x of
+      Error   _ -> Left $ responseBadRequest body -- maybe lack some attributes
+      Success y -> Right y
 
-  findRecord :: (Show keyname, ActiveRecord e) => a -> keyname -> ActionM (Maybe (Entity e))
-  findRecord a keyname = (param $ LText.pack $ show keyname :: ActionM String) >>= db a . find
+responseBadRequest :: (StringClass s) => s -> ControllerResponse
+responseBadRequest txt = defaultControllerResponse {
+  body    = toBody $ toText txt
+  ,status = status400
+  }
 
-  findRecords :: (ActiveRecord e) => a -> [P.Filter e] -> [P.SelectOpt e] -> ActionM [Entity e]
-  findRecords a filters opts = db a $ M.selectBy filters opts
+responsePathNotFound :: ByteString -> ControllerResponse
+responsePathNotFound path = defaultControllerResponse {
+  body    = toBody $ toText $ path +++ (" is not found." :: ByteString)
+  ,status = status404  
+  }
 
-type ControllerAction c = (ActionSymbol, (c -> ActionM c))
+responseNotAllowedMethod :: ByteString -> String -> ControllerResponse
+responseNotAllowedMethod path method = defaultControllerResponse {
+  body = toBody $ toText $ (toByteString method) +++ (" is not allowed on " :: ByteString) +++ path
+  ,status = status404
+  }
 
-def :: (Controller c) => ActionSymbol -> (c -> ActionM c) -> (ActionSymbol, (c -> ActionM c))
-def sym impl = (sym, impl)
+responseUnsupportedMethod :: ByteString -> ControllerResponse
+responseUnsupportedMethod method = defaultControllerResponse {
+  body = toBody $ toText $ method +++ (" is unsupported" :: ByteString)
+  ,status = status405
+  }
 
-data ResponseType = FindR | SaveR | DeleteR
+response500 :: Text -> ControllerResponse
+response500 msg = defaultControllerResponse {
+  body    = toBody msg
+  ,status = status500
+  }  
 
-class (PS.PersistEntity a, ToJSON a) => ToJsonResponse a where
-  toJsonResponse :: ResponseType -> a -> ActionM ()
-  toJsonResponse FindR x = status status200 >> json x
-  toJsonResponse _     x = status status201 >> json x
+doIfRecordFound :: Int64 -> DB.Table m -> (DB.Entity m -> IO ControllerResponse) -> IO ControllerResponse
+doIfRecordFound id t f = do
+  mrec <- DB.find t id
+  case mrec of
+    Nothing -> responseRecordNotFound id
+    Just  x -> f x
 
-  toJsonResponseEntity :: ResponseType -> Entity a -> ActionM ()
-  toJsonResponseEntity t (Entity k v) = toJsonResponse t v
+doIfValidInputJSON :: (FromJSON m) => Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
+doIfValidInputJSON req f = do
+  erec <- fromRequest req
+  case erec of
+    Left res -> return res
+    Right  x -> f x
 
-  toJsonResponseMaybeEntity :: ResponseType -> Maybe (Entity a) -> ActionM ()
-  toJsonResponseMaybeEntity t    (Just (Entity k v)) = toJsonResponse t v
-  toJsonResponseMaybeEntity FindR Nothing  = status status404
-  toJsonResponseMaybeEntity _     Nothing  = status status400
+doIfModifiable :: (ModelClass m) => Int64 -> DB.Table m -> Request -> (DB.Entity m -> IO ControllerResponse) -> IO ControllerResponse
+doIfModifiable id t req f = doIfRecordFound id t $ ifRecordFound'
+  where
+    ifRecordFound' e@(k,v) = doIfValidInputJSON req $ (\inputV -> f (k,inputV) )
 
-instance (PS.PersistEntity e, ToJSON e) => ToJsonResponse e
+doIfCreatable :: (ModelClass m) => DB.Table m -> Request -> (m -> IO ControllerResponse) -> IO ControllerResponse
+doIfCreatable t req f = doIfValidInputJSON req f
 
+modifyCommon :: (ModelClass m, FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => Int64 -> DB.Table m -> Request -> IO ControllerResponse
+modifyCommon id t req = doIfModifiable id t req impl'
+  where
+    -- impl' :: DB.Entity m -> IO ControllerResponse
+    impl' e = modify t e >>= return . saveResultToControllerResponse
 
-run :: (Controller c) => ConnectionPool -> ControllerAction c -> ActionM ()
-run conn (sym, main) = do
-  (res, c) <- beforeAction sym $ new conn
-  if res
-  then afterAction sym =<< main c
-  else return () -- do nothing
+createCommon :: (ModelClass m) => DB.Table m -> Request -> IO ControllerResponse
+createCommon t req = doIfCreatable t req impl'
+  where
+    -- impl' :: m -> IO ControllerResponse
+    impl' v = create t v >>= return . saveResultToControllerResponse
+
+saveResultToControllerResponse :: (ModelClass record) => SaveResult record rore typ -> ControllerResponse
+saveResultToControllerResponse (SaveSuccess e) = responseSaved e
+saveResultToControllerResponse (SaveFailed e results committed) = responseBadRequest ("failed" :: String)
+saveResultToControllerResponse (SaveCanceled pos e) = responseBadRequest ("canceled" :: String)
+saveResultToControllerResponse (Rollbacked e)       = responseBadRequest ("rollbacked" :: String)
+
+responseSaved :: (ModelClass record) => DB.Entity record -> ControllerResponse
+responseSaved e = defaultControllerResponse {
+  body    = toBody e
+  ,status = status201
+  }
+  
+responseRecordNotFound :: Int64 -> IO ControllerResponse
+responseRecordNotFound id = return defaultControllerResponse {
+  body    = toBody $ "id " ++ (show id) ++ "was not found"
+  ,status = status404
+  }
+
+getRecords :: (ToJSON (DB.Entity record)) => [DB.Filter record] -> [DB.SelectOpt record] -> DB.Table record -> IO ControllerResponse
+getRecords filters opts table = do
+  records <- DB.select table filters opts
+  return $ defaultControllerResponse {
+    body = toBody records
+    }  
+
+getRecord :: (ToJSON (DB.Entity record)) => Int64 -> DB.Table record -> IO ControllerResponse
+getRecord id table = do
+  mrec <- find' id
+  case mrec of
+    Nothing -> responseRecordNotFound id -- record not found
+    Just x  -> return $ defaultControllerResponse {
+    body = toBody x
+    }
+  where
+    find' = DB.find table
+
+destroyRecord :: Int64 -> DB.Table record -> IO ControllerResponse
+destroyRecord id table = do
+  mrec <- find' id
+  case mrec of
+    Nothing -> responseRecordNotFound id -- record not found
+    Just (key,_) -> do
+      delete' key
+      mrec2 <- find' id
+      return $ defaultControllerResponse {
+        body = toBody $ isJust mrec2
+        }  
+  where
+    delete' = DB.delete table
+    find'   = DB.find table
+  
+
+defaultListAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action ()
+defaultListAction f _ method conn req = getRecords filters' opts' (f conn)
+  where
+    filters' = [] -- :: [DB.Filter DB.Channel]
+    opts'    = [] -- :: [DB.SelectOpt DB.Channel]
+    
+defaultGetAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultGetAction f id method conn req = getRecord id (f conn)
+
+defaultModifyAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultModifyAction f id method conn req = modifyCommon id (f conn) req
+    
+defaultCreateAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action ()
+defaultCreateAction f _ method conn req = createCommon (f conn) req
+
+defaultDestroyAction :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Action Int64
+defaultDestroyAction f id method conn req = destroyRecord id (f conn)
+
+mkDefaultResource :: (ModelClass record) => (DB.Connection -> DB.Table record) -> Resource
+mkDefaultResource tg = Resource {
+  listAction     = defaultListAction    tg
+  ,getAction     = defaultGetAction     tg
+  ,modifyAction  = defaultModifyAction  tg
+  ,createAction  = defaultCreateAction  tg
+  ,destroyAction = defaultDestroyAction tg
+  }

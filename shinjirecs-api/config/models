@@ -1,31 +1,31 @@
 Reservation json
+  channelId ChannelId
   startTime UTCTime
-  duration Int default=0
+  duration Word default=0
   title String
   description Text
---  category_id CategoryId
-  next Int
+  next Word
   name Text
-  counter Int
-  keta Int
+  counter Word
+  keta Word
   videoFileNameFormat FilePath
-  xwday Int
--- UniqueUsername username
---  status Models.Reservation.Status
---  status Hoge
+  xwday Word
   state ReservationState
+  deriving Show
 
 Program json
---  category_id CategoryId
+  channelId ChannelId
   startTime UTCTime
-  duration Int default=0
+  duration Word default=0
   title String
   description Text
   name Text
+  deriving Show  
 
 Channel json
-  number Int
-  type Int
-  displayName Text
+  number String
+  type ChannelType
+  displayName String
   order Int
   enable Bool
+  deriving Show  

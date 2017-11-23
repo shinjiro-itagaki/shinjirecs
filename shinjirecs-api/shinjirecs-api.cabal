@@ -17,25 +17,64 @@ library
   hs-source-dirs:      src
   exposed-modules:     App
                      , Config
+                     , Config.Class
+                     , Config.DB
+                     , Config.Env
+                     , Config.Paths
+                     , Config.Reservation
                      , DB
+                     , DB.Config
+                     , DB.Class
+                     , DB.HDBC
+                     , DB.ORMLinker
+                     , DB.Persist
                      , DB.Status
+                     , DB.Types
                      , Model
                      , Models.Channel
                      , Models.Reservation
                      , Models.Program
                      , Controller
-                     , Controllers.Channels
-                     , Controllers.Install
-                     , Controllers.Programs
-                     , Controllers.Reservations
+                     , Controller.Types                     
+                     , Controllers.ChannelsController
+                     , Controllers.HomeController
+                     , Controllers.InstallController
+                     , Controllers.ProgramsController
+                     , Controllers.ReservationsController
+                     , Class.Castable
+                     , Class.DateTime
+                     , Class.Object
+                     , Class.String
                      , Helper
+                     , Helper.DateTimeHelper
+                     , Helper.EnumHelper
+                     , Helper.ListHelper
+                     , Helper.MaybeHelper
+                     , Helper.NumHelper
+                     , Job
+                     , Jobs.Recording
+                     , Routing
+                     , Routing.Class
+                     , Routing.Types
+                     , Session
+                     , Session.Class
+                     , Session.DB
   build-depends:       base >= 4.7 && < 5
+                     , HDBC
+                     , HDBC-sqlite3
+                     , HDBC-mysql
+                     , HDBC-postgresql
+                     , MissingH
                      , aeson
                      , bytestring
                      , conduit
+                     , containers
+                     , dates
+                     , directory
                      , enumerator
                      , extra
-                     , scotty
+                     , filepath
+--                     , hedis
                      , http-types
                      , mtl
                      , mysql-simple
@@ -43,20 +82,27 @@ library
                      , regex-posix
                      , resource-pool
                      , resourcet
-                     , persistent
+                     , persistent >= 2.6
                      , persistent-template
                      , persistent-mysql
                      , persistent-postgresql
                      , persistent-sqlite
                      , postgresql-simple
+                     , process
                      , resourcet
                      , scientific
+                     , split
+                     , system-argv0
                      , text
                      , time
                      , transformers
                      , unordered-containers
+                     , uuid
+                     , vector
                      , wai
                      , wai-extra
+                     , warp
+                     , warp-tls
                      , yaml
   default-language:    Haskell2010
 
@@ -79,11 +125,26 @@ executable shinjirecs-api-migrate
 test-suite shinjirecs-api-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             Spec.hs
+  main-is:             Test.hs
+  other-modules:       Test.RoutingTest
+                     , Test.HelperTest
   build-depends:       base
                      , shinjirecs-api
-                     , hspec
-                     , QuickCheck
+                     , HUnit
+                     , dates
+                     , http-types
+                     -- , aeson
+                     -- , directory
+                     -- , filepath
+                     -- , hspec
+                     -- , hspec-expectations
+                     -- , monad-logger
+                     -- , mtl
+                     -- , persistent
+                     -- , system-argv0
+                     -- , time
+                     -- , text
+                     -- , QuickCheck
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

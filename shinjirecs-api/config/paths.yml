@@ -1,0 +1,15 @@
+default:
+  privateDir  : "private"
+  commandsDir : "private/commands"
+  videoFilesDir : "private/videofiles"
+  
+development:
+  <<: default
+
+test:
+  <<: default
+  privateDir  : "private/test"
+  videoFilesDir : "private/test/videofiles"
+  
+production:
+  <<: default

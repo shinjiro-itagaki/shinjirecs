@@ -1,103 +1,92 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module App where
+module App (
+  App.migrate
+  ,listen
+  )where
 import Data.Maybe(maybe)
-import Control.Applicative((<$>))
-import Control.Exception.Base(bracket_)
-import Web.Scotty (ScottyM, scotty, status, json, get, patch, delete , post, options, ActionM, param, jsonData, addroute, setHeader,middleware, RoutePattern)
-import Network.HTTP.Types (status200, status201, status400, status404, StdMethod(..))
-import Network.Wai (Application,Request,Response,ResponseReceived,responseLBS,Middleware)
-import Network.Wai.Middleware.RequestLogger(logStdoutDev) -- wai-extra
-import Network.Wai.Middleware.AddHeaders(addHeaders) -- wai-extra
-import qualified Data.Text.Lazy as L
-import Data.Int (Int64)
--- import           Data.Yaml (decodeFile)
+import Network.Wai (Application,Request(..),Response,ResponseReceived,responseLBS,Middleware)
+import Network.Wai.Handler.Warp (run,defaultSettings,setPort)
+import Network.Wai.Handler.WarpTLS(runTLS,tlsSettings)
+import Network.HTTP.Types
+import Network.HTTP.Types.Status(Status,status200,status405,status405)
+import Network.HTTP.Types.Method(StdMethod(..), parseMethod)
+--import Network.Wai.Middleware.RequestLogger(logStdoutDev) -- wai-extra
+-- import Network.Wai.Middleware.AddHeaders(addHeaders) -- wai-extra
 import qualified Config -- (Config, ConfigFilePaths(ConfigFilePaths), db, dbpath, load, Env(..))
-import qualified DB
-import qualified Database.Persist as P --persistent
-import qualified Database.Persist.Sql as Sql --persistent
--- import qualified Database.Persist.Store as PC --persistent
-import Database.Persist.Sqlite (createSqlitePool) -- persistent-sqlite
-import Control.Monad.IO.Class(liftIO,MonadIO) -- base
-import Control.Monad.Logger(MonadLogger, monadLoggerLog, NoLoggingT, runNoLoggingT) -- monad-logger
-import qualified Control.Monad.Trans.Class as Trans -- transformers
-import Control.Monad.Trans.Resource (ResourceT) -- resourcet
-import qualified Database.Persist.Class as PS
-import Control.Monad.Reader (ReaderT) -- mtl
-import Database.Persist.Sql.Types.Internal (SqlBackend)
+import Config.Env(Env(..))
+import DB
+import Controller.Types(Action,ControllerResponse(..),ParamGivenAction)
+import Routing.Class(RouteNotFoundError(PathNotFound, PathFoundButMethodUnmatch, UnknownMethod), RoutingError(RouteNotFound,BadPathParams), RawPathParamsError(BadParamTypes,BadRouteDefinition))
+import Routing(run)
+import qualified Data.ByteString.Lazy as L
+import Class.String(toByteStringL)
+import System.IO(putStrLn)
+import Controller(response500)
 
-import qualified Controller
-import Controller(ControllerAction(..), Controller(..), ActionSymbol(..))
-
-import qualified Controllers.Channels     as ChannelsC
-import qualified Controllers.Install      as InstallC
-import qualified Controllers.Programs     as ProgramsC
-import qualified Controllers.Reservations as ReservationsC
-
-server = scotty
-
+{-
 setCommonHeaders :: Middleware
 setCommonHeaders = addHeaders [
   ("Access-Control-Allow-Origin","*")
   ]
 
-_COMMON :: (Controller c) =>
-  (RoutePattern -> ActionM () -> ScottyM ())
-  -> Sql.ConnectionPool
-  -> RoutePattern
-  -> ControllerAction c
-  -> ScottyM ()
-_COMMON func conn pat act = do
-  options pat (status status200) -- add OPTIONS
-  func pat $ Controller.run conn act
-
-appImpl :: Int -> Sql.ConnectionPool -> IO ()
-appImpl port pool = do
+startServer :: Int -> ConnectionPool -> IO ()
+startServer port conn = do
+  runThread conn
   server port $ do
     middleware setCommonHeaders
     middleware logStdoutDev
-    _GET    "/channels/list" ChannelsC.list
-    _GET    "/channels/:id"  ChannelsC.get
-    _PATCH  "/channels/:id"  ChannelsC.modify
-    _POST   "/channels"      ChannelsC.create
-    _DELETE "/channels/:id"  ChannelsC.destroy
-    
-    _GET    "/install/index" InstallC.index
-    _GET    "/install/result_detect_channels" InstallC.resultDetectChannels
-    _GET    "/install/step1" (InstallC.step 1)
-    _GET    "/install/step2" (InstallC.step 2)
-    _GET    "/install/step3" (InstallC.step 3)
-    
-    _GET    "/programs/list" ProgramsC.list
-    _GET    "/programs/:id"  ProgramsC.get
-    _PATCH  "/programs/:id"  ProgramsC.modify
-    _POST   "/programs"      ProgramsC.create
-    _DELETE "/programs/:id"  ProgramsC.destroy
-    
-    _GET    "/reservations/list" ReservationsC.list
-    _GET    "/reservations/:id"  ReservationsC.get
-    _PATCH  "/reservations/:id"  ReservationsC.modify
-    _POST   "/reservations"      ReservationsC.create
-    _DELETE "/reservations/:id"  ReservationsC.destroy
+    Routing.run conn
+-}
+
+toResponse :: ControllerResponse -> Response
+toResponse res = responseLBS
+  (status res)
+  [("Content-Type", contentType res)]
+  (body res)
+
+
+mkResponse :: Status -> L.ByteString -> Response
+mkResponse status msg = responseLBS status [("Content-Type", "text/plain")] msg
+
+--response500 :: L.ByteString -> Response
+--response500 msg = mkResponse status500 msg
+
+response404 :: L.ByteString -> Response
+response404 path = mkResponse status404 $ L.concat [path, " is not found"]
+
+response_PathNotFound :: L.ByteString -> Response
+response_PathNotFound path = mkResponse status404 $ L.concat ["match route ",path," is not found"]
+
+response_UnsupportedMethod :: L.ByteString -> Response
+response_UnsupportedMethod method = mkResponse status405 $ L.concat [method , " is unsupported"]
+
+response_NotAllowedMethod :: L.ByteString -> L.ByteString -> Response
+response_NotAllowedMethod method path = mkResponse status405 $ L.concat [method, " is not allowed on " , path]
+
+app :: Env -> Application
+app env req respond = do
+  maybeConf <- Config.loadDefault env
+  respond . toResponse =<< case maybeConf of
+    Just conf -> do
+      conn <- (DB.connect $ Config.db conf)
+      case Routing.run req of
+        Right (stdmethod, action, route) -> putStrLn (show route) >> action stdmethod conn req
+        Left err_res -> return err_res
+    Nothing -> return $ response500 "load config error!"
   where
-    _GET, _PATCH, _POST, _DELETE :: (Controller c) => RoutePattern -> ControllerAction c -> ScottyM ()
-    _GET    = _COMMON get    pool
-    _PATCH  = _COMMON patch  pool
-    _POST   = _COMMON post   pool
-    _DELETE = _COMMON delete pool
+    method' = toByteStringL $ requestMethod req
+    path'   = toByteStringL $ rawPathInfo req
+    
 
--- arg1 : port number
-app :: Int -> IO ()
-app = act . appImpl
-
-act :: (Sql.ConnectionPool -> IO ()) -> IO ()
-act func = config >>= maybe
+listen :: Int -> Env -> IO ()
+listen port env = do
+  putStrLn $ "listen port=" ++ (show port)
+  Network.Wai.Handler.Warp.run port $ app env
+-- runTLS (tlsSettings "server.crt" "server.key") (setPort 8080 defaultSettings) app env
+migrate :: Env -> IO ()
+migrate env = Config.loadDefault env >>= maybe
   (fail "read config error") -- if Nothing
-  (\config' -> (runNoLoggingT $ DB.createPool $ Config.db config') >>= func)
+  (\config' -> DB.migrate $ Config.db config')
 
-config :: IO (Maybe Config.Config)
-config = Config.load (Config.ConfigFilePaths { Config.dbpath = "config/database.yml" }) Config.Development
-
-migrate :: IO ()
-migrate = act (\pool -> DB.run pool $ Sql.runMigration DB.migrateAll)

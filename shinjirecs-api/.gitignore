@@ -1,2 +1,6 @@
-config/database.yml
+config/*.yml
+!config/*.example.yml
 db/*
+private/commands/*
+docs/*
+!docs/.keep

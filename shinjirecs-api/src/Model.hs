@@ -8,247 +8,341 @@
 -- {-# LANGUAGE FunctionalDependencies #-}
 -- {-# LANGUAGE ConstraintKinds #-}
 
-module Model where
-import Text.Read(readMaybe) -- !!!
-import Data.Maybe(fromMaybe, isJust, isNothing, fromJust) -- !!!
-import Data.Tuple(swap)
-import Control.Exception(catch) -- base
-import Control.Monad.IO.Class(MonadIO,liftIO) -- base
-import qualified Database.Persist.Class as PS
-import Database.Persist.Sql(ConnectionPool, SqlPersistT, runSqlPool, toSqlKey)  --persistent
-import Database.Persist.Sql.Types.Internal (SqlBackend)
-import Database.Persist.Types (Update,Entity(..),Filter,SelectOpt)
+module Model (
+  ColumnName(..)
+  ,FailedReason(..)
+  ,ValidationResult(..)
+  ,BeforeActionResult(..)
+  ,AfterActionResult(..)
+  ,HookActionStep(..)
+  ,SaveResult(..)
+  ,Create(..)
+  ,Modify(..)
+  ,CreateResult(..)
+  ,ModifyResult(..)
+  ,DestroyResult(..)
+  ,valid
+  ,invalid
+  ,go
+  ,cancel
+  ,commit
+  ,rollback
+  ,ModelClass(..)
+  ,SelectQuery(..)
+  ,fireAfterFindME
+  ,fireAfterFind
+  ,find
+  ,get
+  ,select
+  ,create
+  ,modify
+  ,save
+  ,destroy
+  ) where
 import qualified DB
-import Web.Scotty (ActionM)
-import Control.Monad.Trans.Resource(MonadResource) -- resourcet
-import Control.Monad.Reader(ReaderT) -- mtl
-import Control.Monad.Reader.Class(MonadReader) -- mtl
-import Data.Acquire(Acquire) -- resourcet
-import Data.Conduit(Source) --- conduit
-import Data.Int(Int64) -- base
-import Helper(ResultClass(..), (=<<&&.),(.&&>>=),(<||>),(.||>>=),(=<<||.))
+import Data.Int(Int64)
+import Data.Maybe(isNothing)
+import Control.Monad(sequence)
+import Control.Monad.IO.Class(liftIO)
+import DB.Types(TransactionRequest(TransactionRequest),TransactionResult(TransactionResult,UnknownError), CommitOrRollback(Commit,Rollback), ActionState(NoProblem, Canceled, Failed))
+import Data.Aeson(ToJSON,FromJSON)
 
-import qualified Database.Persist as P --persistent
+type ColumnName = String
+data FailedReason = TooLarge | TooSmall | NotNull | ReferenceNotFound | Others
 
-runDB :: MonadIO m => ConnectionPool -> ReaderT SqlBackend IO a -> m a
-runDB p action = liftIO $ runSqlPool action p
+data ValidationResult   a = Valid   a | Invalid a [(ColumnName, FailedReason)]
+data BeforeActionResult a = Go      a | Cancel Bool a -- commit or not
+type AfterActionResult a = CommitOrRollback a a
+data HookActionStep a = OnBeforeValidation | OnValidation | OnBeforeSave | OnBefore a | OnAfter a | OnAfterSave 
 
-{-
-let resevation = findById conn $ param "id"
-    time_year  = param "time_year"
-    time_mon   = param "time_mon"
-    time_day   = param "time_day"
-    time_hh    = param "time_hh"
-    time_mm    = param "time_mm"
-    time_ss    = param "time_ss"
-res <- save conn reservation [RerservationStart_time +=. ]
+data SaveResult v a pos = SaveSuccess (DB.Entity v) | SaveFailed a [(ColumnName, FailedReason)] Bool | SaveCanceled (HookActionStep pos) a | Rollbacked a
+
+data Create = Create
+data Modify = Modify
+type CreateResult a = SaveResult a            a  Create
+type ModifyResult a = SaveResult a (DB.Entity a) Modify
+data DestroyResult a = DeleteSuccess a | RecordNotFound | DeleteFailed a | DeleteCanceled a
+
+valid :: a -> IO (ValidationResult a)
+valid = return . Valid
+
+invalid :: a -> [(ColumnName, FailedReason)] -> IO (ValidationResult a)
+invalid x ys = return $ Invalid x ys
+
+go :: a -> IO (BeforeActionResult a)
+go = return . Go
+
+cancel :: a -> IO (BeforeActionResult a)
+cancel = return . Cancel False
+
+commit :: a -> IO (AfterActionResult a)
+commit = return . Commit
+
+rollback :: a -> IO (AfterActionResult a)
+rollback = return . Rollback
+
+class (GetKey m) a where
+  getKey :: a -> Maybe (DB.Key m)
+
+instance (GetKey r) (DB.Entity r) where
+  getKey (k,v) = Just k
+
+doNothing' :: a -> IO a
+doNothing' x = return x
+
+class (FromJSON m, ToJSON m, ToJSON (DB.Entity m)) => ModelClass m where
+  
+  afterFind :: DB.Table m -> DB.Entity m -> IO (DB.Entity m)
+  afterFind _ = doNothing'
+  
+  beforeValidation :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (BeforeActionResult m)
+  beforeValidation _ _ = go
+  
+  validate :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (ValidationResult m)
+  validate _ _ = valid
+
+  afterValidation :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterValidation _ _ = doNothing'
+
+  afterValidationFailed :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterValidationFailed _ _ = doNothing'
+
+  beforeSave :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (BeforeActionResult m)
+  beforeSave _ _ = go
+
+  beforeCreate :: DB.Table m -> m -> IO (BeforeActionResult m)
+  beforeCreate _ = go
+
+  beforeModify :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult m)
+  beforeModify _ = go . snd 
+  
+  afterCreated :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterCreated _ = commit . snd
+
+  afterModified :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterModified _ = commit . snd
+    
+  afterSaved :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterSaved _ = commit . snd
+  
+  afterSaveFailed :: DB.Table m -> Maybe (DB.Key m) -> m -> IO (AfterActionResult m)
+  afterSaveFailed _ _ = rollback
+
+  afterModifyFailed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterModifyFailed _ = rollback . snd
+
+  afterCreateFailed :: DB.Table m -> m -> IO (AfterActionResult m)
+  afterCreateFailed _ = rollback
+  
+  beforeDestroy :: DB.Table m -> DB.Entity m -> IO (BeforeActionResult m)
+  beforeDestroy _ = go . snd
+  
+  afterDestroyed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterDestroyed _ = commit . snd
+  
+  afterDestroyFailed :: DB.Table m -> DB.Entity m -> IO (AfterActionResult m)
+  afterDestroyFailed _ = rollback . snd
+  
+  afterCommit :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterCommit _ _ = doNothing'
+  
+  afterRollback :: DB.Table m -> Maybe (DB.Key m) -> m -> IO m
+  afterRollback _ _ = doNothing'
+
+data (ModelClass m) => SelectQuery m = MkSelectQuery [DB.Filter m] [DB.SelectOpt m]
+
+fireAfterFindME :: (ModelClass m) => DB.Table m -> Maybe (DB.Entity m) -> IO (Maybe (DB.Entity m))
+fireAfterFindME _ Nothing  = return Nothing
+fireAfterFindME t (Just e) = fireAfterFind t e >>= return . Just 
+
+fireAfterFind :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (DB.Entity m)
+fireAfterFind t e = afterFind t e
+
+find :: (ModelClass m) => DB.Table m -> Int64 -> IO (Maybe (DB.Entity m))
+find t id = DB.find t id >>= fireAfterFindME t
+
+get :: (ModelClass m) => DB.Table m -> DB.Key m -> IO (Maybe (DB.Entity m))
+get t k = DB.get t k >>= fireAfterFindME t
+
+select :: (ModelClass m) => DB.Table m -> SelectQuery m -> IO [(DB.Entity m)]
+select t (MkSelectQuery filters opts) = DB.select t filters opts >>= sequence . map (fireAfterFind t)
+
+(.>>==) :: (arg -> IO (Either end next)) -> (next -> DB.Query (Either end next2)) -> (arg -> DB.Query (Either end next2))
+(.>>==) f fnext = impl'
+  where
+    impl' arg = (liftIO $ f arg)
+      >>= (\x -> case x of
+              Right next -> fnext next
+              Left  y    -> return $ Left y)
+
+infixr 7 .>>==
+
+data FindResult a b = Found a | NotFound b
+
+maybe2FindResult' :: b -> (z -> a) -> Maybe z -> FindResult a b
+maybe2FindResult' ifNothing f Nothing  = NotFound ifNothing
+maybe2FindResult' ifNothing f (Just x) = Found $ f x
+
+finish :: (arg -> DB.Query (Either end next)) -> (next -> IO end) -> (arg -> DB.Query end)
+finish f tailf = impl'
+  where
+    impl' arg = do
+      x <- f arg
+      liftIO $ case x of
+        Left  y -> return y
+        Right y -> tailf  y
+
+infixl 6 `finish`
+
+ 
+create :: (ModelClass m) => DB.Table m -> m -> IO (CreateResult m)
+create t arg = do
+  save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV'  
+  where
+    actionImpl' x = DB.insertQuery t x >>= DB.getQuery t
+    toArg' x = x
+    toK'    = Nothing
+    getV'   x = x
+    argv'   = getV' arg
+    action' = Create
+    beforeAction' = beforeCreate
+    afterAction'  = afterCreated
+    afterActionFailed' = afterCreateFailed    
+
+modify :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (ModifyResult m)
+modify t arg@(k,v) = do
+  save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV'
+  where
+    actionImpl' x = do
+      DB.repsertQuery t k x
+      DB.getQuery t k
+    toArg' x = (k,x)
+    getV'   = snd
+    argv'   = getV' arg
+    toK'    = Just k
+    action' = Modify
+    beforeAction' = beforeModify
+    afterAction'  = afterModified
+    afterActionFailed' = afterModifyFailed
+
+save' :: (ModelClass m) => DB.Table m -> arg -> (m -> DB.Query (Maybe (DB.Entity m))) -> (m -> arg) -> Maybe (DB.Key m) -> typ -> (DB.Table m -> arg -> IO (BeforeActionResult m)) -> (DB.Table m -> DB.Entity m -> IO (AfterActionResult m)) -> (DB.Table m -> arg -> IO (AfterActionResult m)) -> (arg -> m) ->  IO (SaveResult m arg typ)
+save' t arg actionImpl' toArg' toK' action' beforeAction' afterAction' afterActionFailed' getV' = do
+  res <- DB.transaction (DB.connection t) impl'
+  case res of
+    TransactionResult (NoProblem         (k',v')) -> afterCommit   t (Just k') v' >>= return . SaveSuccess . (,) k'
+    TransactionResult (Canceled (Commit   v') on) -> afterCommit   t toK' v' >>= return . SaveCanceled on . toArg'
+    TransactionResult (Canceled (Rollback v') on) -> afterRollback t toK' v' >>= return . SaveCanceled on . toArg'
+    TransactionResult (Failed   (Commit   v')   ) -> afterCommit   t toK' v' >>= return . (\x -> SaveFailed  (toArg' x) [] True )
+    TransactionResult (Failed   (Rollback v')   ) -> afterRollback t toK' v' >>= return . (\x -> SaveFailed  (toArg' x) [] False)
+    UnknownError                                  -> afterRollback t toK' argv'  >>= return . (\x -> SaveFailed  (toArg' x) [] False)
+  where
+    argv' = getV' arg
+    {- 
+    actionImpl' x = do
+      DB.repsert t k x
+      DB.get t k
+    toArg' x = (k,x)
+    toK'    = Just k
+    action' = Modify
+    beforeAction' = beforeModify
+    afterAction'  = afterModified
+    afterActionFailed' = afterModifyFailed
 -}
+    impl' = doBeforeValidation'
+      .>>== doValidation'
+      .>>== doAfterValidation'
+      .>>== doBeforeSave'
+      .>>== doBeforeAction'
+      .>>== doAction'
+      `finish` doAllAfterActions' $ getV' arg
 
-data SaveType = Modify | Create
+    cancel2Req' True  x step = return $ Left $ TransactionRequest (Canceled (Commit   x) step)
+    cancel2Req' False x step = return $ Left $ TransactionRequest (Canceled (Rollback x) step)
 
-instance ResultClass a (Bool, a) where
-  toResult b r = (b,r)
-  isSuccess r dummy = fst r
-  returnValue = snd
-
-class (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity where
-
-  -- please override if you need
-  afterFind :: entity -> ReaderT SqlBackend IO entity
-  afterFind = return
-  
-  -- please override if you need
-  beforeValidation :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  beforeValidation = return . toSuccess
-  
-  -- please override if you need
-  validate, afterValidation, beforeSave, afterSaved :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))  
-  validate = return . toSuccess
-  
-  -- please override if you need
-  afterValidation = return . toSuccess
-
-  -- please override if you need
-  afterValidationFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
-  afterValidationFailed = return
-  
-  -- please override if you need
-  beforeSave = return . toSuccess
-
-  -- please override if you need
-  afterSaved = return . toSuccess
-
-  afterSaveFailed, afterModifyFailed :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
-  
-  -- please override if you need  
-  afterSaveFailed = return
-  
-  -- please override if you need
-  beforeCreate :: entity -> ReaderT SqlBackend IO (Bool, entity)
-  beforeCreate = return . toSuccess
-
-  afterCreated, beforeModify, afterModified :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-
-  -- please override if you need  
-  afterCreated = return . toSuccess
-
-  -- please override if you need
-  afterCreateFailed :: entity -> ReaderT SqlBackend IO entity
-  afterCreateFailed = return
-
-  -- please override if you need
-  beforeModify = return . toSuccess
-
-  -- please override if you need
-
-  afterModified = return . toSuccess
-
-  -- please override if you need
-  afterModifyFailed = return
-
-  beforeDestroy, afterDestroyed :: Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
-  
-  -- please override if you need  
-  beforeDestroy = return . toSuccess
-
-  -- please override if you need
-  afterDestroyed = return . toSuccess
-
-  -- please override if you need
-  afterDestroyFailed :: Entity entity -> ReaderT SqlBackend IO (Entity entity)
-  afterDestroyFailed = return
-
-  -- please override if you need
-  afterCommit :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  afterCommit = return . toSuccess
-
-  -- please override if you need
-  afterRollback :: (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Maybe (PS.Key entity), entity)
-  afterRollback = return
-  
-  existOnDb :: PS.Key entity -> ReaderT SqlBackend IO Bool
-  existOnDb key = (return . isJust) =<< (PS.liftPersist $ PS.get key)
-  
-  existOnDbBy :: entity -> ReaderT SqlBackend IO Bool
-  existOnDbBy entity= (return . isJust) =<< (PS.liftPersist . PS.getBy) =<< (PS.liftPersist $ PS.onlyUnique entity)
-  
-  modifyWithoutHooks :: PS.Key entity -> entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  modifyWithoutHooks key entity = PS.replace key entity >> afterSaveWithoutHooks entity key
+    doBeforeValidation'            x  = return . Right =<< beforeValidation t toK' x
+    doValidation'         (Go      x) = return . Right =<< validate t toK' x
+    doValidation'   (Cancel commit x) = cancel2Req' commit x OnBeforeValidation
     
-  createWithoutHooks :: entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  createWithoutHooks entity = PS.insert entity >>= afterSaveWithoutHooks entity
-
-  afterSaveWithoutHooks :: entity -> PS.Key entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  afterSaveWithoutHooks old_entity key =
-    let ifNothing' = (False, (Nothing, old_entity)) in
-    findByKey key >>= return . maybe ifNothing' (\(Entity k v) -> (True, (Just k, v)))
-
-  destroyWithoutHook :: Entity entity -> ReaderT SqlBackend IO (Bool, Entity entity)
-  destroyWithoutHook entity = let key = entityKey entity in PS.delete key >> PS.get key >>= return . swap . (,) entity . isNothing
-
-  destroyImpl :: record -> Entity entity -> ReaderT SqlBackend IO (Bool, (Entity entity))
-  destroyImpl _ = beforeDestroy .&&>>= destroyWithoutHook .||>>= (afterDestroyed <||> afterDestroyFailed)
-
-
-class (PS.PersistEntity entity) => ToMaybeEntity entity a where
-  toMaybeEntity :: a -> Maybe (Entity entity)
-
-instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Maybe (PS.Key entity), entity) where
-  toMaybeEntity (Just key, e) = Just $ Entity {entityKey = key, entityVal = e}
-  toMaybeEntity _             = Nothing
-
-instance (PS.PersistEntity entity) => (ToMaybeEntity entity) (Bool, (Maybe (PS.Key entity), entity)) where
-  toMaybeEntity (True,  a) = toMaybeEntity a
-  toMaybeEntity (False, a) = Nothing
-  
--- need MultiParamTypeClasses
--- need AllowAmbiguousTypes
-class (ActiveRecord entity) => (ActiveRecordSaver entity) record where
-
-  -- need to implement, select existOnDb or existOnDbBy
-  exist :: record -> ReaderT SqlBackend IO Bool
-
-  -- need to implement to call saveImpl
-  save :: record -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-
-  -- first argument is not used but it is required for determine type
-  saveImpl :: record -> (Maybe (PS.Key entity), entity) -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-  saveImpl self arg@(mkey, v) = beforeActionAll' .&&>>= main' .&&>>= afterActionAll' $ arg
-    where
-      key' = fromJust mkey
-
-      beforeActionCommon' =
-        beforeValidation .&&>>= validate .||>>= (afterValidation <||> afterValidationFailed) .&&>>= beforeSave
-
-      beforeActionCreateOrUpdate' =
-        case saveType' of
-          Modify -> beforeModify
-          Create -> \(mkey, entity) -> beforeCreate entity >>= \(b, entity2) -> return (b, (Nothing, entity2))
-        
-      beforeActionAll' =
-        beforeActionCommon' .&&>>= beforeActionCreateOrUpdate'
-
-      main' =
-        (case saveType' of
-          Modify -> modifyWithoutHooks key'
-          Create -> createWithoutHooks
-        ) . snd
-          
-      afterActionCreatedOrUpdated' =
-        case saveType' of
-          Modify -> afterModified
-          Create -> afterCreated
-
-      afterActionCommon' = (\a -> return (True,a)) .||>>= (afterSaved <||> afterSaveFailed) .||>>= (afterCommit <||> afterRollback)
-      afterActionAll'    = afterActionCreatedOrUpdated' .&&>>= afterActionCommon'
-
-      saveType' = if isJust mkey then Modify else Create
-
-findByKey :: (ActiveRecord entity) => PS.Key entity -> ReaderT SqlBackend IO (Maybe (Entity entity))
-findByKey key = PS.get key >>= maybe (return Nothing) (\x -> afterFind x >>= return . Just . Entity key)
+    doAfterValidation'    (Valid   x  ) = return . Right =<< afterValidation t toK' x
+    doAfterValidation'    (Invalid x _) = afterValidationFailed t toK' x >>= (\x2 -> return . Left . TransactionRequest $ Canceled (Rollback x2) OnValidation)
     
-find :: (Read id, Show id, ActiveRecord entity) => id -> ReaderT SqlBackend IO (Maybe (Entity entity))
-find = let ifNothing' = -1 in findByKey . toSqlKey . fromMaybe ifNothing' . readMaybe . show
+    doBeforeSave'                  x  = return . Right =<< beforeSave t toK' x
+    
+    doBeforeAction'        (Go     x) = return . Right =<< beforeAction' t (toArg' x)
+    doBeforeAction' (Cancel commit x) = cancel2Req' commit x OnBeforeSave
 
-selectBy :: (ActiveRecord e) => [P.Filter e] -> [P.SelectOpt e] -> ReaderT SqlBackend IO [Entity e]
-selectBy filters opts = do
-  list <- PS.liftPersist $ P.selectList filters opts
-  mapM (\(Entity k v) -> afterFind v >>= return . Entity k) list
-          
-instance (PS.PersistEntity entity, PS.ToBackendKey SqlBackend entity, PS.PersistRecordBackend entity SqlBackend) => ActiveRecord entity
+    doAction'              (Go     x) = do
+      return . Right . maybe2FindResult' x (\y -> y) =<< actionImpl' x
+    doAction'       (Cancel commit x) = cancel2Req' commit x (OnBefore action')
 
-instance (ActiveRecord entity) => (ActiveRecordSaver entity) entity where
-  exist = existOnDbBy
-  save self = saveImpl self (Nothing, self)
+    doAllAfterActions' (NotFound    v) = doAfterActionFailed' v >>= doAfterSaveFailed'
+    doAllAfterActions' (Found e@(k,v)) = doAfterAction'       e >>= doAfterSave' k
 
-instance (ActiveRecord entity) => (ActiveRecordSaver entity) (Entity entity) where
-  exist = existOnDb . entityKey
-  save self@(Entity k v) = saveImpl self (Just k, v)
+    doAfterAction'             e@(k,v) = afterAction' t e
+    doAfterActionFailed'            v  = afterActionFailed' t (toArg' v)
+    doAfterSave'        k (Rollback v) = doRollback' k v (OnAfter action')
+    doAfterSave'        k (Commit   v) = afterSaved t (k,v) >>=  doCommitOrRollback' k OnAfterSave
+    doCommitOrRollback' k on (Rollback v) = doRollback' k v on
+    doCommitOrRollback' k on (Commit   v) = doCommit'   k v
 
-saveE :: (ActiveRecord entity) => Entity entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-saveE x = save x
+    doCommitOrRollbackAfterFailed' (Rollback v) = do
+      doRollbackAfterFailed' v
+    doCommitOrRollbackAfterFailed' (Commit   v) = do
+      doCommitAfterFailed'   v
+      
+    doAfterSaveFailed'  (Commit   v) = afterSaveFailed t toK' v >>= doCommitOrRollbackAfterFailed'
+    doAfterSaveFailed'  (Rollback v) = doRollbackAfterFailed' v
 
-saveR :: (ActiveRecord entity) => entity -> ReaderT SqlBackend IO (Bool, (Maybe (PS.Key entity), entity))
-saveR x = save x
+    doCommit'                     k v = return $ TransactionRequest $ NoProblem (k,v)
+    doRollback'                k v on = return $ TransactionRequest $ Canceled (Rollback v) on
+    doCommitAfterFailed'            v = return $ TransactionRequest $ Failed $ Commit   v
+    doRollbackAfterFailed'          v = return $ TransactionRequest $ Failed $ Rollback v
 
-class (ActiveRecord entity) => (ActiveRecordDestroyer entity) record where
-  -- need to implement to call destroyImpl
-  destroy :: record -> ReaderT SqlBackend IO (Bool, record, PS.Key entity)
+save :: (ModelClass m) => DB.Table m -> Maybe (DB.Key m) -> m -> IO (Either (CreateResult m) (ModifyResult m))
+save t Nothing  v = create t    v  >>= return . Left
+save t (Just k) v = modify t (k,v) >>= return . Right
 
-instance (ActiveRecord entity) => ActiveRecordDestroyer entity (Entity entity) where
-  destroy self@(Entity k v) = destroyImpl self self >>= (\(b, self') -> return (b, self', k))
+destroy :: (ModelClass m) => DB.Table m -> (DB.Entity m) -> IO (DestroyResult (DB.Entity m))
+destroy table e@(key, v) = do
+  me <- get' key
+  case me of
+    Nothing -> return RecordNotFound -- maybe already deleted
+    Just _ -> delete' key >> get' key >>= afterDelete' v
+  where
+    get'    = DB.get    table
+    delete' = DB.delete table
+    afterDelete' v' Nothing  = afterSuccess' v'
+    afterDelete' v' (Just _) = afterFailed'  v'
+    afterSuccess' e' = afterDestroyed     table (key,e') >>= afterHookCommon' >>= return . DeleteSuccess . (,) key
+    afterFailed'  e' = afterDestroyFailed table (key,e') >>= afterHookCommon' >>= return . DeleteFailed  . (,) key
+    doCommit'   = return ()
+    doRollback' = return ()
+    afterHookCommon' (Commit   v') = doCommit'   >> return v'
+    afterHookCommon' (Rollback v') = doRollback' >> return v'
+    
+    
+-- res <- select table $ asc ChannelHoge $ where [channelHoge .== 1, channelFoo .== 2] $ where [channelAaa .== 22 , channelName .== "hoge"] $ rec
+-- return $ toJSON res
+class (ToSelectQuery m) a where
+  where_  :: [DB.Filter m]  -> a -> SelectQuery m
+  whereOr :: [DB.Filter m]  -> a -> SelectQuery m
+  limit   :: Int         -> a -> SelectQuery m
+  offset  :: Int         -> a -> SelectQuery m
+  asc     :: DB.EntityField m typ -> a -> SelectQuery m
+  desc    :: DB.EntityField m typ -> a -> SelectQuery m
 
--- send key directly
-instance (ActiveRecord entity) => ActiveRecordDestroyer entity (PS.Key entity) where
-  destroy key = findByKey key >>= maybe (return (False, key, key)) (\e -> destroyImpl key e >>= (\(b, e2) -> return (b, key, key)))
-
-class (PS.PersistEntity record, PS.DeleteCascade record SqlBackend) => CascadeDeletable record where
-  deleteCascade      :: (MonadIO m) => ConnectionPool -> PS.Key record -> m ()
-  deleteCascadeWhere :: (MonadIO m) => ConnectionPool -> [Filter record] -> m ()  
-  -- deleteCascade conn key             = do { runDB conn $ PS.deleteCascade key }
-  -- deleteCascadeWhere conn filters    = do { runDB conn $ PS.deleteCascadeWhere filters }
-
-class (PS.PersistEntity record, Eq record, Eq (PS.Unique record) )=> UniqueReplaceable record where
-  replaceUnique :: (MonadIO m) => ConnectionPool -> PS.Key record -> record -> m (Maybe (PS.Unique record))
---  replaceUnique conn key r = do { runDB conn $ PS.replaceUnique key r }
-
+instance (ModelClass m) => (ToSelectQuery m) m where
+  where_  fs x = MkSelectQuery fs []
+  whereOr      = where_
+  limit   i  x = MkSelectQuery [] [DB.mkLimit  i]
+  offset  i  x = MkSelectQuery [] [DB.mkOffset i]
+  asc     f  x = MkSelectQuery [] [DB.mkAsc    f]
+  desc    f  x = MkSelectQuery [] [DB.mkDesc   f]
+  
+instance (ModelClass m) => (ToSelectQuery m) (SelectQuery m) where
+  where_  fs (MkSelectQuery xs ys) = MkSelectQuery (xs ++ fs) ys
+  whereOr fs (MkSelectQuery xs ys) = MkSelectQuery (fs `DB.or` xs) ys
+  limit   i  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkLimit  i])
+  offset  i  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkOffset i])
+  asc     f  (MkSelectQuery xs ys) = MkSelectQuery xs (ys ++ [DB.mkAsc    f])
+  desc    f  (MkSelectQuery ys zs) = MkSelectQuery ys (zs ++ [DB.mkDesc   f])

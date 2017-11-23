@@ -3,63 +3,44 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Helper where
-import Data.Bool(not)
+import Data.Bits(shiftL,(.&.),(.|.),Bits)
+import Data.Bool(Bool,not)
 import Data.Maybe(isJust)
 import Database.Persist.Class(PersistEntity)
+import Data.Text(replace,pack,unpack)
+import Data.Word(Word)
+import Control.Monad.IO.Class(MonadIO) -- base
+import System.Process(CreateProcess,createProcess,proc)
+import Class.Castable
+import Control.Monad(Monad) -- base
+import Data.Either(Either(..))
 
-class ResultClass a r where
-  -- please implement
-  toResult :: Bool -> a -> r
-  
-  toSuccess :: a -> r
-  toSuccess = toResult True
-  toFailed  :: a -> r
-  toFailed = toResult False
-  
-  -- please implement
-  returnValue :: r -> a
+data OnResultFunc m a = OnSuccessFunc (a -> m (Bool,a))
+                      | OnFailedFunc  (a -> m a)
+                      | OnEitherFunc  (a -> m (Bool,a)) (a -> m a)
 
-  -- please implement
---  isSuccess :: r -> a -> Bool
-  isSuccess :: r -> a -> Bool
-  
-  isFailed :: r -> a -> Bool
-  isFailed r = not . (isSuccess r)
-  
-(=<<&&.) :: (Monad m, ResultClass a r) => (a -> m r) -> (a -> m r) -> (a -> m r)
-(=<<&&.) f1 f2 = (\arg -> f1 arg >>= (\res -> let arg2 = returnValue res in if isSuccess res arg2 then f2 arg2 else return res))
+(>>==) :: (Monad m) => m (Bool,a) -> OnResultFunc m a -> m (Bool,a)
+(>>==) mRes (OnSuccessFunc fs) = do
+  res <- mRes
+  case res of
+    (True, v) -> fs v
+    (False,v) -> mRes
 
-infixr 8 =<<&&.
+(>>==) mRes (OnFailedFunc ff) = do
+  res <- mRes
+  case res of
+    (True, v) -> mRes
+    (False,v) -> ff v >>= return . (,) False
 
-(.&&>>=) :: (Monad m, ResultClass a r) => (a -> m r) -> (a -> m r) -> (a -> m r)
-(.&&>>=) f1 f2 = f2 =<<&&. f1
-infixl 8 .&&>>=
+(>>==) mRes (OnEitherFunc fs ff) = do
+  res <- mRes
+  case res of
+    (True ,v) -> mRes >>== (OnSuccessFunc fs)
+    (False,v) -> mRes >>== (OnFailedFunc  ff)
 
-(<||>) :: (Monad m, ResultClass a r) =>
-           (a -> m r) -- on success
-        -> (a -> m a) -- on failed
-        -> (Bool -> a -> m r) -- result
-(<||>) onSuccess onFailed =
-  \flag rtn ->
-  if flag
-  then onSuccess rtn
-  else onFailed rtn
-       >>= (\rtn2 -> return $ toSuccess rtn2)
+infixl 2 >>==
 
-infix 7 <||>
-
-(.||>>=) :: (Monad m, ResultClass a r) =>
-           (a -> m r) -- f1
-        -> (Bool -> a -> m r) -- f2 (do success or failed)
-        -> (a -> m r)
-          
-(.||>>=) f1 f2 = (\arg -> f1 arg >>= (\res -> f2 (isSuccess res arg) (returnValue res)))
-    
-    
-infixl 8 .||>>=
-
-(=<<||.) :: (Monad m, ResultClass a r) =>
-            (Bool -> a -> m r)
-         -> (a -> m r)
-         -> (a -> m r)
-(=<<||.) f2 f1 = f1 .||>>= f2
+{-
+(./) :: a -> (a -> b) -> b
+(./) arg func = func arg
+-}
