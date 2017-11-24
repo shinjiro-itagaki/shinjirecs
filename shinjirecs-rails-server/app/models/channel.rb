@@ -8,6 +8,7 @@ class Channel < ApplicationRecord
   before_save :auto_set_values
 
   scope :enables, ->(){ where(enable: true) }
+  scope :exist,   ->(){ where(exist:  true) }
 
   def self.minimum_number() 1 end
 

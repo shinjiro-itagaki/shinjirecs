@@ -45,6 +45,7 @@ class ChannelsController < ApplicationController
 
         puts cmd
         res = false
+        scaned = true
         # io = IO.popen(cmd, "r")
         pid = spawn(cmd, pgroup: Process.pid)  # io.pid
         puts "command pid=#{pid}"
@@ -63,15 +64,16 @@ class ChannelsController < ApplicationController
         #   # puts e
         # end
         watch_thread.join
+
         res = File.exists?(tempfilepath)
         if res then
           puts "command success"
-          ch.enable = true
+          ch.exist = true
         else
-          ch.enable = false
+          ch.exist = false
           puts "command failed. Channel '#{ch.number}' was not found."
         end
-        ch.scaned = true
+        ch.scaned = scaned
         ch.save
       end
     end
