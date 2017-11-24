@@ -40,36 +40,30 @@ class ChannelsController < ApplicationController
       charr.each do |ch|
         tempfile = Tempfile.new('for-scan')
         tempfilepath = tempfile.path
-        cmd = "#{cmdfile} #{ch.number} 1 #{tempfilepath}"
+        cmd = "#{cmdfile} #{ch.number} #{timeout_sec} #{tempfilepath}"
         tempfile.unlink
 
         puts cmd
         res = false
-
         # io = IO.popen(cmd, "r")
-        io = IO.popen(cmd)
-        cmd = io.read
-        puts " => " + cmd
-        if not $?.to_i == 0
-          next
-        end
         pid = spawn(cmd, pgroup: Process.pid)  # io.pid
-        puts "pid=#{pid}"
+        puts "command pid=#{pid}"
         watch_thread = Process.detach(pid)
-        begin
-          Timeout.timeout(timeout_sec) do
-            # waitpid pid
-            watch_thread.join
-            res = File.exists?(tempfilepath)
-            # puts io.read
-            # res = ($?.to_i == 0)
-            # puts "command status=" + $?.to_s + " and pid = #{pid}"
-          end
-        rescue Timeout::Error #  => e
-          Process.kill(:TERM, pid)
-          # puts e
-        end
+        # begin
+        #   Timeout.timeout(timeout_sec) do
+        #     # waitpid pid
+        #     watch_thread.join
+        #     res = File.exists?(tempfilepath)
+        #     # puts io.read
+        #     # res = ($?.to_i == 0)
+        #     # puts "command status=" + $?.to_s + " and pid = #{pid}"
+        #   end
+        # rescue Timeout::Error #  => e
+        #   Process.kill(:TERM, -1*pid)
+        #   # puts e
+        # end
         watch_thread.join
+        res = File.exists?(tempfilepath)
         if res then
           puts "command success"
           ch.enable = true
