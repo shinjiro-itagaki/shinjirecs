@@ -20,9 +20,17 @@ class ChannelsController < ApplicationController
     bs = params[:bs] || []
 
     area_id = System.instance.area_id
-    cmdfile = Rails.root.to_s + "/config/commands/scan_channel.sh"
-    if !File.exists?(cmdfile)
-      puts cmdfile + " is not found."
+    cmdfile = Command.scan_channel_cmd
+    cmdfilepath = cmdfile.path
+
+    case cmdfile
+    when Command::GetCommandPathResult::GetSuccess
+    when Command::GetCommandPathResult::NotFound
+      puts cmdfilepath + " is not found."
+      render_data nil, system: System.instance, setup: false
+      return
+    when Command::GetCommandPathResult::NotExecutable
+      puts cmdfilepath + " is not executable."
       render_data nil, system: System.instance, setup: false
       return
     end
@@ -40,7 +48,7 @@ class ChannelsController < ApplicationController
       charr.each do |ch|
         tempfile = Tempfile.new('for-scan')
         tempfilepath = tempfile.path
-        cmd = "#{cmdfile} #{ch.number} #{timeout_sec} #{tempfilepath}"
+        cmd = "#{cmdfilepath} #{ch.number} #{timeout_sec} #{tempfilepath}"
         tempfile.unlink
 
         puts cmd
