@@ -67,7 +67,7 @@ class ChannelsController < ApplicationController
 
         res = File.exists?(tempfilepath)
         if res then
-          puts "command success"
+          puts "command success  ......... channel '#{ch.number}' was DETECTED!! "
           ch.exist = true
         else
           ch.exist = false
