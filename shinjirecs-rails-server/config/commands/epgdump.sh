@@ -3,7 +3,7 @@
 # usage
 # epgdump.sh ./in.ts ./temp.json
 #   or
-# epgdump.sh 13 10 ./temp.json
+# epgdump.sh 13      ./temp.json 10
 in_=$1
 out=$2
 
