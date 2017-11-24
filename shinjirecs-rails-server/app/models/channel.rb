@@ -9,6 +9,7 @@ class Channel < ApplicationRecord
 
   scope :enables, ->(){ where(enable: true) }
   scope :exist,   ->(){ where(exist:  true) }
+  scope :scaned,  ->(){ where(scaned: true) }
 
   def self.minimum_number() 1 end
 

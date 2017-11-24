@@ -26,9 +26,9 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false
     t.integer "order", default: 0, null: false
-    t.boolean "enable", default: true, null: false
-    t.boolean "exist", default: true, null: false
-    t.boolean "scaned", default: true, null: false
+    t.boolean "enable", default: false, null: false
+    t.boolean "exist", default: false, null: false
+    t.boolean "scaned", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["area_id", "display_name"], name: "index_channels_on_area_id_and_display_name", unique: true
