@@ -8,6 +8,9 @@ class EpgProgram < ApplicationRecord
   belongs_to :channel
   has_and_belongs_to_many :epg_program_category,        association_foreign_key: "category_id", join_table: "epg_program_category_maps"
   has_and_belongs_to_many :epg_program_medium_category, association_foreign_key: "category_id", join_table: "epg_program_medium_category_maps"
+  has_and_belongs_to_many :video_type,                  association_foreign_key: "video_type_id", join_table: "epg_program_video_type_maps"
+  has_and_belongs_to_many :audio_type,                  association_foreign_key: "audio_type_id", join_table: "epg_program_audio_type_maps"
+  has_and_belongs_to_many :attachinfo,                  association_foreign_key: "attachinfo_id", join_table: "epg_program_attachinfo_maps"
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time

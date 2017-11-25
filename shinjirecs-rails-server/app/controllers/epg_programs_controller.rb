@@ -20,27 +20,81 @@ class EpgProgramsController < ApplicationController
     res = {}
     channel_numbers_or_filepaths.map do |ch_or_fpath|
       #  in(ch) out sec
-      cmd = "#{cmdfilepath} #{ch_or_fpath} - 20"
+      cmd = "#{cmdfilepath} #{ch_or_fpath} - #{sec}"
       puts cmd
       begin
         json = JSON.parse(`#{cmd}`)
-        puts json.length
-        json.each do |d|
-          # cid = d["id"]
-          puts ""
-          puts d
-          puts ""
-        end
-        #channel_id = json
-        res[ch_or_fpath]=json
-      rescue => e
+      rescue
+        # json parse error
         puts e
       end
+
+      puts json.length
+      json.each do |d|
+        # channel
+        service_id = d["service_id"]
+        name       = d["name"]
+        ch = System.instance.find_or_initialize_channel_by_service_id(service_id)
+        if ch.new_record?
+          ch.display_name=name
+     #     ch.save!
+        end
+        # cid = d["id"]
+        programs = d["programs"]
+        programs.each do |p|
+          event_id = p["event_id"]
+          prec = Program.find_or_initialize_by(event_id: event_id)
+          prec.channel_id = ch.id
+          prec.start_time = Time.at(p["start"].to_i / 10000)
+          prec.stop_time  = Time.at(p["end"].to_i   / 10000)
+          prec.channel_id = ch.id
+          prec.title      = p["title"]
+          prec.freeCA     = p["freeCA"]
+          prec.desc       = p["detail"].to_s + "\n" + (p["extdetail"] || []).map(&:to_s).join("\n")
+          l_cat = p["large"]
+          m_cat = p["middle"]
+          lcat = EpgProgramCategory.find_or_initialize_by(      label_en: l_cat["en"])
+          lcat.label_ja = l_cat["ja_JP"]
+          lcat.save!
+
+          mcat = EpgProgramMediumCategory.find_or_initialize_by(label_en: m_cat["en"])
+          mcat.parent_id = lcat.id
+          mcat.label_ja = m_cat["ja_JP"]
+          mcat.save!
+
+          prec.epg_program_categories << lcat
+          prec.epg_program_medium_categories << mcat
+
+          prec.save!
+        end
+        [
+          {
+            "attachinfo"=>[],
+            "video"=>{
+              "resolution"=>"SD",
+              "aspect"=>"16:9"
+            },
+            "audio"=>[
+              {
+                "type"=>"ステレオ",
+                "langcode"=>"jpn",
+                "extdesc"=>""
+              }
+            ],
+          }
+        ]
+        puts ""
+        puts d
+        puts ""
+      end
+      #channel_id = json
+      res[ch_or_fpath]=json
     end
     res
   end
 
   # params: {channels: []}
+  # app.post "/epg_programs/epgdump", params: {in: ["~/test.ts"]}
   def epgdump
     render_data self.class.epgdump(params["in"], params["sec"])
   end

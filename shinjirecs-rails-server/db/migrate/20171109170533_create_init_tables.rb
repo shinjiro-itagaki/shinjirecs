@@ -62,6 +62,21 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.index ["label_ja","label_en"], unique: true
     end
 
+    create_table :video_types, unsigned: true do |t|
+      t.string "resolution", null: false
+      t.string "aspect",     null: false
+    end
+
+    create_table :audio_types, unsigned: true do |t|
+      t.string "type"     , null: false
+      t.string "langcode" , null: false
+      t.string "extdesc"  , null: false, default: ""
+    end
+
+    create_table :attachinfos, unsigned: true do |t|
+      t.string "desc"     , null: false
+    end
+
     create_table :epg_programs, unsigned: true do |t|
       t.datetime   "start_time"           , null: false
       t.datetime   "stop_time"            , null: false
@@ -69,7 +84,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string     "title"                , null: false
       t.text       "desc"                 , null: false
       t.integer    "event_id"             , null: false , default: 0
-      t.integer    "epg_program_category_id"  , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
+      t.boolean    "freeCA"               , null: false , default: false
       t.timestamps                          null: false
       t.index ["start_time", "channel_id"], unique: true
     end
@@ -85,6 +100,24 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
       t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_program_medium_categories"}
       t.index ["program_id","category_id"], unique: true, name: "unique_epg_program_medium_category_maps"
+    end
+
+    create_table :epg_program_video_type_maps, unsigned: true do |t|
+      t.integer "program_id"    , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
+      t.integer "video_type_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "video_types"}
+      t.index ["program_id","video_type_id"], unique: true, name: "unique_epg_program_video_type_maps"
+    end
+
+    create_table :epg_program_audio_type_maps, unsigned: true do |t|
+      t.integer "program_id"    , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
+      t.integer "audio_type_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "audio_types"}
+      t.index ["program_id","audio_type_id"], unique: true, name: "unique_epg_program_audio_type_maps"
+    end
+
+    create_table :epg_program_attachinfo_maps, unsigned: true do |t|
+      t.integer "program_id"    , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
+      t.integer "attachinfo_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "attachinfos"}
+      t.index ["program_id","attachinfo_id"], unique: true, name: "unique_epg_program_attachinfo_maps"
     end
 
     create_table :program_titles, unsigned: true do |t|

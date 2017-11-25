@@ -20,8 +20,19 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.index ["label"], name: "index_areas_on_label", unique: true
   end
 
+  create_table "attachinfos", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "desc", null: false
+  end
+
+  create_table "audio_types", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "type", null: false
+    t.string "langcode", null: false
+    t.string "extdesc", default: "", null: false
+  end
+
   create_table "channels", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.string "number", null: false
+    t.integer "service_id", null: false
     t.integer "area_id", default: 0, null: false
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false
@@ -33,6 +44,19 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.datetime "updated_at", null: false
     t.index ["area_id", "display_name"], name: "index_channels_on_area_id_and_display_name", unique: true
     t.index ["area_id", "number", "ctype"], name: "index_channels_on_area_id_and_number_and_ctype", unique: true
+    t.index ["area_id", "service_id"], name: "index_channels_on_area_id_and_service_id", unique: true
+  end
+
+  create_table "epg_program_attachinfo_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "attachinfo_id", null: false
+    t.index ["program_id", "attachinfo_id"], name: "unique_epg_program_attachinfo_maps", unique: true
+  end
+
+  create_table "epg_program_audio_type_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "audio_type_id", null: false
+    t.index ["program_id", "audio_type_id"], name: "unique_epg_program_audio_type_maps", unique: true
   end
 
   create_table "epg_program_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -64,6 +88,12 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.index ["program_id", "category_id"], name: "unique_epg_program_medium_category_maps", unique: true
   end
 
+  create_table "epg_program_video_type_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "video_type_id", null: false
+    t.index ["program_id", "video_type_id"], name: "unique_epg_program_video_type_maps", unique: true
+  end
+
   create_table "epg_programs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.datetime "start_time", null: false
     t.datetime "stop_time", null: false
@@ -71,7 +101,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.integer "epg_program_category_id", default: 0, null: false
+    t.boolean "freeCA", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["start_time", "channel_id"], name: "index_epg_programs_on_start_time_and_channel_id", unique: true
@@ -142,6 +172,11 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_systems_on_active", unique: true
+  end
+
+  create_table "video_types", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "resolution", null: false
+    t.string "aspect", null: false
   end
 
 end

@@ -36,6 +36,10 @@ class System < ApplicationRecord
     self.area.channels
   end
 
+  def find_or_initialize_channel_by_service_id(service_id)
+    Channel.find_or_initialize_by(service_id: service_id, area_id: self.area_id)
+  end
+
   def self.list_records_of(sym)
     case sym
     when :area_id then
