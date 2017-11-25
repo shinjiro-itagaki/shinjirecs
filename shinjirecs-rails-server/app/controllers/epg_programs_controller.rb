@@ -62,27 +62,14 @@ class EpgProgramsController < ApplicationController
           mcat.label_ja = m_cat["ja_JP"]
           mcat.save!
 
-          prec.epg_program_categories << lcat
+          prec.epg_program_categories        << lcat
           prec.epg_program_medium_categories << mcat
 
+          prec.attachinfos << (p["attachinfo"] || []).map{|str| Attachinfo.find_or_create_by(desc: str) }
+          prec.video_types << (p["video"] || []).map{|video| VideoType.find_or_create_by(resolution: video["resolution"], aspect: video["aspect"]) }
+          prec.audio_types << (p["audio"] || []).map{|audio| VideoType.find_or_create_by(type: audio["type"], langcode: audio["langcode"], extdesc: audio["extdesc"]) }
           prec.save!
         end
-        [
-          {
-            "attachinfo"=>[],
-            "video"=>{
-              "resolution"=>"SD",
-              "aspect"=>"16:9"
-            },
-            "audio"=>[
-              {
-                "type"=>"ステレオ",
-                "langcode"=>"jpn",
-                "extdesc"=>""
-              }
-            ],
-          }
-        ]
         puts ""
         puts d
         puts ""
