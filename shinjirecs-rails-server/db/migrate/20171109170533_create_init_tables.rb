@@ -31,6 +31,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
 
     create_table :channels, unsigned: true do |t|
       t.string  "number"       , null: false
+      t.integer "service_id"   , null: false
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.string  "ctype"        , null: false, default: "gr"
       t.string  "display_name" , null: false
@@ -40,6 +41,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.boolean "scaned"       , null: false, default: false
       t.timestamps               null: false
       t.index ["area_id","number","ctype"], unique: true
+      t.index ["area_id","service_id"], unique: true
       t.index ["area_id","display_name"], unique: true
     end
     execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_ctype  CHECK( ctype IN ('gr','bs'));"

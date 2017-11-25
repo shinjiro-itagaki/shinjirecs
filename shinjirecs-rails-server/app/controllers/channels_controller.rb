@@ -27,11 +27,11 @@ class ChannelsController < ApplicationController
     when Command::GetCommandPathResult::GetSuccess
     when Command::GetCommandPathResult::NotFound
       puts cmdfilepath + " is not found."
-      render_data nil, system: System.instance, setup: false
+      render_data nil
       return
     when Command::GetCommandPathResult::NotExecutable
       puts cmdfilepath + " is not executable."
-      render_data nil, system: System.instance, setup: false
+      render_data nil
       return
     end
 
