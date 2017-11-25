@@ -36,7 +36,7 @@ Rails.application.routes.draw do
   end
 
   post "channels/scan", to: "channels#scan" #
-  post "epg_program/epgdump", to: "epg_program#epgdump" #
+  post "epg_programs/epgdump", to: "epg_programs#epgdump" #
 
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 end
