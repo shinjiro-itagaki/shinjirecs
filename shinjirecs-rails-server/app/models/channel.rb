@@ -17,7 +17,8 @@ class Channel < ApplicationRecord
   validates_uniqueness_of :service_id, scope: :area_id
 
   def self.default_all_numbers
-    self.default_all_gr_numbers + self.default_all_bs_numbers
+    # self.default_all_gr_numbers + self.default_all_bs_numbers
+    self.exist.pluck(:number)
   end
 
   def self.default_all_gr_numbers
