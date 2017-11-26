@@ -2,6 +2,10 @@ require 'json'
 class EpgProgramsController < ApplicationController
   set_model EpgProgram
 
+  def index_records_proxy
+    @model.default_all_proxy
+  end
+
   def self.epgdump(channel_numbers_or_filepaths=nil, sec=20)
     channel_numbers_or_filepaths ||= Channel.default_all_numbers
 

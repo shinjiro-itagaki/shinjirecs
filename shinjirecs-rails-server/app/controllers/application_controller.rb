@@ -29,8 +29,12 @@ class ApplicationController < ActionController::API
 
   # GET /${record}s
   def index
-    @records = @joins.all.to_a
+    @records = self.index_records_proxy.to_a
     render_data @records
+  end
+
+  def index_records_proxy
+    @joins.default_all_proxy
   end
 
   # GET /${record}s/1
@@ -80,7 +84,7 @@ class ApplicationController < ActionController::API
   def set_models
     @model = self.class.model
     keys = @model.reflections.keys.map(&:to_sym)
-    @joins = @model.includes(*keys) # .joins(*keys)
+    @joins = @model.includes(*keys)
     @parent_model = self.class.parent_model
     @parent_fkey  = self.class.parent_fkey
   end

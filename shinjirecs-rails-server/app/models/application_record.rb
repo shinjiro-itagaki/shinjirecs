@@ -89,6 +89,10 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
+  def self.default_all_proxy
+    self.all
+  end
+
   alias_method :orig_as_json, :as_json
 
   def as_json(options = nil)

@@ -17,6 +17,10 @@ class EpgProgram < ApplicationRecord
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
+  def self.default_all_proxy
+    super.where(["start_time > ?", Time.now - 1.week])
+  end
+
   def self.import_epg(json, chnumber=nil)
     json.each do |d|
       ch = Channel.find_or_import_channel_by_json(d, chnumber)
