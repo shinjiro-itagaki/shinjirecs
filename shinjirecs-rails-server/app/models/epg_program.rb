@@ -27,10 +27,7 @@ class EpgProgram < ApplicationRecord
       ch.save!
 
       # skip if chnumber is decleared and detected channel is not match it
-      puts __LINE__
-      puts chnumber
       next if chnumber and ch.number != chnumber
-puts __LINE__
       (d["programs"] || []).each do |p|
         self.find_or_import_program_by_json(ch,p)
       end

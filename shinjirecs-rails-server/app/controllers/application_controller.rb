@@ -29,7 +29,7 @@ class ApplicationController < ActionController::API
 
   # GET /${record}s
   def index
-    @records = @model.all
+    @records = @joins.all.to_a
     render_data @records
   end
 
@@ -79,6 +79,8 @@ class ApplicationController < ActionController::API
 
   def set_models
     @model = self.class.model
+    keys = @model.reflections.keys.map(&:to_sym)
+    @joins = @model.includes(*keys) # .joins(*keys)
     @parent_model = self.class.parent_model
     @parent_fkey  = self.class.parent_fkey
   end
@@ -92,9 +94,9 @@ class ApplicationController < ActionController::API
   # Use callbacks to share common setup or constraints between actions.
   def set_record
     if @parent_model && @parent_fkey then
-      @record = @model.where(:id => params[:id], @parent_fkey => @parent_record.id).first
+      @record = @joins.where(:id => params[:id], @parent_fkey => @parent_record.id).first
     else
-      @record = @model.find(params[:id])
+      @record = @joins.find(params[:id])
     end
   end
 

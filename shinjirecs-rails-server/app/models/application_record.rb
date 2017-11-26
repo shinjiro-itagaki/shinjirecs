@@ -89,11 +89,22 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
+  alias_method :orig_as_json, :as_json
+
   def as_json(options = nil)
     res = super(options)
     res.keys.each do |k|
       v = res[k]
       res[k] = v.to_f if v.kind_of? Time
+    end
+    self.class.reflections.keys.each do |key|
+      v = self.send key
+      if v.kind_of? ActiveRecord::Relation then
+        v = v.to_a.map{|x| x.orig_as_json options }
+      else
+        v = v.orig_as_json(options)
+      end
+      res[key] = v
     end
     res
   end

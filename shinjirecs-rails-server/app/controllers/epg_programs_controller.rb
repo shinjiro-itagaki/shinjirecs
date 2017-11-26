@@ -31,7 +31,6 @@ class EpgProgramsController < ApplicationController
         # json parse error
         puts e
       end
-
       puts json.length
       EpgProgram.import_epg(json,chnumber)
       res[chnum_or_fpath]=json
