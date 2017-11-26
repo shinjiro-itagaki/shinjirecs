@@ -18,7 +18,8 @@ class EpgProgram < ApplicationRecord
   end
 
   def self.default_all_proxy
-    super.where(["start_time > ?", Time.now - 1.week])
+    keys = self.reflections.keys.map(&:to_sym)
+    self.all.includes(*keys).where(["start_time > ?", Time.now - 1.week])
   end
 
   def self.import_epg(json, chnumber=nil)
@@ -107,8 +108,8 @@ class EpgProgram < ApplicationRecord
     if not start < endt then
       start,endt = endt,start
     end
-    st = self.starttime
-    et = self.stoptime
+    st = self.start_time
+    et = self.stop_time
 
     ###########################
     # xy1 not overlap 1
@@ -135,15 +136,15 @@ class EpgProgram < ApplicationRecord
   end
 
   def include?(time)
-    self.starttime <= time and time <= self.stoptime
+    self.start_time <= time and time <= self.stop_time
   end
 
-  def length_second
-    ( self.stoptime - self.starttime ).to_i
+  def duration_sec
+    ( self.stop_time - self.start_time ).to_i
   end
 
-  def length_min
-    ( self.length_second / 60 ).to_i
+  def duration_min
+    ( self.duration_sec / 60 ).to_i
   end
 
   # guess ProgramTitle by Weekday and Time and etc
@@ -151,9 +152,13 @@ class EpgProgram < ApplicationRecord
   end
 
   def new_reservation
-    r = Reservations.new
+    if self.stop_time <= Time.now
+      return nil
+    end
+
+    r = Reservation.new
     r.start_time = self.start_time
-    r.duration   = self.length_second
+    r.duration   = self.duration_sec
     r.channel_id = self.channel_id
     # program_title_id : default 0
     r.title = self.title
@@ -161,7 +166,6 @@ class EpgProgram < ApplicationRecord
     r.event_id = self.event_id
     # t.integer    "counter"             , null: false , default: 0
     # t.integer    "state"               , null: false , default: 0, limit: 1
-
-    @reservation ||= Reservations.find(r.id)[0]
+    r
   end
 end
