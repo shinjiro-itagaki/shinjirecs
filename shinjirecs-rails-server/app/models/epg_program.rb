@@ -12,6 +12,10 @@ class EpgProgram < ApplicationRecord
   has_and_belongs_to_many :audio_types,                   foreign_key: "program_id", association_foreign_key: "audio_type_id", join_table: "epg_program_audio_type_maps"
   has_and_belongs_to_many :attachinfos,                   foreign_key: "program_id", association_foreign_key: "attachinfo_id", join_table: "epg_program_attachinfo_maps"
 
+  before_save :set_stop_date
+
+  validates_uniqueness_of :event_id, scope: [:channel_id,:stop_date]
+
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
   end
@@ -33,10 +37,11 @@ class EpgProgram < ApplicationRecord
   def self.find_or_import_program_by_json(ch,p)
     ch_id = (ch.kind_of?(Channel) ? ch.id : ch)
     event_id = p["event_id"]
-    prec = self.find_or_initialize_by(event_id: event_id)
-    prec.channel_id = ch_id
+    stop_time = Time.at(p["end"].to_i / 10000)
+    stop_date = stop_time.to_date
+    prec = self.find_or_initialize_by(event_id: event_id,stop_date: stop_date, channel_id: ch_id)
     prec.start_time = Time.at(p["start"].to_i / 10000)
-    prec.stop_time  = Time.at(p["end"].to_i   / 10000)
+    prec.stop_time  = stop_time
     prec.title      = p["title"]
     prec.freeCA     = p["freeCA"]
     prec.desc       = p["detail"].to_s + "\n" + (p["extdetail"] || []).map(&:to_s).join("\n")
@@ -147,5 +152,9 @@ class EpgProgram < ApplicationRecord
     # t.integer    "state"               , null: false , default: 0, limit: 1
 
     @reservation ||= Reservations.find(r.id)[0]
+  end
+
+  def set_stop_date
+    self.stop_date = self.stop_time
   end
 end

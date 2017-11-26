@@ -82,9 +82,10 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string     "title"                , null: false
       t.text       "desc"                 , null: false
       t.integer    "event_id"             , null: false , default: 0
+      t.date       "stop_date"            , null: false
       t.boolean    "freeCA"               , null: false , default: false
       t.timestamps                          null: false
-      t.index ["start_time", "channel_id"], unique: true
+      t.index ["channel_id", "event_id", "stop_date"], unique: true
     end
     execute "ALTER TABLE epg_programs ADD CONSTRAINT chk_times CHECK( start_time < stop_time );"
 
