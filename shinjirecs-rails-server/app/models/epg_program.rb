@@ -20,6 +20,8 @@ class EpgProgram < ApplicationRecord
   def self.import_epg(json,dflt_chnumber=nil)
     json.each do |d|
       ch = Channel.find_or_import_channel_by_json(d,dflt_chnumber)
+      ch.exist = true
+      ch.save!
 
       # skip import programs on this channel
       # because it is impossible to identify the channel
