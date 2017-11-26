@@ -3,9 +3,7 @@ class EpgProgramsController < ApplicationController
   set_model EpgProgram
 
   def self.epgdump(channel_numbers_or_filepaths=nil, sec=20)
-    if not channel_numbers_or_filepaths then
-      Channel.default_all_numbers
-    end
+    channel_numbers_or_filepaths ||= Channel.default_all_numbers
 
     cmdfile = Command.epgdump_cmd
     cmdfilepath = cmdfile.path
