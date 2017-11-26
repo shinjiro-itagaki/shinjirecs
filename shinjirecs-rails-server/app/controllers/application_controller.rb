@@ -34,7 +34,7 @@ class ApplicationController < ActionController::API
   end
 
   def index_records_proxy
-    @joins.default_all_proxy
+    @proxy
   end
 
   # GET /${record}s/1
@@ -83,8 +83,7 @@ class ApplicationController < ActionController::API
 
   def set_models
     @model = self.class.model
-    keys = @model.reflections.keys.map(&:to_sym)
-    @joins = @model.includes(*keys)
+    @proxy = @model.default_all_proxy
     @parent_model = self.class.parent_model
     @parent_fkey  = self.class.parent_fkey
   end
@@ -98,9 +97,9 @@ class ApplicationController < ActionController::API
   # Use callbacks to share common setup or constraints between actions.
   def set_record
     if @parent_model && @parent_fkey then
-      @record = @joins.where(:id => params[:id], @parent_fkey => @parent_record.id).first
+      @record = @proxy.where(:id => params[:id], @parent_fkey => @parent_record.id).first
     else
-      @record = @joins.find(params[:id])
+      @record = @proxy.find(params[:id])
     end
   end
 

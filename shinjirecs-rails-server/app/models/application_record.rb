@@ -90,7 +90,8 @@ class ApplicationRecord < ActiveRecord::Base
   end
 
   def self.default_all_proxy
-    self.all
+    keys = self.reflections.keys.map(&:to_sym)
+    self.all.includes(*keys)
   end
 
   alias_method :orig_as_json, :as_json
