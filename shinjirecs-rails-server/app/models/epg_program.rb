@@ -12,12 +12,9 @@ class EpgProgram < ApplicationRecord
   has_and_belongs_to_many :audio_types,                   foreign_key: "program_id", association_foreign_key: "audio_type_id", join_table: "epg_program_audio_type_maps"
   has_and_belongs_to_many :attachinfos,                   foreign_key: "program_id", association_foreign_key: "attachinfo_id", join_table: "epg_program_attachinfo_maps"
 
-  before_save :set_stop_date
-
-  validates_uniqueness_of :event_id, scope: [:channel_id,:stop_date]
-
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
+    rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
   def self.import_epg(json,dflt_chnumber=nil)
@@ -34,14 +31,21 @@ class EpgProgram < ApplicationRecord
     end
   end
 
+  def unique_event_id?
+    self.class.find_or_initialize_by_event_id(self.event_id, self.channel_id, self.stop_time).new_record?
+  end
+
+  def self.find_or_initialize_by_event_id(event_id, ch_id, stop_time)
+    rtn = self.where(event_id: event_id, channel_id: ch_id).where(["stop_time > ? and stop_time <= ?", stop_time - 1.day , stop_time + 1.day  ]).first
+    rtn || self.new(event_id: event_id, channel_id: ch_id, stop_time: stop_time)
+  end
+
   def self.find_or_import_program_by_json(ch,p)
     ch_id = (ch.kind_of?(Channel) ? ch.id : ch)
     event_id = p["event_id"]
     stop_time = Time.at(p["end"].to_i / 10000)
-    stop_date = stop_time.to_date
-    prec = self.find_or_initialize_by(event_id: event_id,stop_date: stop_date, channel_id: ch_id)
+    prec = self.find_or_initialize_by_event_id(event_id, ch_id, stop_time)
     prec.start_time = Time.at(p["start"].to_i / 10000)
-    prec.stop_time  = stop_time
     prec.title      = p["title"]
     prec.freeCA     = p["freeCA"]
     prec.desc       = p["detail"].to_s + "\n" + (p["extdetail"] || []).map(&:to_s).join("\n")
@@ -152,9 +156,5 @@ class EpgProgram < ApplicationRecord
     # t.integer    "state"               , null: false , default: 0, limit: 1
 
     @reservation ||= Reservations.find(r.id)[0]
-  end
-
-  def set_stop_date
-    self.stop_date = self.stop_time
   end
 end

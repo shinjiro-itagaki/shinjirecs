@@ -100,11 +100,9 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.date "stop_date", null: false
     t.boolean "freeCA", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["channel_id", "event_id", "stop_date"], name: "index_epg_programs_on_channel_id_and_event_id_and_stop_date", unique: true
   end
 
   create_table "epgdump_schedules", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
