@@ -22,7 +22,7 @@ class EpgProgramsController < ApplicationController
     res = {}
     channel_numbers_or_filepaths.map do |ch_or_fpath|
       #  in(ch) out sec
-      chnumber = !(File.exists?(ch_or_fpath))
+      chnumber = !(File.exists?(ch_or_fpath.to_s))
       cmd = "#{cmdfilepath} #{ch_or_fpath} - #{sec}"
       puts cmd
       begin
