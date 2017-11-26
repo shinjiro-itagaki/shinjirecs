@@ -36,8 +36,17 @@ class System < ApplicationRecord
     self.area.channels
   end
 
-  def find_or_initialize_channel_by_service_id(service_id)
+  def new_channel
+    return if not self.area_id
+    Channel.new(area_id: self.area_id)
+  end
+
+  def find_or_initialize_channel_by_sid(service_id)
     Channel.find_or_initialize_by(service_id: service_id, area_id: self.area_id)
+  end
+
+  def find_or_initialize_channel_by_number(chnum)
+    Channel.find_or_initialize_by(number: chnum, area_id: self.area_id)
   end
 
   def self.list_records_of(sym)

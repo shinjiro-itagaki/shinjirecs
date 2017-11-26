@@ -35,17 +35,15 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer "area_id"      , null: false, default: 0, foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.string  "ctype"        , null: false, default: "gr"
       t.string  "display_name" , null: false
+      t.boolean "display_name_locked" , null: false, default: false
       t.integer "order"        , null: false, default: 0
       t.boolean "enable"       , null: false, default: false
       t.boolean "exist"        , null: false, default: false
       t.boolean "scaned"       , null: false, default: false
       t.timestamps               null: false
-      t.index ["area_id","number","ctype"], unique: true
       t.index ["area_id","service_id"], unique: true
-      t.index ["area_id","display_name"], unique: true
     end
     execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_ctype  CHECK( ctype IN ('gr','bs'));"
-    execute "ALTER TABLE channels ADD CONSTRAINT chk_channel_number CHECK( number > 0 );"
 
     create_table :epg_program_categories, unsigned: true do |t|
       t.string "label_ja"   , null: false
@@ -59,7 +57,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string "label_en"   , null: false
       t.integer "parent_id" , null: false , default: 0, foreign_key: {to_table: "epg_program_categories", on_delete: :set_default, on_update: :cascade}
       t.timestamps            null: false
-      t.index ["label_ja","label_en"], unique: true
+      t.index ["parent_id","label_ja","label_en"], unique: true, name: "unique_epg_program_medium_categories"
     end
 
     create_table :video_types, unsigned: true do |t|
@@ -68,7 +66,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     end
 
     create_table :audio_types, unsigned: true do |t|
-      t.string "type"     , null: false
+      t.string "typ"      , null: false
       t.string "langcode" , null: false
       t.string "extdesc"  , null: false, default: ""
     end
@@ -93,7 +91,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     create_table :epg_program_category_maps, unsigned: true do |t|
       t.integer "program_id"  , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_programs"}
       t.integer "category_id" , null: false , foreign_key: {on_delete: :cascade, on_update: :cascade, to_table: "epg_program_categories"}
-      t.index ["program_id","category_id"], unique: true
+      t.index ["program_id","category_id"], unique: true, name: "unique_epg_program_category_maps"
     end
 
     create_table :epg_program_medium_category_maps, unsigned: true do |t|

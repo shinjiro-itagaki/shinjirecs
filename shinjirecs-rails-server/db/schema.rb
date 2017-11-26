@@ -25,7 +25,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   end
 
   create_table "audio_types", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.string "type", null: false
+    t.string "typ", null: false
     t.string "langcode", null: false
     t.string "extdesc", default: "", null: false
   end
@@ -36,14 +36,13 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "area_id", default: 0, null: false
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false
+    t.boolean "display_name_locked", default: false, null: false
     t.integer "order", default: 0, null: false
     t.boolean "enable", default: false, null: false
     t.boolean "exist", default: false, null: false
     t.boolean "scaned", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["area_id", "display_name"], name: "index_channels_on_area_id_and_display_name", unique: true
-    t.index ["area_id", "number", "ctype"], name: "index_channels_on_area_id_and_number_and_ctype", unique: true
     t.index ["area_id", "service_id"], name: "index_channels_on_area_id_and_service_id", unique: true
   end
 
@@ -70,7 +69,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   create_table "epg_program_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "program_id", null: false
     t.integer "category_id", null: false
-    t.index ["program_id", "category_id"], name: "index_epg_program_category_maps_on_program_id_and_category_id", unique: true
+    t.index ["program_id", "category_id"], name: "unique_epg_program_category_maps", unique: true
   end
 
   create_table "epg_program_medium_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -79,7 +78,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "parent_id", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["label_ja", "label_en"], name: "index_epg_program_medium_categories_on_label_ja_and_label_en", unique: true
+    t.index ["parent_id", "label_ja", "label_en"], name: "unique_epg_program_medium_categories", unique: true
   end
 
   create_table "epg_program_medium_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
