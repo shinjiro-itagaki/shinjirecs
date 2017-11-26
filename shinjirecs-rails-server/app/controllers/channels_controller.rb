@@ -9,7 +9,7 @@ class ChannelsController < ApplicationController
   end
 
   def self.scan_timeout
-    20
+    5
   end
 
   def scan
@@ -36,7 +36,7 @@ class ChannelsController < ApplicationController
 
     {"gr" => gr,"bs" => bs}.each do |type,charr|
       charr = charr.map {|ch|
-        c = Channel.find_or_initialize_by(number: ch, area_id: area_id)
+        c = Channel.find_or_initialize_by(number: ch, area_id: area_id, ctype: type)
         if c.new_record?
           c.scaned = false
           c.save!
