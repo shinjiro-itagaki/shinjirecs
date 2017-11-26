@@ -3,7 +3,7 @@ class Channel < ApplicationRecord
   belongs_to :area
   has_many :reservations
   has_many :program_titles
-  has_many :programs
+  has_many :epg_programs
 
   before_save :auto_set_values
 
