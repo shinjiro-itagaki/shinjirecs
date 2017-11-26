@@ -17,16 +17,20 @@ class EpgProgram < ApplicationRecord
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
-  def self.import_epg(json,dflt_chnumber=nil)
+  def self.import_epg(json, chnumber=nil)
     json.each do |d|
-      ch = Channel.find_or_import_channel_by_json(d,dflt_chnumber)
-      ch.exist = true
-      ch.save!
-
+      ch = Channel.find_or_import_channel_by_json(d, chnumber)
       # skip import programs on this channel
       # because it is impossible to identify the channel
       next if not ch
+      ch.exist = true
+      ch.save!
 
+      # skip if chnumber is decleared and detected channel is not match it
+      puts __LINE__
+      puts chnumber
+      next if chnumber and ch.number != chnumber
+puts __LINE__
       (d["programs"] || []).each do |p|
         self.find_or_import_program_by_json(ch,p)
       end

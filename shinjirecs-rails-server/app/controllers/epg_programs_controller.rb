@@ -20,10 +20,10 @@ class EpgProgramsController < ApplicationController
     end
 
     res = {}
-    channel_numbers_or_filepaths.map do |ch_or_fpath|
+    channel_numbers_or_filepaths.map do |chnum_or_fpath|
       #  in(ch) out sec
-      chnumber = !(File.exists?(ch_or_fpath.to_s))
-      cmd = "#{cmdfilepath} #{ch_or_fpath} - #{sec}"
+      chnumber = File.exists?(File.expand_path(chnum_or_fpath.to_s)) ? nil : chnum_or_fpath
+      cmd = "#{cmdfilepath} #{chnum_or_fpath} - #{sec}"
       puts cmd
       begin
         json = JSON.parse(`#{cmd}`)
@@ -34,7 +34,7 @@ class EpgProgramsController < ApplicationController
 
       puts json.length
       EpgProgram.import_epg(json,chnumber)
-      res[ch_or_fpath]=json
+      res[chnum_or_fpath]=json
     end
     res
   end

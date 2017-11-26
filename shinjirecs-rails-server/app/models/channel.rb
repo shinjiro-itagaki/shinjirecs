@@ -66,14 +66,12 @@ class Channel < ApplicationRecord
     end
 
     ch = System.instance.find_or_initialize_channel_by_sid(service_id)
-
     if ch.new_record? then
       if not chnumber then
         # skip import channel
         # because it is impossible to identify the channel
         return nil
       end
-
       ch = System.instance.find_or_initialize_channel_by_number(chnumber)
       if ch.new_record? then
       else
