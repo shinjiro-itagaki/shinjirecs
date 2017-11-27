@@ -13,13 +13,13 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.boolean "setup"        , null: false, default: false
       t.integer "gr_tuner_count" , null: false, default: 1, limit: 1
       t.integer "bs_tuner_count" , null: false, default: 0, limit: 1
-      t.integer "rest_gr_tuner_count" , null: false, default: 1, limit: 1
-      t.integer "rest_bs_tuner_count" , null: false, default: 0, limit: 1
+      t.integer "busy_gr_tuner_count" , null: false, default: 0
+      t.integer "busy_bs_tuner_count" , null: false, default: 0
       t.index ["active"], unique: true
       t.timestamps               null: false
     end
     execute "ALTER TABLE systems ADD CONSTRAINT system_active CHECK( active = 1 );"
-    execute "ALTER TABLE systems ADD CONSTRAINT system_tuner_counts CHECK( gr_tuner_count > -1 and bs_tuner_count > -1 and rest_gr_tuner_count > -1 and rest_bs_tuner_count > -1 and gr_tuner_count >= rest_gr_tuner_count and bs_tuner_count >= rest_bs_tuner_count);"
+    execute "ALTER TABLE systems ADD CONSTRAINT system_tuner_counts CHECK( gr_tuner_count > -1 and bs_tuner_count > -1 and busy_gr_tuner_count > -1 and busy_bs_tuner_count > -1 and gr_tuner_count >= busy_gr_tuner_count and bs_tuner_count >= busy_bs_tuner_count);"
 
     create_table :epgdump_schedules, unsigned: true do |t|
       t.integer "system_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
