@@ -1,7 +1,11 @@
 class ApplicationRecord < ActiveRecord::Base
   self.abstract_class = true
 
-  @@tasks = {}
+  class << self
+    def maximums; @maximums ||= {}; end
+    def minimums; @minimums ||= {}; end
+    def tasks;    @tasks    ||= {}; end
+  end
 
   def self.register_task(*args,&block)
     t = Thread.new do
@@ -9,37 +13,34 @@ class ApplicationRecord < ActiveRecord::Base
         block.call args
       rescue
       ensure
-        @@tasks[self.id]=nil
+        self.tasks[self.id]=nil
       end
     end
-    @@tasks[t.id]=nil
+    self.tasks[t.id]=nil
   end
 
   after_initialize :set_default, if: :new_record?
 
-  @@maximums = {}
-  @@minimums = {}
-
   def self.maximum(column,value)
     column = column.to_sym
-    @@maximums[column] = value.to_i
+    self.maximums[column] = value.to_i
     validates column, length: { maximum: value }, numericality: { only_integer: true }
   end
 
   def self.maximum_of(column)
     column = column.to_sym
-    @@maximums[column]
+    self.maximums[column]
   end
 
   def self.minimum(column,value)
     column = column.to_sym
-    @@minimums[column] = value.to_i
+    self.minimums[column] = value.to_i
     validates column, length: { minimum: value }, numericality: { only_integer: true }
   end
 
   def self.minimum_of(column)
     column = column.to_sym
-    @@minimums[column]
+    self.minimums[column]
   end
 
   # nil -> permitted all default params
@@ -89,12 +90,16 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
-  def self.output_reflections
+  def self.output_reflections?
+    false
+  end
+
+  def self.output_reflections(ins)
     false
   end
 
   def self.default_all_proxy
-    if self.output_reflections then
+    if self.output_reflections? then
       keys = self.reflections.keys.map(&:to_sym)
       self.all.includes(*keys)
     else
@@ -111,16 +116,9 @@ class ApplicationRecord < ActiveRecord::Base
       res[k] = v.to_f if v.kind_of? Time
     end
 
-    if self.class.output_reflections then
-      self.class.reflections.keys.each do |key|
-        v = self.send key
-        if v.kind_of? ActiveRecord::Relation then
-          v = v.to_a.map{|x| x.orig_as_json options }
-        else
-          v = v.orig_as_json(options)
-        end
-        res[key] = v
-      end
+    ref=self.class.output_reflections(self)
+    if ref.kind_of? Hash then
+      res = res.merge ref
     end
     res
   end

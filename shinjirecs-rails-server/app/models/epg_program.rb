@@ -17,8 +17,22 @@ class EpgProgram < ApplicationRecord
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
-  def self.output_reflections
+  def self.output_reflections?
     true
+  end
+
+  def self.output_reflections(ins=nil)
+    res = {}
+    self.reflections.keys.each do |key|
+      v = ins.send key
+      if v.kind_of? ActiveRecord::Relation then
+        res[key] = v.to_a.map(&:id) # v.to_a.map{|x| x.orig_as_json options }
+      else
+        #v = v.orig_as_json(options)
+      end
+      # res[key] = v
+    end
+    res
   end
 
   def self.default_all_proxy
