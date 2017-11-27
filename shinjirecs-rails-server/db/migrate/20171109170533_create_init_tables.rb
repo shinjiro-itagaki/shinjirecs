@@ -149,7 +149,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
 
     create_table :reservations, unsigned: true do |t|
       t.datetime   "start_time"          , null: false
-      t.integer    "duration"            , null: false # seconds
+      t.datetime   "stop_time"           , null: false
       t.integer    "channel_id"          , null: false , default: 0, foreign_key: {on_delete: :restrict   , on_update: :cascade}
       t.integer    "program_title_id"    , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
       t.string     "title"               , null: false
@@ -172,7 +172,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.timestamps                         null: false
     end
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2,3));"
-    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_duration CHECK( duration > 0);"
+    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_stop  CHECK( stop_time > start_time);"
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_counter CHECK( counter >= 0);"
   end
 end

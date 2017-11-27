@@ -17,12 +17,58 @@ class Reservation < ApplicationRecord
   belongs_to :channel
   belongs_to :program_title
 
-  # validates :duration, length: { minimum: 1 }, numericality: { only_integer: true }
-  minimum :duration, 1
-  # validates :counter,  length: { minimum: 0 }, numericality: { only_integer: true }
   minimum :counter, 1
 
   enum state: { waiting: 0, preparing: 1, recording: 2, success: 3, failed: -1, canceled: -2 }
+
+  validate do |rec|
+    rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
+    rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if rec.will_recordable?
+  end
+
+  scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
+
+  def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
+    proxy = self.joins(:channel)
+      .where(["not (start_time > ? or stop_time < ?)", ed, st])
+      .where(["#{Channel.table_name}.ctype = ?", ctype])
+    if not exclude_ids.empty? then
+      proxy = proxy.where.not(id: exclude_ids)
+    end
+    proxy
+  end
+
+  def select_overlapped_proxy(exclude_self=true)
+    ex_ids = (self.persisted? and exclude_self) ? [self.id] : []
+    self.class.select_overlapped_proxy(self.stop_time, self.start_time, self.channel.ctype, ex_ids)
+  end
+
+  def will_use_tuner_count()
+    self.select_overlapped_proxy.will_use_tuner.count
+  end
+
+  def will_recordable?
+    if self.new_record?
+      self.will_recordable_if_new?
+    else
+      self.will_recordable_if_persisted?
+    end
+  end
+
+  def will_recordable_if_new?
+    self.will_use_tuner_count < System.instance.tuner_count(self.channel.ctype)
+  end
+
+  def will_recordable_if_persisted?
+    tuner_count = System.instance.tuner_count(self.channel.ctype)
+    list = self.select_overlapped_proxy(exclude_self = false)
+      .will_use_tuner
+      .order(start_time: :asc)
+      .limit(tuner_count)
+      .where(id: self.id)
+      .pluck(:id)
+    list.include? self.id
+  end
 
   @@reservations_cache = {
     waiting:   {},
@@ -53,7 +99,7 @@ class Reservation < ApplicationRecord
 
   scope :now_in_time, ->() {
     now = Time.now
-    where("start_time <= ?", now ).where("end_time >= ?", now)
+    where("start_time <= ?", now ).where("stop_time >= ?", now)
   }
 
   def now_in_time?
@@ -141,64 +187,26 @@ class Reservation < ApplicationRecord
   #   self + 7
   # end
 
-  def next_reservation
-    return nil if not self.has_next?
-    r = self + @next.to_i
-    7.times do
-      ex = self.excluded?(r.starttime.wday)
-      ( ex ) ? r += 1 : break
-    end if @next.to_i == 1
-    r.counter += 1
-    r.load_from_program
-    r
-  end
+  # def next_reservation
+  #   return nil if not self.has_next?
+  #   r = self + @next.to_i
+  #   7.times do
+  #     ex = self.excluded?(r.starttime.wday)
+  #     ( ex ) ? r += 1 : break
+  #   end if @next.to_i == 1
+  #   r.counter += 1
+  #   r.load_from_program
+  #   r
+  # end
 
-  def excluded?(wday)
-    return false if not @weekdays
-    ( @weekdays & ( 0x01 << wday )) == 0
-  end
+  # def excluded?(wday)
+  #   return false if not @weekdays
+  #   ( @weekdays & ( 0x01 << wday )) == 0
+  # end
 
-  def recording_tried?
-    self.success? || self.failed?
-  end
-
-  def savable?
-    return true if Time.now > self.stop_time # done yet
-    return false if not (self.starttime < self.stoptime)
-
-    ntuner = self.ch.tuner.sum
-    rsvs = self.find_overlapped_reservations
-
-    if (rsvs.size + 1) > ntuner then
-      st = self.starttime
-      ed = self.stoptime
-      nst = rsvs.map{|r|r.starttime}.find_all{|t| t <= ed }.max
-      ned = rsvs.map{|r|r.stoptime }.find_all{|t| t >= st }.min
-      n = rsvs.find_all{|r|
-        r.time_overlapped2?(st,ned)
-      }.size + 1
-
-      return false if n > ntuner
-
-      n = rsvs.find_all{|r|
-        r.time_overlapped2?(nst,ed)
-      }.size + 1
-
-      return false if n > ntuner
-    end
-    true
-  end
-
-  def find_overlapped_reservations
-    self.class.find_all.find_all{|rsv|
-      self != rsv and rsv.enable? and rsv.ch.tuner == self.ch.tuner and self.time_overlapped?(rsv)
-    }
-  end
-
-  def ==(other)
-    @channel_id == other.channel_id and @start_time == other.start_time
-  end
-
+  # def recording_tried?
+  #   self.success? || self.failed?
+  # end
 
   # def self.update_from_program
   #   self.find_all.each do |rsv|

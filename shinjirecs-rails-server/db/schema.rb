@@ -142,7 +142,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
 
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.datetime "start_time", null: false
-    t.integer "duration", null: false
+    t.datetime "stop_time", null: false
     t.integer "channel_id", default: 0, null: false
     t.integer "program_title_id", default: 0, null: false
     t.string "title", null: false

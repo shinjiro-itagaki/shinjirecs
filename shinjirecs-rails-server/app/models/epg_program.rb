@@ -17,6 +17,8 @@ class EpgProgram < ApplicationRecord
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
+  default_scope { order(start_time: :desc) }
+
   def self.output_reflections?
     true
   end
@@ -175,7 +177,7 @@ class EpgProgram < ApplicationRecord
 
     r = Reservation.new
     r.start_time = self.start_time
-    r.duration   = self.duration_sec
+    r.stop_time  = self.stop_time
     r.channel_id = self.channel_id
     # program_title_id : default 0
     r.title = self.title

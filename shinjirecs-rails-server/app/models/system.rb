@@ -32,6 +32,16 @@ class System < ApplicationRecord
     ins && ins.setup?
   end
 
+  def tuner_count(ctype)
+    case ctype
+    when Channel.ctypes[:gr]
+      return self.gr_tuner_count
+    when Channel.ctypes[:bs]
+      return self.bs_tuner_count
+    end
+    return 0
+  end
+
   def channels
     self.area.channels
   end
