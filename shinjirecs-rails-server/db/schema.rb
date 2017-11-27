@@ -113,26 +113,15 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "program_title_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "program_title_id", null: false
-    t.date "on", null: false
-    t.index ["program_title_id", "on"], name: "index_program_title_dayoffs_on_program_title_id_and_on", unique: true
-  end
-
-  create_table "program_title_terms", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "program_title_id", null: false
-    t.date "begin_on", null: false
-    t.date "finish_on", null: false
-    t.index ["program_title_id"], name: "index_program_title_terms_on_program_title_id", unique: true
-  end
-
-  create_table "program_titles", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+  create_table "program_series", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.time "start_at", null: false
     t.integer "duration", null: false
     t.integer "channel_id", null: false
-    t.string "title", null: false
+    t.string "name", null: false
+    t.boolean "repeat", default: false, null: false
     t.text "desc", null: false
-    t.integer "next_counter", default: 1, null: false
+    t.integer "next_episode_number", default: 1, null: false
+    t.integer "last_episode_number", default: 0, null: false
     t.integer "weekdays", limit: 1, default: 0, null: false
     t.boolean "auto_next", default: true, null: false
     t.string "label_format", default: "", null: false
@@ -140,11 +129,24 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "program_series_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_series_id", null: false
+    t.date "on", null: false
+    t.index ["program_series_id", "on"], name: "index_program_series_dayoffs_on_program_series_id_and_on", unique: true
+  end
+
+  create_table "program_series_terms", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_series_id", null: false
+    t.date "begin_on", null: false
+    t.date "finish_on", null: false
+    t.index ["program_series_id"], name: "index_program_series_terms_on_program_series_id", unique: true
+  end
+
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.datetime "start_time", null: false
     t.datetime "stop_time", null: false
     t.integer "channel_id", default: 0, null: false
-    t.integer "program_title_id", default: 0, null: false
+    t.integer "program_series_id", default: 0, null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
@@ -165,8 +167,8 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.boolean "setup", default: false, null: false
     t.integer "gr_tuner_count", limit: 1, default: 1, null: false
     t.integer "bs_tuner_count", limit: 1, default: 0, null: false
-    t.integer "rest_gr_tuner_count", limit: 1, default: 1, null: false
-    t.integer "rest_bs_tuner_count", limit: 1, default: 0, null: false
+    t.integer "busy_gr_tuner_count", default: 0, null: false
+    t.integer "busy_bs_tuner_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_systems_on_active", unique: true

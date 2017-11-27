@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class ProgramTitleDayoffTest < ActiveSupport::TestCase
+class ProgramSeriesDayoffTest < ActiveSupport::TestCase
   # test "the truth" do
   #   assert true
   # end

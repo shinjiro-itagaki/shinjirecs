@@ -9,7 +9,9 @@
 # t.integer    "weekdays" , null: false , default: 0, limit: 1 # byte
 # t.boolean    "auto_next", null: false , default: true
 # t.string     "label_format"   , null: false , default: ''
-class ProgramTitle < ApplicationRecord
+class ProgramSeries < ApplicationRecord
+  self.table_name="program_series"
+  
   belongs_to :channel
   belongs_to :program_category
   has_many :reservations

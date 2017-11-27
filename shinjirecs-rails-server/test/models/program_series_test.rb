@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class ProgramTitleTest < ActiveSupport::TestCase
+class ProgramSeriesTest < ActiveSupport::TestCase
   # test "the truth" do
   #   assert true
   # end
