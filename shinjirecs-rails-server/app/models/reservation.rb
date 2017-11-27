@@ -28,14 +28,41 @@ class Reservation < ApplicationRecord
 
   scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
 
+  scope :not_finished, -> (){
+    where(["stop_time > ?",Time.now])
+  }
+
+  scope :in_ctype, -> (ctype){
+    joins(:channel).where(["#{Channel.table_name}.ctype = ?", ctype])
+  }
+
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
-    proxy = self.joins(:channel)
+    proxy = self.in_ctype(ctype)
       .where(["not (start_time > ? or stop_time < ?)", ed, st])
-      .where(["#{Channel.table_name}.ctype = ?", ctype])
     if not exclude_ids.empty? then
       proxy = proxy.where.not(id: exclude_ids)
     end
     proxy
+  end
+
+  def self.tuner_count_changeable?(ctype,count)
+    rsvs = self.will_use_tuner
+      .not_finished
+      .in_ctype(ctype)
+      .to_a
+
+    impl = -> (at_list, rsvlist, max) {
+      if at_list.empty? or rsvlist.empty? then
+        return max
+      end
+      at = at_list.shift
+      new_rsvlist = rsvlist.delete_if{|r|r.over?(at)}
+      new_max = Math.max(max, rsvlist.select{|r| r.in_time?(at) }.map(&:id).uniq.count)
+      impl at_list, new_rsvlist, new_max
+    }
+
+    allat = rsvs.map{|x| [x.start_time, x.stop_time] }.flatten.sort.uniq
+    impl.call(allat,rsvs,0) <= count
   end
 
   def select_overlapped_proxy(exclude_self=true)
@@ -55,12 +82,21 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def set_system(system)
+    @new_system = system
+    self
+  end
+
+  def tuner_count
+    (@new_system || System.instance).tuner_count(self.channel.ctype)
+  end
+
   def will_recordable_if_new?
-    self.will_use_tuner_count < System.instance.tuner_count(self.channel.ctype)
+    self.will_use_tuner_count < self.tuner_count
   end
 
   def will_recordable_if_persisted?
-    tuner_count = System.instance.tuner_count(self.channel.ctype)
+    tuner_count = self.tuner_count
     list = self.select_overlapped_proxy(exclude_self = false)
       .will_use_tuner
       .order(start_time: :asc)
@@ -103,8 +139,19 @@ class Reservation < ApplicationRecord
   }
 
   def now_in_time?
-    now = Time.now
-    @start_time <= now && @end_time >= now
+    self.in_time? Time.now
+  end
+
+  def in_time?(at)
+    @start_time <= at && at <= @stop_time
+  end
+
+  def over?(at)
+    at <= @stop_time
+  end
+
+  def now_over?(at)
+    self.over?(Time.now)
   end
 
   def self.run
