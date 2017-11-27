@@ -23,7 +23,7 @@ class Reservation < ApplicationRecord
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
-    rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if rec.will_recordable?
+    rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
   end
 
   scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
