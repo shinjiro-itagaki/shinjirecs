@@ -23,10 +23,11 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
 
     create_table :epgdump_schedules, unsigned: true do |t|
       t.integer "system_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
-      t.time    "time"      , null: false, default: "00:00:00"
+      t.integer "time"      , null: false, default: 0
       t.integer "weekdays"  , null: false, default: 127, limit: 1 # byte, 0 means not active
       t.timestamps null: false
     end
+    execute "ALTER TABLE epgdump_schedules ADD CONSTRAINT chk_schedule_time CHECK( time >= 0 and time < 86400  )"
     execute "ALTER TABLE epgdump_schedules ADD CONSTRAINT chk_schedule_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
 
     create_table :channels, unsigned: true do |t|
@@ -118,7 +119,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     end
 
     create_table :program_series, unsigned: true do |t|
-      t.time       "start_at"             , null: false
+      t.integer    "start_at"             , null: false
       t.integer    "duration"             , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
       t.string     "name"                 , null: false
@@ -131,6 +132,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.string     "label_format"         , null: false , default: ''
       t.timestamps                          null: false
     end
+    execute "ALTER TABLE program_series ADD CONSTRAINT chk_program_series_start_at CHECK( start_at >= 0 and start_at < 86400)"
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_next_episode_number CHECK( next_episode_number > 0 )"
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_last_episode_number CHECK( last_episode_number >= 0 )"
