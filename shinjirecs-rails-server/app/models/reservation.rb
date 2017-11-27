@@ -222,6 +222,19 @@ class Reservation < ApplicationRecord
     @weekdays ||= Weekdays.none
   end
 
+  # sec
+  def duration_sec
+    ( self.stop_time - self.start_time ).to_i
+  end
+
+  def duration_min
+    ( self.duration_sec / 60 ).to_i
+  end
+
+  def duration
+    self.duration_sec
+  end
+
 #  def select_label(lmap)
 #    lmap[self.status] || lmap[self.status.to_s] || "j"
 #  end
