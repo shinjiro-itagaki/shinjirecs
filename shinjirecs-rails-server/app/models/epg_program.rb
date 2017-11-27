@@ -19,6 +19,10 @@ class EpgProgram < ApplicationRecord
 
   default_scope { order(start_time: :desc) }
 
+  before_save do
+    self.desc ||= ""
+  end
+
   def self.output_reflections?
     true
   end
@@ -175,16 +179,7 @@ class EpgProgram < ApplicationRecord
       return nil
     end
 
-    r = Reservation.new
-    r.start_time = self.start_time
-    r.stop_time  = self.stop_time
-    r.channel_id = self.channel_id
-    # program_title_id : default 0
-    r.title = self.title
-    r.desc = self.desc
-    r.event_id = self.event_id
-    # t.integer    "counter"             , null: false , default: 0
-    # t.integer    "state"               , null: false , default: 0, limit: 1
-    r
+    series = ProgramSeries.find_or_create_by_epg_program(self)
+    series.new_next_reservation(self)
   end
 end

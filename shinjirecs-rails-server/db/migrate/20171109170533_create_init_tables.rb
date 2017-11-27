@@ -122,6 +122,9 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer    "start_at"             , null: false
       t.integer    "duration"             , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
+      t.date       "begin_on"             , null: false
+      t.date       "expire_date"          , null: false
+      t.boolean    "expire_date_enable"   , null: false , default: false
       t.string     "name"                 , null: false
       t.boolean    "repeat"               , null: false , default: false
       t.text       "desc"                 , null: false
@@ -131,20 +134,14 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.boolean    "auto_next"            , null: false , default: true
       t.string     "label_format"         , null: false , default: ''
       t.timestamps                          null: false
+      t.index ["start_at","channel_id","begin_on"], unique: true, name: "idx_unique_program_series"
     end
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_program_series_start_at CHECK( start_at >= 0 and start_at < 86400)"
+    execute "ALTER TABLE program_series ADD CONSTRAINT chk_program_series_begin_on CHECK( begin_on <= expire_date )"
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_weekdays CHECK( 0 <= weekdays and weekdays <= 127 )" # between ( 0b0000000 , 0b1111111 )
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_next_episode_number CHECK( next_episode_number > 0 )"
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_last_episode_number CHECK( last_episode_number >= 0 )"
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_program_series_duration CHECK( duration > 0 )"
-
-    create_table :program_series_terms, unsigned: true do |t|
-      t.integer "program_series_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
-      t.date    "begin_on"          , null: false
-      t.date    "finish_on"         , null: false
-      t.index   ["program_series_id"], unique: true
-    end
-    execute "ALTER TABLE program_series_terms ADD CONSTRAINT chk_between CHECK( begin_on <= finish_on )"
 
     create_table :program_series_dayoffs, unsigned: true do |t|
       t.integer "program_series_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
@@ -170,10 +167,10 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       #  3: success
       t.integer    "state"               , null: false , default: 0, limit: 1
       t.text       "command_str"         , null: false
-      t.integer    "command_pid"         , null: false
+      t.integer    "command_pid"         , null: false , default: 0
       t.text       "log"                 , null: false
-      t.text       "errror_log"          , null: false
-      t.string     "filename"            , null: false
+      t.text       "error_log"           , null: false
+      t.string     "filename"            , null: false , default: ""
       t.timestamps                         null: false
     end
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2,3));"

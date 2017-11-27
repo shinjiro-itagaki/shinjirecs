@@ -107,16 +107,19 @@ ActiveRecord::Schema.define(version: 20171109170533) do
 
   create_table "epgdump_schedules", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "system_id", null: false
-    t.time "time", default: "2000-01-01 00:00:00", null: false
+    t.integer "time", default: 0, null: false
     t.integer "weekdays", limit: 1, default: 127, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
   create_table "program_series", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.time "start_at", null: false
+    t.integer "start_at", null: false
     t.integer "duration", null: false
     t.integer "channel_id", null: false
+    t.date "begin_on", null: false
+    t.date "expire_date", null: false
+    t.boolean "expire_date_enable", default: false, null: false
     t.string "name", null: false
     t.boolean "repeat", default: false, null: false
     t.text "desc", null: false
@@ -127,19 +130,13 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.string "label_format", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["start_at", "channel_id", "begin_on"], name: "idx_unique_program_series", unique: true
   end
 
   create_table "program_series_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "program_series_id", null: false
     t.date "on", null: false
     t.index ["program_series_id", "on"], name: "index_program_series_dayoffs_on_program_series_id_and_on", unique: true
-  end
-
-  create_table "program_series_terms", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "program_series_id", null: false
-    t.date "begin_on", null: false
-    t.date "finish_on", null: false
-    t.index ["program_series_id"], name: "index_program_series_terms_on_program_series_id", unique: true
   end
 
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -153,10 +150,10 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "counter", default: 0, null: false
     t.integer "state", limit: 1, default: 0, null: false
     t.text "command_str", null: false
-    t.integer "command_pid", null: false
+    t.integer "command_pid", default: 0, null: false
     t.text "log", null: false
-    t.text "errror_log", null: false
-    t.string "filename", null: false
+    t.text "error_log", null: false
+    t.string "filename", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

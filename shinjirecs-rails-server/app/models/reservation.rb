@@ -1,7 +1,7 @@
 # t.timestamp  "start_time"          , null: false
-# t.integer    "duration"            , null: false # seconds
+# t.integer    "stop_time"           , null: false # seconds
 # t.integer    "channel_id"          , null: false , default: 0, foreign_key: {on_delete: :restrict   , on_update: :cascade}
-# t.integer    "program_title_id"    , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
+# t.integer    "program_series_id"    , null: false , default: 0, foreign_key: {on_delete: :set_default, on_update: :cascade}
 # t.string     "title"               , null: false
 # t.text       "desc"                , null: false
 # t.integer    "event_id"            , null: false , default: 0
@@ -15,7 +15,7 @@
 class Reservation < ApplicationRecord
 
   belongs_to :channel
-  belongs_to :program_title
+  belongs_to :program_series
 
   minimum :counter, 1
 
@@ -35,6 +35,13 @@ class Reservation < ApplicationRecord
   scope :in_ctype, -> (ctype){
     joins(:channel).where(["#{Channel.table_name}.ctype = ?", ctype])
   }
+
+  before_save do
+    self.desc ||= ""
+    self.command_str ||= ""
+    self.log ||= ""
+    self.error_log ||= ""
+  end
 
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
     proxy = self.in_ctype(ctype)

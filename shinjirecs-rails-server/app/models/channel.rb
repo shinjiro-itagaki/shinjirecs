@@ -2,7 +2,7 @@ class Channel < ApplicationRecord
   enum ctype: {gr: 'gr',bs: 'bs'}
   belongs_to :area
   has_many :reservations
-  has_many :program_titles
+  has_many :program_series
   has_many :epg_programs
 
   before_save :auto_set_values

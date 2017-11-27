@@ -14,6 +14,7 @@ class ProgramSeries < ApplicationRecord
 
   belongs_to :channel
   has_many :reservations
+  has_one :program_series_dayoff
   minimum :start_at, 0
   maximum :start_at, 24 * 3600 - 1
   minimum :weekdays, 0
@@ -21,6 +22,12 @@ class ProgramSeries < ApplicationRecord
   minimum :next_episode_number, 1
   minimum :last_episode_number, 1
 
+  before_create -> {
+    if not self.expire_date
+      self.expire_date = self.begin_on
+      self.expire_date_enable = false
+    end
+  }
 
   def next_datetime(include_today=true)
     now = Time.now
@@ -32,7 +39,43 @@ class ProgramSeries < ApplicationRecord
     end
   end
 
-  def new_reservation
-    
+  def label
+    self.label_format || self.name
+  end
+
+  def self.find_or_create_by_epg_program(ep)
+    chid = ep.channel_id
+    st = ep.start_time
+    hh = st.hour
+    mm = st.min
+    ss = st.sec
+    wday = st.wday
+    wday_mask = Weekdays.to_mask(wday)
+    itime = hh * 3600 + mm * 60 + ss
+    ins = self.where(channel_id: chid, start_at: itime)
+      .where(["weekdays & ? > 0", wday_mask])
+      .where(["begin_on <= ?", st]) # dont forget !!
+      .order(begin_on: :desc)
+      .first
+    ins || self.create(channel_id: chid, start_at: itime, weekdays: wday_mask, begin_on: st, duration: ep.duration_sec, name: ep.title, desc: "")
+  end
+
+  def new_next_reservation(epg=nil)
+    st = self.next_datetime true
+    return nil if not st
+    epg ||= EpgProgram.where(channel_id: self.channel_id, start_time: st).first
+
+    title = epg ? epg.title : self.label
+    desc  = epg ? epg.desc  : self.desc
+    event_id = epg ? epg.event_id : -1
+
+    Reservation.new(start_time: st,
+                    stop_time: st + self.duration,
+                    channel_id: self.channel_id,
+                    program_series_id: self.id,
+                    title: title,
+                    desc: desc,
+                    event_id: event_id,
+                    counter: self.next_episode_number)
   end
 end
