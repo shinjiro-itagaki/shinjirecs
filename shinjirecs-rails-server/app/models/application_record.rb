@@ -89,8 +89,17 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
+  def self.output_reflections
+    false
+  end
+
   def self.default_all_proxy
-    self.all
+    if self.output_reflections then
+      keys = self.reflections.keys.map(&:to_sym)
+      self.all.includes(*keys)
+    else
+      self.all
+    end
   end
 
   alias_method :orig_as_json, :as_json
@@ -101,14 +110,17 @@ class ApplicationRecord < ActiveRecord::Base
       v = res[k]
       res[k] = v.to_f if v.kind_of? Time
     end
-    self.class.reflections.keys.each do |key|
-      v = self.send key
-      if v.kind_of? ActiveRecord::Relation then
-        v = v.to_a.map{|x| x.orig_as_json options }
-      else
-        v = v.orig_as_json(options)
+
+    if self.class.output_reflections then
+      self.class.reflections.keys.each do |key|
+        v = self.send key
+        if v.kind_of? ActiveRecord::Relation then
+          v = v.to_a.map{|x| x.orig_as_json options }
+        else
+          v = v.orig_as_json(options)
+        end
+        res[key] = v
       end
-      res[key] = v
     end
     res
   end

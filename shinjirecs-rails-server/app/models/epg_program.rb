@@ -17,9 +17,12 @@ class EpgProgram < ApplicationRecord
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
+  def self.output_reflections
+    true
+  end
+
   def self.default_all_proxy
-    keys = self.reflections.keys.map(&:to_sym)
-    self.all.includes(*keys).where(["start_time > ?", Time.now - 1.week])
+    super.where(["start_time > ?", Time.now - 1.week])
   end
 
   def self.import_epg(json, chnumber=nil)
