@@ -13,6 +13,7 @@
 # t.text       "errror_log"          , null: false
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
+  require "securerandom"
 
   belongs_to :channel
   belongs_to :program_series
@@ -23,6 +24,7 @@ class Reservation < ApplicationRecord
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
+    rec.errors[:stop_time] << "this stop_time will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
   end
 
@@ -36,11 +38,19 @@ class Reservation < ApplicationRecord
     joins(:channel).where(["#{Channel.table_name}.ctype = ?", ctype])
   }
 
+  before_create do
+    self.filename = SecureRandom.hex(10) + ".ts"
+  end
+
   before_save do
     self.desc ||= ""
     self.command_str ||= ""
     self.log ||= ""
     self.error_log ||= ""
+  end
+
+  def self.video_dir
+    Rails.application.config.video_path
   end
 
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
@@ -72,6 +82,14 @@ class Reservation < ApplicationRecord
     impl.call(allat,rsvs,0) <= count
   end
 
+  def filepath
+    self.class.video_dir + "./" + self.filename
+  end
+
+  def file
+    File.exists?(paht = self.filepath) ? File.new(path) : nil
+  end
+
   def select_overlapped_proxy(exclude_self=true)
     ex_ids = (self.persisted? and exclude_self) ? [self.id] : []
     self.class.select_overlapped_proxy(self.stop_time, self.start_time, self.channel.ctype, ex_ids)
@@ -87,15 +105,6 @@ class Reservation < ApplicationRecord
     else
       self.will_recordable_if_persisted?
     end
-  end
-
-  def set_system(system)
-    @new_system = system
-    self
-  end
-
-  def tuner_count
-    (@new_system || System.instance).tuner_count(self.channel.ctype)
   end
 
   def will_recordable_if_new?
@@ -137,7 +146,7 @@ class Reservation < ApplicationRecord
 
   def will_start_in?(sec)
     now = Time.now
-    @start_time > now && @start_time < now + sec
+    self.start_time > now && self.start_time < now + sec
   end
 
   scope :now_in_time, ->() {
@@ -150,11 +159,11 @@ class Reservation < ApplicationRecord
   end
 
   def in_time?(at)
-    @start_time <= at && at <= @stop_time
+    (self.start_time <= at) && (at <= self.stop_time)
   end
 
   def over?(at)
-    at <= @stop_time
+    at <= self.stop_time
   end
 
   def now_over?(at)
@@ -173,6 +182,10 @@ class Reservation < ApplicationRecord
       return false
     else
       @@do_check_preparing_now = true
+
+      # 1. state is waiting and process id is none or the written is not found
+      # 2. state is recording but process id is none or the written is not found
+      # 3. state is 
       proxy = self.waiting.will_start_in(30)
       rsvs = proxy.all.to_a
       # @@staging_reservations[rsv.id] ||= rsv
@@ -185,6 +198,16 @@ class Reservation < ApplicationRecord
           rsv.save!
         end
       end
+    end
+  end
+
+  after_create_commit :after_create_commit_impl
+
+  def after_create_commit_impl
+    if self.now_in_time? then
+      puts "now in time"
+    else
+      puts "jiojo"
     end
   end
 
@@ -226,7 +249,6 @@ class Reservation < ApplicationRecord
 
   def set_default_value
     self.waiting! if not self.state
-    @weekdays ||= Weekdays.none
   end
 
   # sec
