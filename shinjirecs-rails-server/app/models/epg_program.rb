@@ -170,10 +170,6 @@ class EpgProgram < ApplicationRecord
     ( self.duration_sec / 60 ).to_i
   end
 
-  # guess ProgramTitle by Weekday and Time and etc
-  def guess_title
-  end
-
   def new_reservation
     if self.stop_time <= Time.now
       return nil

@@ -13,7 +13,9 @@
 # t.text       "errror_log"          , null: false
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
-  require "securerandom"
+  class RecordThread < Thread
+    attr_reader :reservation,:stop_time
+  end
 
   belongs_to :channel
   belongs_to :program_series
@@ -26,6 +28,18 @@ class Reservation < ApplicationRecord
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
     rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
+
+    if (self.recording? or self.preparing?) and self.start_time_changed? then
+      rec.errors[:start_time] << "cannot change start_time when preparing and recording"
+    end
+
+    # if self.event_id then
+    #   if self.new_record? then
+    #     rec.errors[:event_id] << "invalid event_id" if self.guess_epg_programs.count < 1
+    #   else
+    #     rec.errors[:event_id] << "invalid event_id" if self.guess_epg_programs.count < 1 and self.event_id_changed?
+    #   end
+    # end
   end
 
   scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
@@ -33,6 +47,10 @@ class Reservation < ApplicationRecord
   scope :future_stop_time, -> (){
     where(["stop_time > ?",Time.now])
   }
+
+  def future_stop_time?
+    self.stop_time > Time.now
+  end
 
   scope :in_ctype, -> (ctype){
     joins(:channel).where(["#{Channel.table_name}.ctype = ?", ctype])
@@ -51,15 +69,21 @@ class Reservation < ApplicationRecord
     self.command_str ||= ""
     self.log ||= ""
     self.error_log ||= ""
+    if self.recording? then
+      self.command_pid = 0
+    end
   end
 
   def self.video_dir
     Rails.application.config.video_path
   end
 
+  scope :overlapped, ->(st,ed) {
+    where(["not (start_time > ? or stop_time < ?)", ed, st])
+  }
+
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
-    proxy = self.in_ctype(ctype)
-      .where(["not (start_time > ? or stop_time < ?)", ed, st])
+    proxy = self.in_ctype(ctype).overlapped(st,ed)
     if not exclude_ids.empty? then
       proxy = proxy.where.not(id: exclude_ids)
     end
@@ -126,6 +150,14 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def tuner_count
+    System.instance.tuner_count(self.channel.ctype)
+  end
+
+  def rest_tuner_count
+    System.instance.rest_tuner_count(self.channel.ctype)
+  end
+
   def will_recordable_if_new?
     self.will_use_tuner_count < self.tuner_count
   end
@@ -141,21 +173,7 @@ class Reservation < ApplicationRecord
     list.include? self.id
   end
 
-  @@reservations_cache = {
-    waiting:   {},
-    preparing: {},
-    recording: {},
-    success:   {},
-    failed:    {},
-    canceled:  {}
-  }.freeze # :: {Int => {Int => Reservation}}
-
-  def self.set_reservation_cache(rsv)
-    @@reservations_cache.keys.each do |k,m|
-      m[rsv.id] = nil
-    end
-    @@reservations_cache[rsv.state]
-  end
+  @@recordings = []
 
   scope :will_start_in, ->(sec = 10){
     now ||= Time.now
@@ -168,12 +186,12 @@ class Reservation < ApplicationRecord
     self.start_time > now && self.start_time < now + sec
   end
 
-  scope :now_in_time, ->() {
+  scope :now_in_recording_time, ->() {
     now = Time.now
     where("start_time <= ?", now ).where("stop_time >= ?", now)
   }
 
-  def now_in_time?
+  def now_in_recording_time?
     self.in_time? Time.now
   end
 
@@ -220,49 +238,156 @@ class Reservation < ApplicationRecord
     end
   end
 
-  def mkCmd
+  def self.mk_cmd_by_result(cmdres)
     cmdpath = nil
-    case (cmdres = Command.recording_cmd)
+    case cmdres
     when GetCommandPathResult::GetSuccess
       cmdpath = cmdres.path
-    when GetCommandPathResult::NotExecutable
-    when GetCommandPathResult::NotFound
+    # when GetCommandPathResult::NotExecutable
+    # when GetCommandPathResult::NotFound
     end
-    return nil if not cmdpath
-    "#{cmdpath} #{self.channel.number} #{self.duration} #{self.filepath}"
+    cmdpath
   end
 
-  #
+  def mk_recording_cmd
+    return nil if not (cmdpath = self.class.mk_cmd_by_result Command.recording_cmd)
+    fpath = self.filepath(true)
+    ["#{cmdpath} #{self.channel.number} #{self.duration_sec} " + fpath , fpath]
+  end
+
+  def self.log_splitter
+    "7186cc6a2ef74523c310"
+  end
+
+  def command_pid
+    pid = self.attributes["command_pid"]
+    (pid and pid < 1) ? nil : pid
+  end
+
+  # @return false => needless or fail to send term message
+  # @return true  => success to send term message
+  def stop_recording
+    self.reload
+    if not self.recording?
+      return false
+    end
+
+    if pid = self.command_pid then
+      return false
+    end
+
+    Reservation.transaction do
+      begin
+        self.state.cancel!
+        Process.kill Signal.list["TERM"], pid
+      rescue ArgumentError => e
+        # process of pid was not found because maybe the process was already terminated
+        return true
+      rescue => e
+        raise ActiveRecord::Rollback.new e.message
+      end
+    end
+    false
+  end
+
+  def extend_recording_if_need
+    return nil if not (cmdpath = self.class.mk_cmd_by_result Command.extend_recording_time_cmd)
+    if not self.recording?
+      return false
+    end
+
+    if pid = self.command_pid then
+      return false
+    end
+    "#{cmdpath} #{pid} #{sec}"
+  end
+
+  def self.preparing_margin
+    10.0
+  end
+
+  def self.start_margin
+    3.0
+  end
+
+  def self.end_margin
+    self.start_margin + 5.0
+  end
+
+  def in_preparing_time?
+    span = self.start_time - Time.now
+    0 <= span && span <= self.class.preparing_margin
+  end
+
   def start_recording
     if @recth then
       return @recth
     end
 
-    @recth = Thread.start(self) do |rsv|
-      begin
-        cmd = rsv.mkCmd
-        return nil if not cmd
-        pid = spawn(cmd, pgroup: Process.pid)
-        Open3.popen3(cmd) do |i,o,e,w|
-          pid = o.gets.to_i
-          "log"
-          "error_log"
-          rsv.update(command_pid: pid, command_str: cmd, state: "recording")
-          log = e.read
-        end
-        watch_thread = Process.detach(pid)
-        watch_thread.join
+    if not self.future_stop_time? then
+      return false
+    end
+
+    @recth = RecordThread.start(self) do |rsv|
+      th = Thread.current
+      th.reservation = rsv
+      th.stop_time = rsv.stop_time
+      while (sleepsec = (restsec = rsv.start_time - Time.now) - rsv.class.preparing_margin) > 0
+        sleep sleepsec
+
+        # reload data because there is a possibility that data was changed while this thread slept
+        rsv.reload
       end
+      rsv.state.preparing!
+
+      cmd,resfpath = rsv.mk_recording_cmd
+      if not cmd then
+        rsv.state.canceled!
+        next # finish
+      end
+      sleep(rsv.start_time - Time.now - rsv.class.start_margin)
+
+      reslog = ""
+      Open3.popen3(cmd) do |i,o,e,w|
+        pid = o.gets.to_i # first line of stdout is pid of recording process
+        rsv.update(command_pid: pid, command_str: cmd, state: "recording")
+        while line = e.gets # stderr is used for message
+          puts line
+          reslog += line
+        end
+      end
+
+      reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + resfpath + "\n" + reslog
+      rsv.reload
+
+      log = rsv.log
+      errlog = rsv.error_log
+      state = rsv.state
+
+      if rsv.state.canceled? then
+        errlog += reslog # canceled by other thread
+      else
+        if File.exists? resfpath then
+          state = "success"
+          log += reslog
+        else
+          state = "failed"
+          errlog += reslog
+        end
+      end
+      rsv.state = state
+      rsv.log = log
+      rsv.error_log = errlog
+      rsv.save!
     end
   end
 
   after_create_commit :after_create_commit_impl
 
   def after_create_commit_impl
-    if self.now_in_time? then
-      self.check_preparing
+    if self.now_in_recording_time? then
+      self.class.check_preparing
     else
-      puts "jiojo"
     end
   end
 
@@ -308,7 +433,7 @@ class Reservation < ApplicationRecord
 
   # sec
   def duration_sec
-    ( self.stop_time - self.start_time ).to_i
+    ( self.stop_time - self.start_time - self.class.end_margin).to_i
   end
 
   def duration_min
@@ -317,6 +442,23 @@ class Reservation < ApplicationRecord
 
   def duration
     self.duration_sec
+  end
+
+  def event_id
+    v = self.attributes["event_id"]
+    (v < 1) ? nil : v
+  end
+
+  def guess_epg_programs
+    day = 24*3600
+    proxy = EpgProgram
+      .where("start_time > ? and stop_time < ?", self.start_time - day, self.stop_time + day)
+      .where(channel_id: self.channel_id)
+      .order(desc: :start_time)
+    if self.event_id then
+      proxy = proxy.where(event_id: self.event_id)
+    end
+    proxy.to_a
   end
 
   # def recording_tried?

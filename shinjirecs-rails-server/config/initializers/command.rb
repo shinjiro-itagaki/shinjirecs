@@ -40,4 +40,8 @@ module Command
   def self.recording_cmd
     get_command_path "recording.sh"
   end
+
+  def self.extend_recording_time_cmd
+    get_command_path "extend_recording_time.sh"
+  end
 end

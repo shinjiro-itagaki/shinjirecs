@@ -65,6 +65,23 @@ class System < ApplicationRecord
     end
   end
 
+  def rest_tuner_count(ctype)
+    case ctype
+    when Channel.ctypes[:gr]
+      return self.rest_gr_tuner_count
+    when Channel.ctypes[:bs]
+      return self.rest_bs_tuner_count
+    end
+  end
+
+  def rest_bs_tuner_count
+    self.bs_tuner_count - self.busy_bs_tuner_count
+  end
+
+  def rest_gr_tuner_count
+    self.gr_tuner_count - self.busy_gr_tuner_count
+  end
+
   private
   def refresh_instance
     if @@instance and !(@@instance.object_id == self.object_id)
