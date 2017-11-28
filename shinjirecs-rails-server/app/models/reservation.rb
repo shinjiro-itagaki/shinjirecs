@@ -79,7 +79,8 @@ class Reservation < ApplicationRecord
   def self.tuner_count_changeable?(ctype,count)
     rsvs = self.will_record.in_ctype(ctype).to_a
     allat = rsvs.map{|x| [x.start_time, x.stop_time] }.flatten.sort.uniq
-    self.max_overlapped_count(allat,rsvs) <= count
+    max = self.max_overlapped_count(allat,rsvs)
+    max <= count
   end
 
   def filepath
