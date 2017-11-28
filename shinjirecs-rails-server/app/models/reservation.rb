@@ -83,8 +83,26 @@ class Reservation < ApplicationRecord
     max <= count
   end
 
-  def filepath
-    self.class.video_dir + "./" + self.filename
+  def filepath_fix
+    (self.class.video_dir + "./" + self.filename).to_s
+  end
+
+  def partial_filepath(n,base=nil)
+    (base || self.filepath_fix) + ".part#{n}"
+  end
+
+  def filepath(add_suffix_if_exists=false)
+    rtn = self.filepath_fix
+    if add_suffix_if_exists then
+      partnum = 0
+      newrtn = rtn + ""
+      while File.exists? newrtn
+        newrtn = self.partial_filepath(partnum,rtn)
+        partnum += 1
+      end
+      rtn = newrtn
+    end
+    rtn
   end
 
   def file
@@ -202,11 +220,47 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def mkCmd
+    cmdpath = nil
+    case (cmdres = Command.recording_cmd)
+    when GetCommandPathResult::GetSuccess
+      cmdpath = cmdres.path
+    when GetCommandPathResult::NotExecutable
+    when GetCommandPathResult::NotFound
+    end
+    return nil if not cmdpath
+    "#{cmdpath} #{self.channel.number} #{self.duration} #{self.filepath}"
+  end
+
+  #
+  def start_recording
+    if @recth then
+      return @recth
+    end
+
+    @recth = Thread.start(self) do |rsv|
+      begin
+        cmd = rsv.mkCmd
+        return nil if not cmd
+        pid = spawn(cmd, pgroup: Process.pid)
+        Open3.popen3(cmd) do |i,o,e,w|
+          pid = o.gets.to_i
+          "log"
+          "error_log"
+          rsv.update(command_pid: pid, command_str: cmd, state: "recording")
+          log = e.read
+        end
+        watch_thread = Process.detach(pid)
+        watch_thread.join
+      end
+    end
+  end
+
   after_create_commit :after_create_commit_impl
 
   def after_create_commit_impl
     if self.now_in_time? then
-      puts "now in time"
+      self.check_preparing
     else
       puts "jiojo"
     end

@@ -35,4 +35,9 @@ module Command
   def self.epgdump_cmd
     get_command_path "epgdump.sh"
   end
+
+  # GetCommandPathResult
+  def self.recording_cmd
+    get_command_path "recording.sh"
+  end
 end
