@@ -24,18 +24,22 @@ class Reservation < ApplicationRecord
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
-    rec.errors[:stop_time] << "this stop_time will not record" if not Time.now < rec.stop_time
+    rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
   end
 
   scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
 
-  scope :not_finished, -> (){
+  scope :future_stop_time, -> (){
     where(["stop_time > ?",Time.now])
   }
 
   scope :in_ctype, -> (ctype){
     joins(:channel).where(["#{Channel.table_name}.ctype = ?", ctype])
+  }
+
+  scope :will_record, -> {
+    self.will_use_tuner.future_stop_time
   }
 
   before_create do
@@ -62,24 +66,20 @@ class Reservation < ApplicationRecord
     proxy
   end
 
+  def self.max_overlapped_count(at_list, rsvlist, max=0)
+    if at_list.empty? or rsvlist.empty? then
+      return max
+    end
+    at = at_list.shift
+    new_rsvlist = rsvlist.delete_if{|r|r.over?(at)}
+    new_max = [max, rsvlist.select{|r| r.in_time?(at) }.map(&:id).uniq.count].max
+    self.max_overlapped_count(at_list, new_rsvlist, new_max)
+  end
+
   def self.tuner_count_changeable?(ctype,count)
-    rsvs = self.will_use_tuner
-      .not_finished
-      .in_ctype(ctype)
-      .to_a
-
-    impl = -> (at_list, rsvlist, max) {
-      if at_list.empty? or rsvlist.empty? then
-        return max
-      end
-      at = at_list.shift
-      new_rsvlist = rsvlist.delete_if{|r|r.over?(at)}
-      new_max = Math.max(max, rsvlist.select{|r| r.in_time?(at) }.map(&:id).uniq.count)
-      impl at_list, new_rsvlist, new_max
-    }
-
+    rsvs = self.will_record.in_ctype(ctype).to_a
     allat = rsvs.map{|x| [x.start_time, x.stop_time] }.flatten.sort.uniq
-    impl.call(allat,rsvs,0) <= count
+    self.max_overlapped_count(allat,rsvs) <= count
   end
 
   def filepath
@@ -163,7 +163,7 @@ class Reservation < ApplicationRecord
   end
 
   def over?(at)
-    at <= self.stop_time
+    at >= self.stop_time
   end
 
   def now_over?(at)
