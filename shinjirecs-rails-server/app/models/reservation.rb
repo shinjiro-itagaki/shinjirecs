@@ -242,61 +242,13 @@ class Reservation < ApplicationRecord
     self.duration_sec
   end
 
-#  def select_label(lmap)
-#    lmap[self.status] || lmap[self.status.to_s] || "j"
-#  end
-
-  # def duration(from=self.starttime)
-  #   ( self.stoptime - from ).to_i
-  # end
-
-  # def to_next_week
-  #   self + 7
-  # end
-
-  # def next_reservation
-  #   return nil if not self.has_next?
-  #   r = self + @next.to_i
-  #   7.times do
-  #     ex = self.excluded?(r.starttime.wday)
-  #     ( ex ) ? r += 1 : break
-  #   end if @next.to_i == 1
-  #   r.counter += 1
-  #   r.load_from_program
-  #   r
-  # end
-
-  # def excluded?(wday)
-  #   return false if not @weekdays
-  #   ( @weekdays & ( 0x01 << wday )) == 0
-  # end
-
   # def recording_tried?
   #   self.success? || self.failed?
-  # end
-
-  # def self.update_from_program
-  #   self.find_all.each do |rsv|
-  #     rsv.save if rsv.load_from_program
-  #   end
-  # end
-
-  # def load_from_program
-  #   p = self.find_program
-  #   return false if not p
-  #   @title = p.title
-  #   @desc  = p.desc
-  #   true
   # end
 
   # def videofilesize(div=2**20)
   #   File.size?(self.videofilepath).to_i / div
   # end
-
-  # def enable!() @disable = false  end
-  # def disable!() @disable = true  end
-  # def disable?() ( @disable ) ? true : false  end
-  # def enable?() !self.disable? end
 
   # def symlink_filename
   #   fname = self.videofilename
@@ -324,25 +276,6 @@ class Reservation < ApplicationRecord
   # def delete_symlink
   #   path = self.symlink_filepath
   #   (File.exist?(path)) ? FileUtils.rm_f(path) : true
-  # end
-
-  # def archive_success?() @archive_result == @@success end
-  # def archive_failed?()  @archive_result == @@failed  end
-  # def archive_waiting?() @archive_result == @@waiting end
-
-  # def archive_success!() @archive_result = @@success end
-  # def archive_failed!()
-  #   self.not_archive!
-  #   @archive_result = @@failed
-  # end
-  # def archive_waiting!() @archive_result = @@waiting  end
-
-  # def archivefilesize(div=2**20)
-  #   File.size?(self.archivefilepath).to_i / div
-  # end
-
-  # def archive_tmp_filesize(div=2**20)
-  #   (self.now_archive_creating?) ? File.size?(@tmpfilepath).to_i / div : 0
   # end
 
 #  def everyweek?() @next.to_i == 7 end
