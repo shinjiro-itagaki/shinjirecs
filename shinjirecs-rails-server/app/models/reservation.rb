@@ -29,8 +29,14 @@ class Reservation < ApplicationRecord
     rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
 
-    if (self.recording? or self.preparing?) and self.start_time_changed? then
-      rec.errors[:start_time] << "cannot change start_time when preparing and recording"
+    if self.will_record_state? and (self.start_time_changed? or self.stop_time_changed?) then
+      ctype = self.channel.ctype
+      exclude_ids=[self.id]
+      if self.class.select_overlapped_proxy(self.start_time,self.stop_time,ctype,exclude_ids).count > self.class.select_overlapped_proxy(self.start_time_was,self.stop_time_was,ctype,exclude_ids).count
+        msg = "this cannot change %s because this change will occur new unrecordable reservation."
+        rec.errors[:start_time] << msg % ["start_time"] if self.start_time_changed?
+        rec.errors[:stop_time]  << msg % ["stop_time"]  if self.stop_time_changed?
+      end
     end
 
     # if self.event_id then
@@ -135,11 +141,15 @@ class Reservation < ApplicationRecord
 
   def select_overlapped_proxy(exclude_self=true)
     ex_ids = (self.persisted? and exclude_self) ? [self.id] : []
-    self.class.select_overlapped_proxy(self.stop_time, self.start_time, self.channel.ctype, ex_ids)
+    self.class.select_overlapped_proxy(self.start_time, self.stop_time, self.channel.ctype, ex_ids)
   end
 
   def will_use_tuner_count()
     self.select_overlapped_proxy.will_use_tuner.count
+  end
+
+  def will_record_state?
+    self.waiting? or self.recording? or self.preparing?
   end
 
   def will_recordable?
@@ -289,16 +299,28 @@ class Reservation < ApplicationRecord
     false
   end
 
-  def extend_recording(sec)
-    cmdpath = self.class.mk_cmd_by_result Command.extend_recording_time_cmd
-    return nil if not cmdpath
-    if not self.recording?
+  def extend_recording_state_waiting(sec)
+    if not self.waiting? then
+      puts "state is not waiting"
+      return false
+    end
+    self.stop_time += sec
+    self.save!
+  end
+
+  def extend_recording_state_recording(sec)
+    if not self.recording? then
+      puts "state is not recording"
       return false
     end
 
-    if pid = self.command_pid then
+    if not (pid = self.command_pid) then
+      puts "process '#{pid}' command not found"
       return false
     end
+
+    cmdpath = self.class.mk_cmd_by_result Command.extend_recording_time_cmd
+    return false if not cmdpath
 
     begin
       self.class.transaction do
@@ -316,9 +338,21 @@ class Reservation < ApplicationRecord
           raise ActiveRecord::Rollback.new("error: '#{cmd}'")
         end
       end
-    rescue
+    rescue => e
+      puts e.message
       return false
     end
+  end
+
+  def extend_recording(sec)
+    if self.waiting?
+      return extend_recording_state_waiting(sec)
+    end
+
+    if self.recording?
+      return extend_recording_state_recording(sec)
+    end
+
     true
   end
 
