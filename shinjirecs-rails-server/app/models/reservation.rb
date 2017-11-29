@@ -166,9 +166,8 @@ class Reservation < ApplicationRecord
     tuner_count = self.tuner_count
     list = self.select_overlapped_proxy(exclude_self = false)
       .will_use_tuner
-      .order(start_time: :asc)
+      .order(start_time: :asc, id: :asc)
       .limit(tuner_count)
-      .where(id: self.id)
       .pluck(:id)
     list.include? self.id
   end
