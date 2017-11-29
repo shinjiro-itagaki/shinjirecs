@@ -170,12 +170,24 @@ class EpgProgram < ApplicationRecord
     ( self.duration_sec / 60 ).to_i
   end
 
+  def find_or_create_program_series
+    ProgramSeries.find_or_create_by_epg_program(self)
+  end
+
   def new_reservation
     if self.stop_time <= Time.now
       return nil
     end
 
-    series = ProgramSeries.find_or_create_by_epg_program(self)
-    series.new_next_reservation(self)
+    series = self.find_or_create_program_series
+
+    Reservation.new(start_time: self.start_time,
+                    stop_time: self.stop_time,
+                    channel_id: self.channel_id,
+                    program_series_id: series.id,
+                    title: self.title,
+                    desc: self.desc,
+                    event_id: self.event_id,
+                    counter: series.next_episode_number)
   end
 end

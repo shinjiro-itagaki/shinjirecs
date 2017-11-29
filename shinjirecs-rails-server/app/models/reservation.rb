@@ -241,10 +241,10 @@ class Reservation < ApplicationRecord
   def self.mk_cmd_by_result(cmdres)
     cmdpath = nil
     case cmdres
-    when GetCommandPathResult::GetSuccess
+    when Command::GetCommandPathResult::GetSuccess
       cmdpath = cmdres.path
-    # when GetCommandPathResult::NotExecutable
-    # when GetCommandPathResult::NotFound
+    # when Command::GetCommandPathResult::NotExecutable
+    # when Command::GetCommandPathResult::NotFound
     end
     cmdpath
   end
@@ -290,8 +290,9 @@ class Reservation < ApplicationRecord
     false
   end
 
-  def extend_recording_if_need
-    return nil if not (cmdpath = self.class.mk_cmd_by_result Command.extend_recording_time_cmd)
+  def extend_recording(sec)
+    cmdpath = self.class.mk_cmd_by_result Command.extend_recording_time_cmd
+    return nil if not cmdpath
     if not self.recording?
       return false
     end
@@ -299,7 +300,27 @@ class Reservation < ApplicationRecord
     if pid = self.command_pid then
       return false
     end
-    "#{cmdpath} #{pid} #{sec}"
+
+    begin
+      self.class.transaction do
+        self.stop_time += sec
+        self.save!
+        cmd = "#{cmdpath} #{pid} #{sec}" #hoge
+        res = nil
+        Open3.popen3(cmd) do |i,o,e,w|
+          o.read
+          res = w
+        end
+
+        if res and res.success? then
+        else
+          raise ActiveRecord::Rollback.new("error: '#{cmd}'")
+        end
+      end
+    rescue
+      return false
+    end
+    true
   end
 
   def self.preparing_margin
@@ -391,9 +412,9 @@ class Reservation < ApplicationRecord
     end
   end
 
-  after_save :after_save_impl
+  after_commit :after_commit_impl
 
-  def after_save_impl
+  def after_commit_impl
     st = self.class.states
     case @state
     when st[:waiting] then
@@ -454,7 +475,7 @@ class Reservation < ApplicationRecord
     proxy = EpgProgram
       .where("start_time > ? and stop_time < ?", self.start_time - day, self.stop_time + day)
       .where(channel_id: self.channel_id)
-      .order(desc: :start_time)
+      .order(start_time: :desc)
     if self.event_id then
       proxy = proxy.where(event_id: self.event_id)
     end

@@ -60,10 +60,10 @@ class ProgramSeries < ApplicationRecord
     ins || self.create(channel_id: chid, start_at: itime, weekdays: wday_mask, begin_on: st, duration: ep.duration_sec, name: ep.title, desc: "")
   end
 
-  def new_next_reservation(epg=nil)
+  def new_next_reservation
     st = self.next_datetime true
     return nil if not st
-    epg ||= EpgProgram.where(channel_id: self.channel_id, start_time: st).first
+    epg = EpgProgram.where(channel_id: self.channel_id, start_time: st).first
     ed = st + self.duration
     title = epg ? epg.title : self.label
     desc  = epg ? epg.desc  : self.desc
