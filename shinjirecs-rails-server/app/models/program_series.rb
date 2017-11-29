@@ -35,7 +35,7 @@ class ProgramSeries < ApplicationRecord
     if Weekdays.include?(now.wday, self.weekdays) and (now < t)
       t
     else
-      Weekdays.nearest_date(t,self.weekdays)
+      Weekdays.nearest_date(t,self.weekdays).to_time.beginning_of_day + self.start_at
     end
   end
 
@@ -64,13 +64,13 @@ class ProgramSeries < ApplicationRecord
     st = self.next_datetime true
     return nil if not st
     epg ||= EpgProgram.where(channel_id: self.channel_id, start_time: st).first
-
+    ed = st + self.duration
     title = epg ? epg.title : self.label
     desc  = epg ? epg.desc  : self.desc
     event_id = epg ? epg.event_id : -1
 
     Reservation.new(start_time: st,
-                    stop_time: st + self.duration,
+                    stop_time: ed,
                     channel_id: self.channel_id,
                     program_series_id: self.id,
                     title: title,
