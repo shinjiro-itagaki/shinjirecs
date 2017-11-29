@@ -66,6 +66,10 @@ class Reservation < ApplicationRecord
     self.will_use_tuner.future_stop_time
   }
 
+  scope :staging, -> {
+    self.will_use_tuner
+  }
+
   before_create do
     self.filename = SecureRandom.hex(10) + ".ts"
   end
@@ -182,23 +186,32 @@ class Reservation < ApplicationRecord
     list.include? self.id
   end
 
-  @@recordings = []
-
-  scope :will_start_in, ->(sec = 10){
-    now ||= Time.now
-    # where{ start_time.gt(now) & start_time.lt(now+sec) }
-    where("start_time > ?", now).where("start_time < ?", now+sec)
-  }
-
-  def will_start_in?(sec)
-    now = Time.now
-    self.start_time > now && self.start_time < now + sec
-  end
-
   scope :now_in_recording_time, ->() {
     now = Time.now
     where("start_time <= ?", now ).where("stop_time >= ?", now)
   }
+
+  scope :staging, ->() {
+    now = Time.now
+    will_use_tuner.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
+  }
+
+  def self.random(chn=1000)
+    chs = Channel.enables.to_a
+    chs = Channel.all.to_a if chs.count < 1
+
+    channel = nil
+    channel = chs[chn % chs.count] if chs.count > 0
+
+    return nil if not channel
+
+    st = Time.now - 30
+    ed = Time.now + 1800
+    duration_sec = ed - st
+    wday_mask = Weekdays.to_mask(st.wday)
+    ps = ProgramSeries.find_or_create_by(channel.id, st, duration_sec,  wday_mask)
+    self.new(program_series_id: ps.id, start_time: st, stop_time: ed, channel_id: channel.id, title: ps.label, desc: ps.desc)
+  end
 
   def now_in_recording_time?
     self.in_time? Time.now
@@ -216,35 +229,17 @@ class Reservation < ApplicationRecord
     self.over?(Time.now)
   end
 
-  def self.run
-    self.count
-    1
-  end
-
   @@do_check_preparing_now = false
 
   def self.check_preparing
     if @@do_check_preparing_now then
       return false
-    else
-      @@do_check_preparing_now = true
-
-      # 1. state is waiting and process id is none or the written is not found
-      # 2. state is recording but process id is none or the written is not found
-      # 3. state is 
-      proxy = self.waiting.will_start_in(30)
-      rsvs = proxy.all.to_a
-      # @@staging_reservations[rsv.id] ||= rsv
-      rsvs.each do |rsv|
-        rsv.state.preparing!
-      end
-
-      self.transaction do
-        rsvs.each do |rsv|
-          rsv.save!
-        end
-      end
     end
+    @@do_check_preparing_now = true
+    now = Time.now
+    self.will_use_tuner.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
+  ensure
+    @@do_check_preparing_now = false
   end
 
   def self.mk_cmd_by_result(cmdres)

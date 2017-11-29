@@ -43,21 +43,23 @@ class ProgramSeries < ApplicationRecord
     self.label_format || self.name
   end
 
-  def self.find_or_create_by_epg_program(ep)
-    chid = ep.channel_id
-    st = ep.start_time
-    hh = st.hour
-    mm = st.min
-    ss = st.sec
-    wday = st.wday
-    wday_mask = Weekdays.to_mask(wday)
-    itime = hh * 3600 + mm * 60 + ss
-    ins = self.where(channel_id: chid, start_at: itime)
-      .where(["weekdays & ? > 0", wday_mask])
-      .where(["begin_on <= ?", st]) # dont forget !!
+  def self.find_by(channel_id, st, duration_sec,  wday_mask, name="", desc="")
+    itime = st.get_itime
+    self.where(channel_id: channel_id)
+      .where("start_at <= ? and ? <= start_at + duration", itime, itime)
+      .where("weekdays & ? > 0", wday_mask)
+      .where("begin_on <= ?", st) # dont forget !!
       .order(begin_on: :desc)
       .first
-    ins || self.create(channel_id: chid, start_at: itime, weekdays: wday_mask, begin_on: st, duration: ep.duration_sec, name: ep.title, desc: "")
+  end
+
+  def self.find_or_create_by(channel_id, start_time, duration_sec,  wday_mask, name="", desc="")
+    itime = start_time.get_itime
+    self.find_by(channel_id, start_time, duration_sec,  wday_mask, name, desc) || self.create(channel_id: channel_id, start_at: itime, weekdays: wday_mask, begin_on: start_time, duration: duration_sec, name: name || "", desc: desc || "")
+  end
+
+  def self.find_or_create_by_epg_program(ep)
+    self.find_or_create_by(ep.channel_id, ep.start_time, ep.duration_sec, Weekdays.to_mask(ep.start_time.wday), ep.title, ep.desc)
   end
 
   def new_next_reservation
