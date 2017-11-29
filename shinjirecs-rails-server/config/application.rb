@@ -30,5 +30,6 @@ module ShinjirecsRailsServer
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
     config.video_path = config.paths.path + "public/videos"
+    config.time_zone = 'Tokyo'
   end
 end
