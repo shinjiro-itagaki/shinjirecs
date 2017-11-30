@@ -13,6 +13,8 @@
 # t.text       "errror_log"          , null: false
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
+  require "open3"
+  
   class RecordThread < Thread
     attr_accessor :reservation,:stop_time
   end
@@ -283,25 +285,26 @@ class Reservation < ApplicationRecord
 
   # @return :: [result : Bool, cmdpath : String, message : String]
   def self.mk_cmd_by_result(cmdres)
-    cmdpath = cmdres.path
+    cmdfpath = cmdres.path
     res = true
     msg = ""
     case cmdres
     when Command::GetCommandPathResult::GetSuccess
     when Command::GetCommandPathResult::NotExecutable
       res = false
-      msg = "'#{cmdpath}' is not executable"
+      msg = "'#{cmdfpath}' is not executable"
     when Command::GetCommandPathResult::NotFound
       res = false
-      msg = "'#{cmdpath}' is not found"
+      msg = "'#{cmdfpath}' is not found"
     end
-    [res, cmdpath, msg]
+    [res, cmdfpath, msg]
   end
 
-  # @return :: [result : Bool, cmdpath : String, message : String]
+  # @return :: [result : Bool, cmd : String, cmdfpath : String, message : String]
   def mk_recording_cmd
-    res,cmdpath,msg = self.class.mk_cmd_by_result Command.recording_cmd
-    [res, "#{cmdpath} #{self.channel.number} #{self.duration_sec} ", msg]
+    res,cmdfpath,msg = self.class.mk_cmd_by_result Command.recording_cmd
+    outputfpath = self.filepath(true)
+    [res, "#{cmdfpath} #{self.channel.number} #{self.duration_sec} #{outputfpath}", cmdfpath, outputfpath, msg]
   end
 
   def self.log_splitter
@@ -327,7 +330,7 @@ class Reservation < ApplicationRecord
 
     Reservation.transaction do
       begin
-        self.state.cancel!
+        self.cancel!
         Process.kill Signal.list["TERM"], pid
       rescue ArgumentError => e
         # process of pid was not found because maybe the process was already terminated
@@ -439,13 +442,14 @@ class Reservation < ApplicationRecord
     rsv.preparing!
     puts "set preparing ..."
 
-    res,cmd,msg = rsv.mk_recording_cmd
+    res,cmd,cmdfpath,outputfpath,msg = rsv.mk_recording_cmd
     if not res then
       rsv.canceled!
       puts "[ERROR] #{msg}"
       return false
     end
-    sleep(rsv.start_time - Time.now - rsv.class.start_margin)
+    sleepsec = rsv.start_time - Time.now - rsv.class.start_margin
+    sleep(sleepsec) if sleepsec > 0.0
 
     reslog = ""
     puts "start recording ..."
@@ -459,22 +463,22 @@ class Reservation < ApplicationRecord
       end
     end
 
-    reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + resfpath + "\n" + reslog
+    reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + outputfpath + "\n" + reslog
     rsv.reload
 
     log = rsv.log
     errlog = rsv.error_log
     state = rsv.state
 
-    if rsv.state.canceled? then
-      errlog += reslog # canceled by other thread
+    if rsv.canceled? then
+      errlog += "\n" + reslog # canceled by other thread
     else
-      if File.exists? resfpath then
+      if File.exists? outputfpath then
         state = "success"
-        log += reslog
+        log += "\n" + reslog
       else
         state = "failed"
-        errlog += reslog
+        errlog += "\n" + reslog
       end
     end
     rsv.state = state
