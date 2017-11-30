@@ -66,10 +66,6 @@ class Reservation < ApplicationRecord
     self.will_use_tuner.future_stop_time
   }
 
-  scope :staging, -> {
-    self.will_record
-  }
-
   before_create do
     self.filename = SecureRandom.hex(10) + ".ts"
   end
@@ -229,20 +225,26 @@ class Reservation < ApplicationRecord
     self.over?(Time.now)
   end
 
-  @@do_check_preparing_now = false
+  @@do_check_staging_now = false
   @@staging = {}
 
-  def self.check_preparing
-    if @@do_check_preparing_now then
+  def self.check_staging
+    if @@do_check_staging_now then
       return false
     end
-    @@do_check_preparing_now = true
-    @@staging = self.staging.to_a.inject(Hash.new){|e,h| h[e.id]=e;h}.merge(@@staging)
+    @@do_check_staging_now = true
+    @@staging = self.staging.to_a.inject(Hash.new){|h,e| h[e.id]=e;h}.merge(@@staging)
     @@staging.values.sort{|a,b|
       (a.start_time <=> b.start_time).nonzero? || (a.id <=> b.id)
-    }
+    }.each do |r|
+      if r.will_record_state? then
+        r.start_recording_thread_if_not_started
+      else
+        @@staging.delete(r.id)
+      end
+    end
   ensure
-    @@do_check_preparing_now = false
+    @@do_check_staging_now = false
   end
 
   def self.mk_cmd_by_result(cmdres)
@@ -371,12 +373,14 @@ class Reservation < ApplicationRecord
     0 <= span && span <= self.class.preparing_margin
   end
 
-  def start_recording
+  def start_recording_thread_if_not_started
     if not self.future_stop_time? then
       return false
     end
 
     @recth ||= RecordThread.start(self) do |rsv|
+      puts "start new reservation thread"
+      puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"
       th = Thread.current
       th.reservation = rsv
       th.stop_time = rsv.stop_time
@@ -438,7 +442,7 @@ class Reservation < ApplicationRecord
 
   def after_create_commit_impl
     if self.now_in_recording_time? then
-      self.class.check_preparing
+      self.class.check_staging
     else
     end
   end
@@ -459,7 +463,7 @@ class Reservation < ApplicationRecord
     when st[:canceled] then
       self.after_save_state_canceled
     end
-    self.class.check_preparing
+    self.class.check_staging
   end
 
   def after_save_state_waiting
