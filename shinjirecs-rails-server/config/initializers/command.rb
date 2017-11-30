@@ -48,4 +48,8 @@ module Command
   def self.extend_recording_time_cmd
     get_command_path "extend_recording_time.sh"
   end
+
+  def self.detect_tuners_count_cmd
+    get_command_path "detect_tuners_count.sh"
+  end
 end
