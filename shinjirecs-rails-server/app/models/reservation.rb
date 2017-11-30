@@ -416,6 +416,18 @@ class Reservation < ApplicationRecord
     0 <= span && span <= self.class.preparing_margin
   end
 
+  # not implemented
+  def concat_partials
+  end
+
+  # not implemented
+  def self.retry_failures
+  end
+
+  # not implemented
+  def retry_if_failed
+  end
+
   def self.run_record_thread_impl(rsv)
     puts "start new reservation thread"
     puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"

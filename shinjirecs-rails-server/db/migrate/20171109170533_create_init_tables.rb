@@ -171,10 +171,12 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.text       "log"                 , null: false
       t.text       "error_log"           , null: false
       t.string     "filename"            , null: false , default: ""
+      t.integer    "retried_count"       , null: false , default: 0
       t.timestamps                         null: false
     end
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_state CHECK( state IN (-2,-1,0,1,2,3));"
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_stop  CHECK( stop_time > start_time);"
     execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_counter CHECK( counter >= 0);"
+    execute "ALTER TABLE reservations ADD CONSTRAINT chk_reservation_counter CHECK( retried_count >= 0);"
   end
 end

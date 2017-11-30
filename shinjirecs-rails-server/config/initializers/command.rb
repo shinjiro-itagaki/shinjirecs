@@ -38,7 +38,11 @@ module Command
 
   # GetCommandPathResult
   def self.recording_cmd
-    get_command_path "recording.sh"
+    if Rails.env.test? then
+      get_command_path "recording-for-test-mode.sh"
+    else
+      get_command_path "recording.sh"
+    end
   end
 
   def self.extend_recording_time_cmd
