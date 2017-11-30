@@ -38,10 +38,10 @@ module Command
 
   # GetCommandPathResult
   def self.recording_cmd
-    if Rails.env.test? then
-      get_command_path "recording-for-test-mode.sh"
-    else
+    if Rails.env.production? or Rails.env.staging? then
       get_command_path "recording.sh"
+    else
+      get_command_path "recording-for-test-mode.sh"
     end
   end
 

@@ -33,3 +33,8 @@ production:
   <<: *default
 #  database: db/production.sqlite3
   database: shinjirecs_production
+
+staging:
+  <<: *default
+#  database: db/development.sqlite3
+  database: shinjirecs_development
