@@ -21,7 +21,27 @@ class System < ApplicationRecord
   end
 
   def self.reload_instance() @@instance = self.where_instance.first  end
-  def self.instance() @@instance || self.reload_instance end
+
+  @@observer_thread = nil
+
+  def self.instance()
+    @@observer_thread ||= Thread.new do
+      while true
+        begin
+          if ActiveRecord::Base.connection.pool.connected? then
+            Reservation.check_staging
+            sleep 1
+          else
+            sleep 3
+          end
+        rescue => e
+          puts e.message
+        end
+      end
+    end
+
+    @@instance || self.reload_instance
+  end
   def self.ins() self.instance end
 
   def self.setup_finished?

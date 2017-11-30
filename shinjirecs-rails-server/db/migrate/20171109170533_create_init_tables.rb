@@ -122,8 +122,8 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer    "start_at"             , null: false
       t.integer    "duration"             , null: false
       t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
-      t.date       "begin_on"             , null: false
-      t.date       "expire_date"          , null: false
+      t.datetime   "begin_on"             , null: false
+      t.datetime   "expire_date"          , null: false
       t.boolean    "expire_date_enable"   , null: false , default: false
       t.string     "name"                 , null: false
       t.boolean    "repeat"               , null: false , default: false
@@ -144,9 +144,9 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
     execute "ALTER TABLE program_series ADD CONSTRAINT chk_program_series_duration CHECK( duration > 0 )"
 
     create_table :program_series_dayoffs, unsigned: true do |t|
-      t.integer "program_series_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
-      t.date    "on"                , null: false
-      t.index   ["program_series_id","on"], unique: true
+      t.integer  "program_series_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
+      t.datetime "on"                , null: false
+      t.index    ["program_series_id","on"], unique: true
     end
 
     create_table :reservations, unsigned: true do |t|

@@ -117,8 +117,8 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "start_at", null: false
     t.integer "duration", null: false
     t.integer "channel_id", null: false
-    t.date "begin_on", null: false
-    t.date "expire_date", null: false
+    t.datetime "begin_on", null: false
+    t.datetime "expire_date", null: false
     t.boolean "expire_date_enable", default: false, null: false
     t.string "name", null: false
     t.boolean "repeat", default: false, null: false
@@ -135,7 +135,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
 
   create_table "program_series_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "program_series_id", null: false
-    t.date "on", null: false
+    t.datetime "on", null: false
     t.index ["program_series_id", "on"], name: "index_program_series_dayoffs_on_program_series_id_and_on", unique: true
   end
 
