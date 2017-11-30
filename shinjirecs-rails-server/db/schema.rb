@@ -154,6 +154,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.text "log", null: false
     t.text "error_log", null: false
     t.string "filename", default: "", null: false
+    t.integer "retried_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
