@@ -281,21 +281,27 @@ class Reservation < ApplicationRecord
     @@do_check_staging_now = false
   end
 
+  # @return :: [result : Bool, cmdpath : String, message : String]
   def self.mk_cmd_by_result(cmdres)
-    cmdpath = nil
+    cmdpath = cmdres.path
+    res = true
+    msg = ""
     case cmdres
     when Command::GetCommandPathResult::GetSuccess
-      cmdpath = cmdres.path
-    # when Command::GetCommandPathResult::NotExecutable
-    # when Command::GetCommandPathResult::NotFound
+    when Command::GetCommandPathResult::NotExecutable
+      res = false
+      msg = "'#{cmdpath}' is not executable"
+    when Command::GetCommandPathResult::NotFound
+      res = false
+      msg = "'#{cmdpath}' is not found"
     end
-    cmdpath
+    [res, cmdpath, msg]
   end
 
+  # @return :: [result : Bool, cmdpath : String, message : String]
   def mk_recording_cmd
-    return nil if not (cmdpath = self.class.mk_cmd_by_result Command.recording_cmd)
-    fpath = self.filepath(true)
-    ["#{cmdpath} #{self.channel.number} #{self.duration_sec} " + fpath , fpath]
+    res,cmdpath,msg = self.class.mk_cmd_by_result Command.recording_cmd
+    [res, "#{cmdpath} #{self.channel.number} #{self.duration_sec} ", msg]
   end
 
   def self.log_splitter
@@ -433,10 +439,10 @@ class Reservation < ApplicationRecord
     rsv.preparing!
     puts "set preparing ..."
 
-    cmd,resfpath = rsv.mk_recording_cmd
-    if not cmd then
+    res,cmd,msg = rsv.mk_recording_cmd
+    if not res then
       rsv.canceled!
-      puts "[ERROR] recording command '#{resfpath}' not found or not executable ..."
+      puts "[ERROR] #{msg}"
       return false
     end
     sleep(rsv.start_time - Time.now - rsv.class.start_margin)
