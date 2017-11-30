@@ -221,6 +221,7 @@ class Reservation < ApplicationRecord
 
   def self.random(chn=1000)
     chs = Channel.enables.to_a
+    chs = Channel.exist.to_a if chs.count < 1
     chs = Channel.all.to_a if chs.count < 1
 
     channel = nil
