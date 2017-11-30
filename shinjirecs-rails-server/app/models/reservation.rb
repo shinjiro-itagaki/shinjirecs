@@ -433,8 +433,8 @@ class Reservation < ApplicationRecord
   end
 
   def record_thread_finished!
-    @record_thread_finished=true
     @recth = nil
+    @record_thread_finished=true
   end
 
   def record_thread_finished?
@@ -451,7 +451,7 @@ class Reservation < ApplicationRecord
       ActiveRecord::Base.connection_pool.with_connection do
         self.class.run_record_thread_impl(rsv)
       end
-      rsv.record_thread_finished
+      rsv.record_thread_finished!
     end
   end
 
