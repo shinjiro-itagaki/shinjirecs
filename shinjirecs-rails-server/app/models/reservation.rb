@@ -219,7 +219,8 @@ class Reservation < ApplicationRecord
     will_use_tuner.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
   }
 
-  def self.random(chn=1000)
+  def self.random
+    chn = (Time.now.to_i / 60).to_i
     chs = Channel.enables.to_a
     chs = Channel.exist.to_a if chs.count < 1
     chs = Channel.all.to_a if chs.count < 1
