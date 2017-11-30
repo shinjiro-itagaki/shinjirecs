@@ -11,6 +11,7 @@ end
 begin
   File.unlink testfile if File.exists?(testfile)
   File.write(testfile,"")
+  File.unlink testfile
 rescue
   throw "#{path} is not writable."
 end
