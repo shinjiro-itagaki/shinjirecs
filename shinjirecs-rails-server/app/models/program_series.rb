@@ -43,7 +43,7 @@ class ProgramSeries < ApplicationRecord
     self.label_format || self.name
   end
 
-  def self.find_by(channel_id, st, duration_sec,  wday_mask, name="", desc="")
+  def self.find_by(channel_id, st, duration_sec,  wday_mask)
     itime = st.get_itime
     self.where(channel_id: channel_id)
       .where("start_at <= ? and ? <= start_at + duration", itime, itime)
@@ -55,7 +55,7 @@ class ProgramSeries < ApplicationRecord
 
   def self.find_or_create_by(channel_id, start_time, duration_sec,  wday_mask, name="", desc="")
     itime = start_time.get_itime
-    self.find_by(channel_id, start_time, duration_sec,  wday_mask, name, desc) || self.create(channel_id: channel_id, start_at: itime, weekdays: wday_mask, begin_on: start_time, duration: duration_sec, name: name || "", desc: desc || "")
+    self.find_by(channel_id, start_time, duration_sec,  wday_mask) || self.create(channel_id: channel_id, start_at: itime, weekdays: wday_mask, begin_on: start_time, duration: duration_sec, name: name || "", desc: desc || "")
   end
 
   def self.find_or_create_by_epg_program(ep)

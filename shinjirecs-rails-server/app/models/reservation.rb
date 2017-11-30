@@ -67,7 +67,7 @@ class Reservation < ApplicationRecord
   }
 
   scope :staging, -> {
-    self.will_use_tuner
+    self.will_record
   }
 
   before_create do
@@ -230,14 +230,17 @@ class Reservation < ApplicationRecord
   end
 
   @@do_check_preparing_now = false
+  @@staging = {}
 
   def self.check_preparing
     if @@do_check_preparing_now then
       return false
     end
     @@do_check_preparing_now = true
-    now = Time.now
-    self.will_use_tuner.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
+    @@staging = self.staging.to_a.inject(Hash.new){|e,h| h[e.id]=e;h}.merge(@@staging)
+    @@staging.values.sort{|a,b|
+      (a.start_time <=> b.start_time).nonzero? || (a.id <=> b.id)
+    }
   ensure
     @@do_check_preparing_now = false
   end
@@ -369,15 +372,11 @@ class Reservation < ApplicationRecord
   end
 
   def start_recording
-    if @recth then
-      return @recth
-    end
-
     if not self.future_stop_time? then
       return false
     end
 
-    @recth = RecordThread.start(self) do |rsv|
+    @recth ||= RecordThread.start(self) do |rsv|
       th = Thread.current
       th.reservation = rsv
       th.stop_time = rsv.stop_time
@@ -388,17 +387,21 @@ class Reservation < ApplicationRecord
         rsv.reload
       end
       rsv.state.preparing!
+      puts "set preparing ..."
 
       cmd,resfpath = rsv.mk_recording_cmd
       if not cmd then
         rsv.state.canceled!
+        puts "[ERROR] recording command not found ..."
         next # finish
       end
       sleep(rsv.start_time - Time.now - rsv.class.start_margin)
 
       reslog = ""
+      puts "start recording ..."
       Open3.popen3(cmd) do |i,o,e,w|
         pid = o.gets.to_i # first line of stdout is pid of recording process
+        puts "pid=#{pid}"
         rsv.update(command_pid: pid, command_str: cmd, state: "recording")
         while line = e.gets # stderr is used for message
           puts line
