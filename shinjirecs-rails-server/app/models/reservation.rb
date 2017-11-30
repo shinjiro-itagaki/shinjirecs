@@ -14,7 +14,7 @@
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
   class RecordThread < Thread
-    attr_reader :reservation,:stop_time
+    attr_accessor :reservation,:stop_time
   end
 
   belongs_to :channel
@@ -29,15 +29,28 @@ class Reservation < ApplicationRecord
     rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
 
-    if self.will_record_state? and (self.start_time_changed? or self.stop_time_changed?) then
-      ctype = self.channel.ctype
-      exclude_ids=[self.id]
-      if self.class.select_overlapped_proxy(self.start_time,self.stop_time,ctype,exclude_ids).count > self.class.select_overlapped_proxy(self.start_time_was,self.stop_time_was,ctype,exclude_ids).count
-        msg = "this cannot change %s because this change will occur new unrecordable reservation."
-        rec.errors[:start_time] << msg % ["start_time"] if self.start_time_changed?
-        rec.errors[:stop_time]  << msg % ["stop_time"]  if self.stop_time_changed?
+    # check whether other reservation will be impossible to record, or not
+    if self.will_record_state?
+      if self.new_record? then
+        msg = "invalid insert , because other reservation will be imppossible to record by this insert."
+        # if (overlapped_count = self.class.select_overlapped_proxy(self.start_time, self.stop_time, ctype).count) <
+      else
+        if self.start_time_changed? or self.stop_time_changed? then
+          ctype = self.channel.ctype
+          exclude_ids=[self.id]
+          old_overlapped_count = self.class.select_overlapped_proxy(self.start_time_was,self.stop_time_was,ctype,exclude_ids).count
+          new_overlapped_count = self.class.select_overlapped_proxy(self.start_time,    self.stop_time,    ctype,exclude_ids).count
+          puts "old_overlapped_count = #{old_overlapped_count}"
+          puts "new_overlapped_count = #{new_overlapped_count}"
+          if new_overlapped_count > old_overlapped_count
+            msg = "invalid change %s , because other reservation will be imppossible to record by this change."
+            rec.errors[:start_time] << msg % ["start_time"] if self.start_time_changed?
+            rec.errors[:stop_time]  << msg % ["stop_time"]  if self.stop_time_changed?
+          end
+        end
       end
     end
+    
 
     # if self.event_id then
     #   if self.new_record? then
@@ -85,7 +98,7 @@ class Reservation < ApplicationRecord
   end
 
   scope :overlapped, ->(st,ed) {
-    where(["not (start_time > ? or stop_time < ?)", ed, st])
+    where(["not (start_time > ? or stop_time < ?)", ed, st]).will_use_tuner
   }
 
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
@@ -144,8 +157,12 @@ class Reservation < ApplicationRecord
     self.class.select_overlapped_proxy(self.start_time, self.stop_time, self.channel.ctype, ex_ids)
   end
 
+  def overlapped
+    self.select_overlapped_proxy.all
+  end
+
   def will_use_tuner_count()
-    self.select_overlapped_proxy.will_use_tuner.count
+    self.select_overlapped_proxy.count
   end
 
   def will_record_state?
@@ -169,17 +186,25 @@ class Reservation < ApplicationRecord
   end
 
   def will_recordable_if_new?
-    self.will_use_tuner_count < self.tuner_count
+    self.select_overlapped_proxy(exclude_self = true)
+      .to_a.append(self)
+      .sort_by{|a,b| self.class.sort_by(a,b) }
+      .map(&:__id__)
+      .take(self.tuner_count)
+      .include?(self.__id__)
   end
 
   def will_recordable_if_persisted?
-    tuner_count = self.tuner_count
-    list = self.select_overlapped_proxy(exclude_self = false)
-      .will_use_tuner
-      .order(start_time: :asc, id: :asc)
-      .limit(tuner_count)
-      .pluck(:id)
-    list.include? self.id
+    if self.will_record_state? then
+      self.select_overlapped_proxy(exclude_self = false)
+        .limit(self.tuner_count)
+        .to_a
+        .sort_by{|a,b| self.class.sort(a,b)}
+        .map(&:id)
+        .include?(self.id)
+    else
+      self.will_recordable_if_new?
+    end
   end
 
   scope :now_in_recording_time, ->() {
@@ -201,7 +226,7 @@ class Reservation < ApplicationRecord
 
     return nil if not channel
 
-    st = Time.now - 30
+    st = Time.now + 5
     ed = Time.now + 1800
     duration_sec = ed - st
     wday_mask = Weekdays.to_mask(st.wday)
@@ -225,6 +250,14 @@ class Reservation < ApplicationRecord
     self.over?(Time.now)
   end
 
+  def self.sort_by(a,b)
+    if a.kind_of? self and b.kind_of? self
+      (a.start_time <=> b.start_time).nonzero? || (a.id <=> b.id)
+    else
+      nil
+    end
+  end
+
   @@do_check_staging_now = false
   @@staging = {}
 
@@ -233,9 +266,10 @@ class Reservation < ApplicationRecord
       return false
     end
     @@do_check_staging_now = true
+
     @@staging = self.staging.to_a.inject(Hash.new){|h,e| h[e.id]=e;h}.merge(@@staging)
     @@staging.values.sort{|a,b|
-      (a.start_time <=> b.start_time).nonzero? || (a.id <=> b.id)
+      self.sort_by(a,b)
     }.each do |r|
       if r.will_record_state? then
         r.start_recording_thread_if_not_started
@@ -377,21 +411,32 @@ class Reservation < ApplicationRecord
     puts "start new reservation thread"
     puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"
     th = Thread.current
-    th.reservation = rsv
-    th.stop_time = rsv.stop_time
-    while (sleepsec = (restsec = rsv.start_time - Time.now) - rsv.class.preparing_margin) > 0
-      sleep sleepsec
-
-      # reload data because there is a possibility that data was changed while this thread slept
-      rsv.reload
+    if th.kind_of? RecordThread
+      th.reservation = rsv
+      th.stop_time = rsv.stop_time
     end
-    rsv.state.preparing!
+
+    puts "before sleep"
+    while true
+      sleepsec = (wakeup_time = rsv.start_time - rsv.class.preparing_margin) - Time.now
+      if sleepsec > 0 then
+        puts "this reservation thread wakeup after #{sleepsec} (at #{wakeup_time})"
+        sleep sleepsec
+
+        # reload data because there is a possibility that data was changed while this thread slept
+        rsv.reload
+      else
+        puts "no need to sleep"
+        break
+      end
+    end
+    rsv.preparing!
     puts "set preparing ..."
 
     cmd,resfpath = rsv.mk_recording_cmd
     if not cmd then
-      rsv.state.canceled!
-      puts "[ERROR] recording command not found ..."
+      rsv.canceled!
+      puts "[ERROR] recording command '#{resfpath}' not found or not executable ..."
       return false
     end
     sleep(rsv.start_time - Time.now - rsv.class.start_margin)
@@ -448,10 +493,14 @@ class Reservation < ApplicationRecord
 
     @recth = nil if self.record_thread_finished?
     @recth ||= RecordThread.start(self) do |rsv|
-      ActiveRecord::Base.connection_pool.with_connection do
-        self.class.run_record_thread_impl(rsv)
+      begin
+        ActiveRecord::Base.connection_pool.with_connection do
+          self.class.run_record_thread_impl(rsv)
+        end
+        rsv.record_thread_finished!
+      rescue => e
+        puts e
       end
-      rsv.record_thread_finished!
     end
   end
 
