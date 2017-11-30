@@ -114,4 +114,45 @@ class ApplicationController < ActionController::API
       render_data nil, system: ins, setup: false
     end
   end
+
+  class WorkingThread < Thread
+    attr_accessor :please_stop
+    def status
+      (self.please_stop) ? nil : super
+    end
+  end
+
+  @@threads = {}
+
+  def self.stop_thread(namespace)
+    if (th = @@threads[namespace]) then
+      th.please_stop = true
+      if th.alive? then
+        th.exit
+        @@threads.delete namespace
+      end
+      return :stop
+    else
+      return :not_found
+    end
+  end
+
+  def self.run_thread(namespace,*args,&block)
+    if (th = @@threads[namespace]) then
+      if th.alive? then
+        puts "now working"
+        return :working
+      else
+        @@threads.delete(namespace)
+      end
+    end
+
+    @@threads[namespace] ||= WorkingThread.start do
+      ActiveRecord::Base.connection_pool.with_connection do
+        block.call *args
+      end
+    end
+    :start
+  end
+
 end

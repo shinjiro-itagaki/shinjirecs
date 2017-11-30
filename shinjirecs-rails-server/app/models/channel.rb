@@ -102,16 +102,14 @@ class Channel < ApplicationRecord
     5
   end
 
-  def self.scan(gr=nil,bs=nil,timeout=nil,&block)
+  def self.scan(gr=nil,bs=nil,timeout=nil)
     gr ||= self.default_all_gr_numbers
     bs ||= self.default_all_bs_numbers
     timeout_sec = timeout.to_s.to_i
     timeout_sec = self.scan_timeout if timeout_sec < 1
-
     area_id = System.instance.area_id
     cmdfile = Command.scan_channel_cmd
     cmdfilepath = cmdfile.path
-
     case cmdfile
     when Command::GetCommandPathResult::GetSuccess
     when Command::GetCommandPathResult::NotFound
@@ -123,9 +121,7 @@ class Channel < ApplicationRecord
       render_data nil
       return
     end
-    if block and block.call then
-      return true
-    end
+    return true if not Thread.current.status
     {"gr" => gr,"bs" => bs}.each do |type,charr|
       charr = charr.map {|ch|
         c = Channel.find_or_initialize_by(number: ch, area_id: area_id, ctype: type)
@@ -146,22 +142,18 @@ class Channel < ApplicationRecord
         res = false
         scaned = true
         # io = IO.popen(cmd, "r")
-        if block and block.call then
-          return true
-        end
+        return true if not Thread.current.status
         pid = spawn(cmd, pgroup: Process.pid)  # io.pid
         puts "command pid=#{pid}"
         watch_thread = Process.detach(pid)
         term = false
-        if block and block.call then
+        if not Thread.current.status then
           term = true
           Process.kill Signal.list["TERM"], pid
         end
         watch_thread.join
 
-        if block and block.call then
-          return true
-        end
+        return true if not Thread.current.status
 
         if term then
           return true

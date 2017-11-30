@@ -52,12 +52,16 @@ class EpgProgram < ApplicationRecord
       # because it is impossible to identify the channel
       next if not ch
       ch.exist = true
+      return if not Thread.current.status
       ch.save!
+
+      return if not Thread.current.status
 
       # skip if chnumber is decleared and detected channel is not match it
       next if chnumber and ch.number != chnumber
       (d["programs"] || []).each do |p|
         self.find_or_import_program_by_json(ch,p)
+        return if not Thread.current.status
       end
     end
   end
@@ -88,6 +92,7 @@ class EpgProgram < ApplicationRecord
     mcats = []
 
     (p["category"] || []).each do |cat|
+      return if not Thread.current.status
       if l_cat = cat["large"] then
         lcat = EpgProgramCategory.find_or_create_by!(label_ja: l_cat["ja_JP"], label_en: l_cat["en"])
         if not cids.include?(lcat.id) then
@@ -120,6 +125,7 @@ class EpgProgram < ApplicationRecord
       ids = prec.audio_types.pluck(:id)
       prec.audio_types << [audios].flatten.map{|audio| AudioType.find_or_create_by(typ: audio["type"], langcode: audio["langcode"], extdesc: audio["extdesc"]) }.uniq(&:id).delete_if{|x| ids.include? x.id }
     end
+    return if not Thread.current.status
 
     prec.save!
     prec
@@ -189,5 +195,40 @@ class EpgProgram < ApplicationRecord
                     desc: self.desc,
                     event_id: self.event_id,
                     counter: series.next_episode_number)
+  end
+
+  def self.epgdump(channel_numbers_or_filepaths=nil, sec=20)
+    channel_numbers_or_filepaths ||= Channel.default_all_numbers
+
+    cmdfile = Command.epgdump_cmd
+    cmdfilepath = cmdfile.path
+    case cmdfile
+    when Command::GetCommandPathResult::GetSuccess
+    when Command::GetCommandPathResult::NotFound
+      puts cmdfilepath + " is not found."
+      return
+    when Command::GetCommandPathResult::NotExecutable
+      puts cmdfilepath + " is not executable."
+      return
+    end
+
+    res = {}
+    channel_numbers_or_filepaths.map do |chnum_or_fpath|
+      #  in(ch) out sec
+      chnumber = File.exists?(File.expand_path(chnum_or_fpath.to_s)) ? nil : chnum_or_fpath
+      cmd = "#{cmdfilepath} #{chnum_or_fpath} - #{sec}"
+      puts cmd
+      begin
+        json = JSON.parse(`#{cmd}`)
+      rescue
+        # json parse error
+        puts e
+      end
+      puts json.length
+      return if not Thread.current.status
+      self.import_epg(json,chnumber)
+      res[chnum_or_fpath]=json
+    end
+    res
   end
 end

@@ -4,7 +4,7 @@ require 'tempfile'
 
 class ChannelsController < ApplicationController
   class ScanThread < Thread
-    attr_accessor :cancel
+    attr_accessor :stop
   end
 
   set_model Channel
@@ -12,32 +12,17 @@ class ChannelsController < ApplicationController
     [:number,:area_id,:ctype,:display_name,:display_name_locked,:order]
   end
 
-  @@scan_thread=nil
-
   def scan
-    if @@scan_thread then
-      if params["cancel"] then
-        @@scan_thread.cancel = true
-        @@scan_thread.exit
-        @@scan_thread = nil
-        render_data canceled: true
-      else
-        render_data working: true
+    namespace = "channels_controller#scan"
+    res = nil
+    if params["stop"] then
+      res = self.class.stop_thread namespace
+    else
+      res = self.class.run_thread(namespace, params[:gr], params[:bs], params[:timeout]) do |gr,bs,timeout|
+        Channel.scan params[:gr], params[:bs], params[:timeout]
       end
     end
-
-    @@scan_thread ||= ScanThread.start do
-      ActiveRecord::Base.connection_pool.with_connection do
-        Channel.scan params[:gr], params[:bs], params[:timeout] do
-          if (th = Thread.current).kind_of? ScanThread then
-            th.canceled
-          else
-            false
-          end
-        end
-      end
-    end
-    render_data start: true
+    render_data result: res
   end
 
   protected
