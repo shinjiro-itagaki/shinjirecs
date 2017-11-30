@@ -373,78 +373,91 @@ class Reservation < ApplicationRecord
     0 <= span && span <= self.class.preparing_margin
   end
 
+  def self.run_record_thread_impl(rsv)
+    puts "start new reservation thread"
+    puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"
+    th = Thread.current
+    th.reservation = rsv
+    th.stop_time = rsv.stop_time
+    while (sleepsec = (restsec = rsv.start_time - Time.now) - rsv.class.preparing_margin) > 0
+      sleep sleepsec
+
+      # reload data because there is a possibility that data was changed while this thread slept
+      rsv.reload
+    end
+    rsv.state.preparing!
+    puts "set preparing ..."
+
+    cmd,resfpath = rsv.mk_recording_cmd
+    if not cmd then
+      rsv.state.canceled!
+      puts "[ERROR] recording command not found ..."
+      return false
+    end
+    sleep(rsv.start_time - Time.now - rsv.class.start_margin)
+
+    reslog = ""
+    puts "start recording ..."
+    Open3.popen3(cmd) do |i,o,e,w|
+      pid = o.gets.to_i # first line of stdout is pid of recording process
+      puts "pid=#{pid}"
+      rsv.update(command_pid: pid, command_str: cmd, state: "recording")
+      while line = e.gets # stderr is used for message
+        puts line
+        reslog += line
+      end
+    end
+
+    reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + resfpath + "\n" + reslog
+    rsv.reload
+
+    log = rsv.log
+    errlog = rsv.error_log
+    state = rsv.state
+
+    if rsv.state.canceled? then
+      errlog += reslog # canceled by other thread
+    else
+      if File.exists? resfpath then
+        state = "success"
+        log += reslog
+      else
+        state = "failed"
+        errlog += reslog
+      end
+    end
+    rsv.state = state
+    rsv.log = log
+    rsv.error_log = errlog
+    rsv.save!
+  end
+
+  def record_thread_finished!
+    @record_thread_finished=true
+    @recth = nil
+  end
+
+  def record_thread_finished?
+    @record_thread_finished
+  end
+
   def start_recording_thread_if_not_started
     if not self.future_stop_time? then
       return false
     end
 
+    @recth = nil if self.record_thread_finished?
     @recth ||= RecordThread.start(self) do |rsv|
-      puts "start new reservation thread"
-      puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"
-      th = Thread.current
-      th.reservation = rsv
-      th.stop_time = rsv.stop_time
-      while (sleepsec = (restsec = rsv.start_time - Time.now) - rsv.class.preparing_margin) > 0
-        sleep sleepsec
-
-        # reload data because there is a possibility that data was changed while this thread slept
-        rsv.reload
+      ActiveRecord::Base.connection_pool.with_connection do
+        self.class.run_record_thread_impl(rsv)
       end
-      rsv.state.preparing!
-      puts "set preparing ..."
-
-      cmd,resfpath = rsv.mk_recording_cmd
-      if not cmd then
-        rsv.state.canceled!
-        puts "[ERROR] recording command not found ..."
-        next # finish
-      end
-      sleep(rsv.start_time - Time.now - rsv.class.start_margin)
-
-      reslog = ""
-      puts "start recording ..."
-      Open3.popen3(cmd) do |i,o,e,w|
-        pid = o.gets.to_i # first line of stdout is pid of recording process
-        puts "pid=#{pid}"
-        rsv.update(command_pid: pid, command_str: cmd, state: "recording")
-        while line = e.gets # stderr is used for message
-          puts line
-          reslog += line
-        end
-      end
-
-      reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + resfpath + "\n" + reslog
-      rsv.reload
-
-      log = rsv.log
-      errlog = rsv.error_log
-      state = rsv.state
-
-      if rsv.state.canceled? then
-        errlog += reslog # canceled by other thread
-      else
-        if File.exists? resfpath then
-          state = "success"
-          log += reslog
-        else
-          state = "failed"
-          errlog += reslog
-        end
-      end
-      rsv.state = state
-      rsv.log = log
-      rsv.error_log = errlog
-      rsv.save!
+      rsv.record_thread_finished
     end
   end
 
   after_create_commit :after_create_commit_impl
 
   def after_create_commit_impl
-    if self.now_in_recording_time? then
-      self.class.check_staging
-    else
-    end
   end
 
   after_commit :after_commit_impl
@@ -463,7 +476,6 @@ class Reservation < ApplicationRecord
     when st[:canceled] then
       self.after_save_state_canceled
     end
-    self.class.check_staging
   end
 
   def after_save_state_waiting
