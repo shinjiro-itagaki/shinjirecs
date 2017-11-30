@@ -188,7 +188,7 @@ class Reservation < ApplicationRecord
   def will_recordable_if_new?
     self.select_overlapped_proxy(exclude_self = true)
       .to_a.append(self)
-      .sort_by{|a,b| self.class.sort_by(a,b) }
+      .sort_by{|a,b| self.class.compare(a,b) }
       .map(&:__id__)
       .take(self.tuner_count)
       .include?(self.__id__)
@@ -199,7 +199,7 @@ class Reservation < ApplicationRecord
       self.select_overlapped_proxy(exclude_self = false)
         .limit(self.tuner_count)
         .to_a
-        .sort_by{|a,b| self.class.sort(a,b)}
+        .sort_by{|a,b| self.class.compare(a,b) }
         .map(&:id)
         .include?(self.id)
     else
@@ -250,7 +250,7 @@ class Reservation < ApplicationRecord
     self.over?(Time.now)
   end
 
-  def self.sort_by(a,b)
+  def self.compare(a,b)
     if a.kind_of? self and b.kind_of? self
       (a.start_time <=> b.start_time).nonzero? || (a.id <=> b.id)
     else
@@ -268,8 +268,8 @@ class Reservation < ApplicationRecord
     @@do_check_staging_now = true
 
     @@staging = self.staging.to_a.inject(Hash.new){|h,e| h[e.id]=e;h}.merge(@@staging)
-    @@staging.values.sort{|a,b|
-      self.sort_by(a,b)
+    @@staging.values.sort_by{|a,b|
+      self.compare(a,b)
     }.each do |r|
       if r.will_record_state? then
         r.start_recording_thread_if_not_started
