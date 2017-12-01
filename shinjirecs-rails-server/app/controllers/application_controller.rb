@@ -10,6 +10,29 @@ class ApplicationController < ActionController::API
     def parent_fkey() @parent_fkey; end
   end
 
+  @@observer_thread = nil
+  before_action do
+    p = Thread.current
+    @@observer_thread ||= Thread.start p do |pth|
+      while true
+        if not pth.status or pth.status == "aborting" then
+          break
+        end
+
+        begin
+          if ActiveRecord::Base.connection.pool.connected? then
+            Reservation.check_staging
+            sleep 1
+          else
+            sleep 3
+          end
+        rescue => e
+          puts e.message
+        end
+      end
+    end
+  end
+
   before_action :set_models
   before_action :set_parent_record
   before_action :set_record, only: [:show, :update, :destroy]

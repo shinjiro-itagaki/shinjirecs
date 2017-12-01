@@ -22,29 +22,7 @@ class System < ApplicationRecord
 
   def self.reload_instance() @@instance = self.where_instance.first  end
 
-  @@observer_thread = nil
-
   def self.instance()
-    p = Thread.current
-    @@observer_thread ||= Thread.start p do |pth|
-      while true
-        if not pth.status or pth.status == "aborting" then
-          break
-        end
-
-        begin
-          if ActiveRecord::Base.connection.pool.connected? then
-            Reservation.check_staging
-            sleep 1
-          else
-            sleep 3
-          end
-        rescue => e
-          puts e.message
-        end
-      end
-    end
-
     @@instance || self.reload_instance
   end
   def self.ins() self.instance end
