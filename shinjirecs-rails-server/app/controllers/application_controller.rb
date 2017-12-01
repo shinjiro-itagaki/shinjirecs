@@ -12,8 +12,11 @@ class ApplicationController < ActionController::API
 
   @@observer_thread = nil
   before_action do
-    p = Thread.current
-    @@observer_thread ||= Thread.start p do |pth|
+    if @@observer_thread and not @@observer_thread.status then
+      @@observer_thread = nil
+    end
+
+    @@observer_thread ||= Thread.start(Thread.current) do |pth|
       while true
         if not pth.status or pth.status == "aborting" then
           break
