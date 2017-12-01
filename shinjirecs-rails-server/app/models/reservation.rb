@@ -16,7 +16,7 @@ class Reservation < ApplicationRecord
   require "open3"
   
   class RecordThread < Thread
-    attr_accessor :reservation,:stop_time
+    attr_accessor :reservation,:stop_time,:pid
   end
 
   belongs_to :channel
@@ -326,7 +326,7 @@ class Reservation < ApplicationRecord
       return false
     end
 
-    if pid = self.command_pid then
+    if not (pid = self.command_pid) then
       return false
     end
 
@@ -430,7 +430,23 @@ class Reservation < ApplicationRecord
   def retry_if_failed
   end
 
+  scope :be_consistent, ->() {
+    where(state: "recording").where("start_time < ?", Time.now - 60)
+  }
+
+  def correct_if_be_consistent
+    if self.recording? and self.stop_time < (Time.now - 60) then
+      return self.stop_recording
+    end
+    false
+  end
+
   def self.run_record_thread_impl(rsv)
+    if not rsv.will_record_state? then
+      puts "this is not recordable state"
+      return false
+    end
+
     puts "start new reservation thread"
     puts "start_time=#{rsv.start_time}, stop_time=#{rsv.stop_time}, ch=#{rsv.channel.number}"
     th = Thread.current
@@ -453,8 +469,11 @@ class Reservation < ApplicationRecord
         break
       end
     end
-    rsv.preparing!
-    puts "set preparing ..."
+
+    if rsv.waiting?
+      rsv.preparing!
+      puts "set preparing ..."
+    end
 
     res,cmd,cmdfpath,outputfpath,msg = rsv.mk_recording_cmd
     if not res then
@@ -600,6 +619,10 @@ class Reservation < ApplicationRecord
       proxy = proxy.where(event_id: self.event_id)
     end
     proxy.to_a
+  end
+
+  def as_json(options = nil)
+    {filepath: self.filepath, start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s }.merge(super(options))
   end
 
   # def recording_tried?
