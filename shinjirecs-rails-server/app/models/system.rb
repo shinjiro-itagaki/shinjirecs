@@ -25,8 +25,13 @@ class System < ApplicationRecord
   @@observer_thread = nil
 
   def self.instance()
-    @@observer_thread ||= Thread.new do
+    p = Thread.current
+    @@observer_thread ||= Thread.start p do |pth|
       while true
+        if not pth.status or pth.status == "aborting" then
+          break
+        end
+
         begin
           if ActiveRecord::Base.connection.pool.connected? then
             Reservation.check_staging
