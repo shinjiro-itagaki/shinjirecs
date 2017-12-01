@@ -5,7 +5,8 @@ class System < ApplicationRecord
 
   @@instance = nil
 
-  after_save :refresh_instance
+  after_commit :modify_db_connection_pools_count_if_need
+  after_commit :refresh_instance
 
   min = 0
   minimum :gr_tuner_count, min
@@ -23,7 +24,9 @@ class System < ApplicationRecord
   def self.reload_instance() @@instance = self.where_instance.first  end
 
   def self.instance()
-    @@instance || self.reload_instance
+    res = @@instance || self.reload_instance
+    res.modify_db_connection_pools_count_if_need
+    res
   end
   def self.ins() self.instance end
 
@@ -83,6 +86,19 @@ class System < ApplicationRecord
 
   def rest_gr_tuner_count
     self.gr_tuner_count - self.busy_gr_tuner_count
+  end
+
+  @@orig_conf = ActiveRecord::Base.configurations[Rails.env]
+
+  def modify_db_connection_pools_count_if_need
+    all_tuners_count = Channel.ctypes.values.map{|type|
+      self.tuner_count(type)
+    }.sum
+    conf = @@orig_conf.dup
+    newsize = (conf["pool"] += all_tuners_count)
+    if ActiveRecord::Base.connection.pool.size != newsize then
+      ActiveRecord::Base.establish_connection(conf)
+    end
   end
 
   private

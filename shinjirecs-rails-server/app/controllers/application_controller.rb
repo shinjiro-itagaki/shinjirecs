@@ -10,30 +10,8 @@ class ApplicationController < ActionController::API
     def parent_fkey() @parent_fkey; end
   end
 
-  @@observer_thread = nil
   before_action do
-    if @@observer_thread and not @@observer_thread.status then
-      @@observer_thread = nil
-    end
-
-    @@observer_thread ||= Thread.start(Thread.current) do |pth|
-      while true
-        if not pth.status or pth.status == "aborting" then
-          break
-        end
-
-        begin
-          if ActiveRecord::Base.connection.pool.connected? then
-            Reservation.check_staging
-            sleep 1
-          else
-            sleep 3
-          end
-        rescue => e
-          puts e.message
-        end
-      end
-    end
+    Rails.application.wakeup_or_start_observer_thread
   end
 
   before_action :set_models
@@ -174,9 +152,7 @@ class ApplicationController < ActionController::API
     end
 
     @@threads[namespace] ||= WorkingThread.start do
-      ActiveRecord::Base.connection_pool.with_connection do
-        block.call *args
-      end
+      block.call *args
     end
     :start
   end

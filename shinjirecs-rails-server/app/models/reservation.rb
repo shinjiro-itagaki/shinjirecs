@@ -14,7 +14,7 @@
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
   require "open3"
-  
+
   class RecordThread < Thread
     attr_accessor :reservation,:stop_time,:pid
   end
@@ -52,7 +52,6 @@ class Reservation < ApplicationRecord
         end
       end
     end
-    
 
     # if self.event_id then
     #   if self.new_record? then
@@ -63,7 +62,7 @@ class Reservation < ApplicationRecord
     # end
   end
 
-  scope :will_use_tuner, ->(){ where(state: [:waiting, :preparing, :recording]) }
+  scope :use_tuner_state, ->(){ where(state: [:waiting, :preparing, :recording]) }
 
   scope :future_stop_time, -> (){
     where(["stop_time > ?",Time.now])
@@ -78,7 +77,7 @@ class Reservation < ApplicationRecord
   }
 
   scope :will_record, -> {
-    self.will_use_tuner.future_stop_time
+    self.use_tuner_state.future_stop_time
   }
 
   before_create do
@@ -100,7 +99,7 @@ class Reservation < ApplicationRecord
   end
 
   scope :overlapped, ->(st,ed) {
-    where(["not (start_time > ? or stop_time < ?)", ed, st]).will_use_tuner
+    where(["not (start_time > ? or stop_time < ?)", ed, st]).use_tuner_state
   }
 
   def self.select_overlapped_proxy(st,ed,ctype,exclude_ids=[])
@@ -130,6 +129,10 @@ class Reservation < ApplicationRecord
 
   def filepath_fix
     (self.class.video_dir + "./" + self.filename).to_s
+  end
+
+  def file_access_path
+    (self.class.video_access_dir + "./" + self.filename).to_s
   end
 
   def partial_filepath(n,base=nil)
@@ -216,7 +219,7 @@ class Reservation < ApplicationRecord
 
   scope :staging, ->() {
     now = Time.now
-    will_use_tuner.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
+    use_tuner_state.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
   }
 
   def self.random
@@ -231,7 +234,7 @@ class Reservation < ApplicationRecord
     return nil if not channel
 
     st = Time.now + 5
-    ed = Time.now + 1800
+    ed = Time.now + 35
     duration_sec = ed - st
     wday_mask = Weekdays.to_mask(st.wday)
     ps = ProgramSeries.find_or_create_by(channel.id, st, duration_sec,  wday_mask)
@@ -282,7 +285,21 @@ class Reservation < ApplicationRecord
       end
     end
   ensure
+    rtn = self.next_check_staging_time
     @@do_check_staging_now = false
+    return rtn # dont forget 'return'
+  end
+
+  def self.staging_keys
+    @@staging.keys
+  end
+
+  def self.stagings
+    @@staging.values
+  end
+
+  def self.next_check_staging_time
+    self.will_record.where.not(id: self.staging_keys).pluck(:start_time).min
   end
 
   # @return :: [result : Bool, cmdpath : String, message : String]
@@ -463,6 +480,7 @@ class Reservation < ApplicationRecord
         sleep sleepsec
 
         # reload data because there is a possibility that data was changed while this thread slept
+        
         rsv.reload
       else
         puts "no need to sleep"
@@ -495,12 +513,12 @@ class Reservation < ApplicationRecord
         reslog += line
       end
     end
-
+    puts "finish recording ..."
     reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + outputfpath + "\n" + reslog
     rsv.reload
 
-    log = rsv.log
-    errlog = rsv.error_log
+    log = rsv.log.to_s
+    errlog = rsv.error_log.to_s
     state = rsv.state
 
     if rsv.canceled? then
@@ -521,6 +539,9 @@ class Reservation < ApplicationRecord
   end
 
   def record_thread_finished!
+    if @recth then
+      @recth.exit
+    end
     @recth = nil
     @record_thread_finished=true
   end
@@ -539,8 +560,8 @@ class Reservation < ApplicationRecord
       begin
         ActiveRecord::Base.connection_pool.with_connection do
           self.class.run_record_thread_impl(rsv)
+          rsv.record_thread_finished!
         end
-        rsv.record_thread_finished!
       rescue => e
         puts e
       end
@@ -555,6 +576,7 @@ class Reservation < ApplicationRecord
   after_commit :after_commit_impl
 
   def after_commit_impl
+    Rails.application.wakeup_or_start_observer_thread
     st = self.class.states
     case @state
     when st[:waiting] then
