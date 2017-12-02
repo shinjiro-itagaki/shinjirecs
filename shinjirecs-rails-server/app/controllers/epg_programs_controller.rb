@@ -1,6 +1,7 @@
 require 'json'
 class EpgProgramsController < ApplicationController
   set_model EpgProgram
+  before_action :set_record, only: [:new_reservation]
 
   class EpgProgramDompThread < Thread
     attr_accessor :stop
@@ -19,6 +20,15 @@ class EpgProgramsController < ApplicationController
       end
     end
     render_data result: res
+  end
+
+  def new_reservation
+    @record = @record.new_reservation
+    if @record.save
+      render_data @record, status: :created, location: @record
+    else
+      render_data @record.errors, status: :unprocessable_entity
+    end
   end
 
   def self.permitted_params
