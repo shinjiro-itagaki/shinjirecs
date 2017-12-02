@@ -31,17 +31,16 @@ class EpgProgramsController < ApplicationController
     end
   end
 
+  def search
+    render_data EpgProgram.search(params)
+  end
+
   def self.permitted_params
     [:start_time, :stop_time, :channel_id, :title, :desc, :epg_program_category_id]
   end
 
-  def self.default_search_start_time
-    (Time.now - 2.weeks.seconds).beginning_of_day
-  end
-
   protected
   def index_records_proxy
-    st = Time.at(params["start_time"] || self.class.default_search_start_time.to_i)
-    @proxy.order(start_time: :desc).where("start_time > ?", st)
+    @proxy.default
   end
 end

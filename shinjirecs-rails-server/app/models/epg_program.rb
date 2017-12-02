@@ -231,4 +231,22 @@ class EpgProgram < ApplicationRecord
     end
     res
   end
+
+  def self.default_search_start_time
+    (Time.now - 2.weeks.seconds).beginning_of_day
+  end
+
+  scope :default, ->(start_time=nil) {
+    st = Time.at(start_time || EpgProgram.default_search_start_time.to_i)
+    where("start_time > ?", st).order(start_time: :desc)
+  }
+
+  def self.search(params)
+    proxy = nil
+    if not (w = params["word"].to_s.strip).empty? then
+      proxy = where("\`title\` LIKE ?","%#{w}%").or(self.where("\`desc\` LIKE ? ","%#{w}%"))
+    end
+    proxy = (proxy || self).default(params["start_time"])
+    proxy.all
+  end
 end
