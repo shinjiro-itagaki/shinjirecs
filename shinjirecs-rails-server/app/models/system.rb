@@ -89,6 +89,7 @@ class System < ApplicationRecord
   end
 
   @@orig_conf = ActiveRecord::Base.configurations[Rails.env]
+  @@mutex = Mutex.new
 
   def modify_db_connection_pools_count_if_need
     all_tuners_count = Channel.ctypes.values.map{|type|
@@ -98,6 +99,44 @@ class System < ApplicationRecord
     newsize = (conf["pool"] += all_tuners_count)
     if ActiveRecord::Base.connection.pool.size != newsize then
       ActiveRecord::Base.establish_connection(conf)
+    end
+  end
+
+  def self.use_tuner(ctype,&block)
+    rest = 0
+    col = nil
+    count = nil
+    ins = System.instance
+
+    begin
+      @@mutex.lock
+      case ctype
+      when Channel.ctypes[:bs] then
+        rest = rest_bs_tuner_count
+        col = "busy_bs_tuner_count"
+      when Channel.ctypes[:gr] then
+        rest = rest_gr_tuner_count
+        col = "busy_gr_tuner_count"
+      end
+      if rest > 0 then
+        ins.update(col => ins.attributes[col] + 1)
+      end
+    ensure
+      @@mutex.unlock
+    end
+
+    if rest > 0 then
+      ins.update(col => ins.attributes[col] + 1)
+      begin
+        block.call
+        ins.reload
+      rescue => e
+        throw e
+      ensure
+        ins.update(col => ins.attributes[col] - 1)
+      end
+    else
+      false
     end
   end
 
