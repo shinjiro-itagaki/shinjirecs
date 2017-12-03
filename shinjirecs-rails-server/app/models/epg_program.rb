@@ -80,6 +80,7 @@ class EpgProgram < ApplicationRecord
     event_id = p["event_id"]
     stop_time = Time.at(p["end"].to_i / 10000)
     prec = self.find_or_initialize_by_event_id(event_id, ch_id, stop_time)
+    prec.stop_time  = stop_time
     prec.start_time = Time.at(p["start"].to_i / 10000)
     prec.title      = p["title"]
     prec.freeCA     = p["freeCA"]
