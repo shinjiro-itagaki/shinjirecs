@@ -13,7 +13,7 @@ class EpgProgram < ApplicationRecord
   has_and_belongs_to_many :attachinfos,                   foreign_key: "program_id", association_foreign_key: "attachinfo_id", join_table: "epg_program_attachinfo_maps"
 
   validate do |rec|
-    rec.errors[:stop_time] << "inconsistent stop_time, start_time=#{rec.start_time}, stop_time=#{rec.stop_time} " if not rec.start_time < rec.stop_time
+    rec.errors[:stop_time] << "inconsistent stop_time, start_time=#{rec.start_time}, stop_time=#{rec.stop_time} , #{rec}" if not rec.start_time < rec.stop_time
     rec.errors[:event_id]  << "event_id '#{rec.event_id}' is not unique around stop_time '#{rec.stop_time}'"  if rec.new_record? and not rec.unique_event_id?
   end
 
