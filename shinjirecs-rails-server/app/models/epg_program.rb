@@ -83,7 +83,12 @@ class EpgProgram < ApplicationRecord
     prec.start_time = Time.at(p["start"].to_i / 10000)
     prec.title      = p["title"]
     prec.freeCA     = p["freeCA"]
-    prec.desc       = p["detail"].to_s + "\n" + (p["extdetail"] || []).map(&:to_s).join("\n")
+    desc = p["detail"].to_s + "\n"
+    (p["extdetail"] || []).each do |item|
+      desc += item["item_description"].to_s + "\n"
+      desc += item["item"].to_s + "\n"
+    end
+    prec.desc = desc
 
     cids = prec.epg_program_categories.pluck(:id)
     cmids = prec.epg_program_medium_categories.pluck(:id)
