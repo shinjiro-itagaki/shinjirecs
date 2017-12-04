@@ -4,7 +4,6 @@ sec=$2
 out=$3
 sid=$4
 opt_sid="--sid ${sid}"
-ffmpeg_opts=$5
 
 if [ "${sid}" = "" ] ; then
     opt_sid=""
