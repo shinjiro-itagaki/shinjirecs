@@ -11,4 +11,8 @@ if [ "${out}" = "" ]; then
     $out=${inn}.mpeg
 fi
 
+echo "before ffmpeg"
+# cat ${inn} > ${out}
+
 ffmpeg -y ${options} -i ${inn} ${out}
+

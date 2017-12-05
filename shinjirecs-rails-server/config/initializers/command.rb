@@ -52,4 +52,8 @@ module Command
   def self.detect_tuners_count_cmd
     get_command_path "detect_tuners_count.sh"
   end
+
+  def self.encoding_cmd
+    get_command_path "encoding.sh"
+  end
 end

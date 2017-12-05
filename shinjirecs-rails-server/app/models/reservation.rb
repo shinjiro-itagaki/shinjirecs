@@ -330,6 +330,12 @@ class Reservation < ApplicationRecord
     [res, "#{cmdfpath} #{self.channel.number} #{self.duration_sec} #{outputfpath}", cmdfpath, outputfpath, msg]
   end
 
+  def self.mk_encoding_cmd(inn,opts="",out=nil)
+    out ||= inn + ".mpeg"
+    res,cmdfpath,msg = self.mk_cmd_by_result Command.encoding_cmd
+    [res, "#{cmdfpath} #{inn} \"#{opts}\" #{out}", cmdfpath, out, msg]
+  end
+
   def self.log_splitter
     "7186cc6a2ef74523c310"
   end
@@ -462,6 +468,33 @@ class Reservation < ApplicationRecord
     false
   end
 
+  def self.start_encoding_thread(inn,options="",out=nil)
+    # inn ||= "pipe:0"
+    res,cmd,cmdfpath,_,msg = mk_encoding_cmd(inn,options,out || inn+".mpeg")
+    if not res then
+      puts "command not found"
+      return nil
+    end
+
+    Thread.start do
+      timeout = 20
+      if not File.exists?(inn) then
+        puts "sleep because #{inn} not found."
+        sleep 10
+      end
+
+      if not File.exists?(inn) then
+        next
+      end
+
+      Open3.popen3(cmd) do |i,o,e,w|
+        puts "start #{cmd}"
+        puts e.read
+        puts o.read
+      end
+    end
+  end
+
   def self.run_record_thread_impl(rsv)
     if not rsv.will_record_state? then
       puts "this is not recordable state"
@@ -484,7 +517,6 @@ class Reservation < ApplicationRecord
         sleep sleepsec
 
         # reload data because there is a possibility that data was changed while this thread slept
-        
         rsv.reload
       else
         puts "no need to sleep"
@@ -503,21 +535,28 @@ class Reservation < ApplicationRecord
       puts "[ERROR] #{msg}"
       return false
     end
+
     sleepsec = rsv.start_time - Time.now - rsv.class.start_margin
     sleep(sleepsec) if sleepsec > 0.0
 
     reslog = ""
     puts "start recording ..."
+    enc_th = nil
+    now_recording = true
+
     Open3.popen3(cmd) do |i,o,e,w|
       pid = o.gets.to_i # first line of stdout is pid of recording process
       puts "pid=#{pid}"
       rsv.update(command_pid: pid, command_str: cmd, state: "recording")
+      enc_th = self.class.start_encoding_thread(outputfpath)
       while line = e.gets # stderr is used for message
         puts line
         reslog += line
       end
     end
     puts "finish recording ..."
+    now_recording = false
+
     reslog = "\n#{rsv.class.log_splitter}\n" + Time.now.to_s + "\n" + outputfpath + "\n" + reslog
     rsv.reload
 
