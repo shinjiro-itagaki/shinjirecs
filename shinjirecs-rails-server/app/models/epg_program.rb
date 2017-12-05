@@ -206,6 +206,10 @@ class EpgProgram < ApplicationRecord
   def self.epgdump(channel_numbers_or_filepaths=nil, sec=20)
     channel_numbers_or_filepaths ||= Channel.default_all_numbers
 
+    if not channel_numbers_or_filepaths.kind_of? Array then
+      channel_numbers_or_filepaths = [channel_numbers_or_filepaths]
+    end
+
     cmdfile = Command.epgdump_cmd
     cmdfilepath = cmdfile.path
     case cmdfile

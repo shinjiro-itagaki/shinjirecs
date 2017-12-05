@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   # root to: "systems#all"
   get "systems/all", to: "systems#all"
+  post   "systems/add_epgdump_schedule",  to: "systems#add_epgdump_schedule"
+  delete "systems/del_epgdump_schedules", to: "systems#del_epgdump_schedules"
   get  "epg_programs/search", to: "epg_programs#search" #
 
   post "channels/scan", to: "channels#scan" #

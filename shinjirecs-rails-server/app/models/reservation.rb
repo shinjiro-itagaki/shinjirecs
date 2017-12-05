@@ -110,6 +110,10 @@ class Reservation < ApplicationRecord
     proxy
   end
 
+  def self.full?(st,ed,ctype)
+    !(select_overlapped_proxy(st,ed,ctype).count < System.instance.tuner_count(ctype))
+  end
+
   def self.max_overlapped_count(at_list, rsvlist, max=0)
     if at_list.empty? or rsvlist.empty? then
       return max

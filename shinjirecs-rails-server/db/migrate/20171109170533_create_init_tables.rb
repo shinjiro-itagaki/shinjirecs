@@ -25,6 +25,7 @@ class CreateInitTables < ActiveRecord::Migration[5.1]
       t.integer "system_id" , null: false, foreign_key: {on_delete: :cascade, on_update: :cascade}
       t.integer "time"      , null: false, default: 0
       t.integer "weekdays"  , null: false, default: 127, limit: 1 # byte, 0 means not active
+      t.index ["system_id","time"], unique: true
       t.timestamps null: false
     end
     execute "ALTER TABLE epgdump_schedules ADD CONSTRAINT chk_schedule_time CHECK( time >= 0 and time < 86400  )"

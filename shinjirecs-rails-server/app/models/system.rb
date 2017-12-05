@@ -1,5 +1,6 @@
 class System < ApplicationRecord
   belongs_to :area
+  has_many :epgdump_schedules
   scope :where_instance, ->(){ where(active: true ) }
   scope :where_dummy   , ->(){ where(active: false) }
 
@@ -138,6 +139,16 @@ class System < ApplicationRecord
     else
       false
     end
+  end
+
+  def find_or_create_epgdump_schedule(params)
+    self.epgdump_schedules.find_or_create_by(params)
+  end
+
+  def del_epgdump_schedules(ids)
+    recs = self.epgdump_schedules.where(id: ids).to_a
+    recs.each(&:destroy)
+    recs.select(&:destroyed?).map(&:id)
   end
 
   private
