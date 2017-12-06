@@ -23,7 +23,10 @@ class EpgdumpSchedule < ApplicationRecord
     end
 
     @@epgdump_thread = Thread.new duration do |d|
-      Channel.exist.to_a.shuffle.each do |ch|
+      Channel.exist.to_a.sort_by{|ch|
+        e = ch.epg_programs.order(updated_at: :desc).first
+        (e ? e.updated_at : nil).to_i
+      }.each do |ch|
         st = Time.now
         ed = st + d
         if not Reservation.full?(st,ed,ch.ctype) then
@@ -47,5 +50,14 @@ class EpgdumpSchedule < ApplicationRecord
     if st < now and now < today then
       self.class.start_epgdump_thread(duration)
     end
+  end
+
+  def self.last_updates
+    res = {}
+    Channel.exist.to_a.each do |ch|
+      latest = ch.epg_programs.order(updated_at: :desc).first
+      res[ch.id] = latest ? latest.updated_at : nil
+    end
+    res
   end
 end
