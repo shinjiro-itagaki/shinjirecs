@@ -62,10 +62,10 @@ gr_tuner_count : System -> Int
 gr_tuner_count rec = rec.gr_tuner_count
 bs_tuner_count : System -> Int
 bs_tuner_count rec = rec.bs_tuner_count
-rest_gr_tuner_count : System -> Int
-rest_gr_tuner_count rec = rec.rest_gr_tuner_count
-rest_bs_tuner_count : System -> Int
-rest_bs_tuner_count rec = rec.rest_bs_tuner_count
+--rest_gr_tuner_count : System -> Int
+--rest_gr_tuner_count rec = rec.rest_gr_tuner_count
+--rest_bs_tuner_count : System -> Int
+--rest_bs_tuner_count rec = rec.rest_bs_tuner_count
                                     
 type SystemId = SystemId Int
 type alias System =
@@ -74,8 +74,8 @@ type alias System =
     , setup  : Bool
     , gr_tuner_count : Int
     , bs_tuner_count : Int
-    , rest_gr_tuner_count : Int
-    , rest_bs_tuner_count : Int
+--    , rest_gr_tuner_count : Int
+--    , rest_bs_tuner_count : Int
     , created_at : Time
     , updated_at : Time
     , errors : Errors
@@ -87,8 +87,8 @@ new = { area_id = 0
       , setup  = False
       , gr_tuner_count = 0
       , bs_tuner_count = 0
-      , rest_gr_tuner_count = 0
-      , rest_bs_tuner_count = 0
+--      , rest_gr_tuner_count = 0
+--      , rest_bs_tuner_count = 0
       , created_at = 0
       , updated_at = 0
       , errors = Dict.empty
@@ -102,8 +102,8 @@ systemDecoder =
         |> required "setup"                D.bool
         |> required "gr_tuner_count"       D.int
         |> required "bs_tuner_count"       D.int
-        |> required "rest_gr_tuner_count"  D.int
-        |> required "rest_bs_tuner_count"  D.int
+--        |> required "rest_gr_tuner_count"  D.int
+--        |> required "rest_bs_tuner_count"  D.int
         |> required "created_at"           D.float
         |> required "updated_at"           D.float
         |> hardcoded Dict.empty
