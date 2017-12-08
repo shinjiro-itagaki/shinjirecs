@@ -85,7 +85,7 @@ mkAllEntityDecoder =
     |> optional "channels"               (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing channelDecoder            ) Nothing
     |> optional "epg_programs"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramDecoder         ) Nothing
     |> optional "epg_program_categories" (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramCategoryDecoder ) Nothing
-    |> optional "program_titles"         (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing programSeriesDecoder       ) Nothing
+    |> optional "program_serieses"       (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing programSeriesDecoder       ) Nothing
     |> optional "reservations"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing reservationDecoder        ) Nothing
         
 mkSystemI : String -> T.SystemI

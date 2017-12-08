@@ -8,7 +8,7 @@ class SystemsController < ApplicationController
       :channels               => Channel.default_all_proxy,
       :epg_programs           => EpgProgram.default_all_proxy,
       :epg_program_categories => EpgProgramCategory.default_all_proxy,
-      :program_titles         => ProgramTitle.default_all_proxy,
+      :program_serieses       => ProgramSeries.default_all_proxy,
       :reservations           => Reservation.default_all_proxy
     })
   end
