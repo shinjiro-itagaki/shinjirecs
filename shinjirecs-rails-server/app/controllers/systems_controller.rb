@@ -2,15 +2,15 @@ class SystemsController < ApplicationController
   set_model System
   def all
     # render_data system: System.instance
-    render_data ({
-      :system                 => System.instance,
-      :areas                  => Area.default_all_proxy,
-      :channels               => Channel.default_all_proxy,
-      :epg_programs           => EpgProgram.default_all_proxy,
-      :epg_program_categories => EpgProgramCategory.default_all_proxy,
-      :program_serieses       => ProgramSeries.default_all_proxy,
-      :reservations           => Reservation.default_all_proxy
-    })
+    render_data(system: System.instance,
+                areas: Area.default_all_proxy,
+                channels: Channel.default_all_proxy,
+                epg_programs: EpgProgram.default_all_proxy,
+                epg_program_categories: EpgProgramCategory.default_all_proxy,
+                epg_program_medium_categories: EpgProgramMediumCategory.default_all_proxy,
+                program_serieses: ProgramSeries.default_all_proxy,
+                reservations: Reservation.default_all_proxy
+                )
   end
 
   def index
