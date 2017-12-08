@@ -1,4 +1,4 @@
-module Records.ProgramTitle exposing (ProgramTitle,ProgramTitleId,programTitleDecoder,programTitleEncoder)
+module Records.ProgramSeries exposing (ProgramSeries,ProgramSeriesId,programSeriesDecoder,programSeriesEncoder)
 import Utils.Json exposing (fromTimeToDateDecoder,dateEncoder)
 import Time exposing (Time)
 import Json.Decode as D
@@ -8,8 +8,8 @@ import Json.Encode as E
 import Utils.Maybe exposing (ifJust)
 import Utils.Json exposing (Encoder)
 
-type ProgramTitleId = ProgramTitleId Int
-type alias ProgramTitle =
+type ProgramSeriesId = ProgramSeriesId Int
+type alias ProgramSeries =
     { start_at : Int
     , duration : Int
     , channel_id : Int
@@ -27,9 +27,9 @@ type alias ProgramTitle =
     , dayoffs : List Date
     }
 
-programTitleDecoder : D.Decoder ProgramTitle
-programTitleDecoder =
-    decode ProgramTitle
+programSeriesDecoder : D.Decoder ProgramSeries
+programSeriesDecoder =
+    decode ProgramSeries
         |> required "start_at"             D.int -- 0 ~ (24 * 3600 - 1), from second from 00:00:00
         |> required "duration"             D.int
         |> required "channel_id"           D.int
@@ -46,8 +46,8 @@ programTitleDecoder =
         |> optional "finish_on"            (D.maybe fromTimeToDateDecoder) Nothing
         |> optional "dayoffs"              (D.list fromTimeToDateDecoder) []
     
-programTitleEncoder : Encoder ProgramTitle
-programTitleEncoder x = E.object
+programSeriesEncoder : Encoder ProgramSeries
+programSeriesEncoder x = E.object
                   [ ("start_at",              E.int x.start_at)
                   , ("duration",              E.int x.duration)
                   , ("channel_id",            E.int x.channel_id)

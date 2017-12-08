@@ -14,7 +14,7 @@ import Records.Area exposing (Area, areaDecoder, areaEncoder)
 import Records.Channel exposing (Channel ,channelDecoder ,channelEncoder)
 import Records.EpgProgram exposing (EpgProgram, epgProgramDecoder, epgProgramEncoder)
 import Records.EpgProgramCategory exposing (EpgProgramCategory, epgProgramCategoryDecoder, epgProgramCategoryEncoder)
-import Records.ProgramTitle exposing (ProgramTitle, programTitleDecoder, programTitleEncoder)
+import Records.ProgramSeries exposing (ProgramSeries, programSeriesDecoder, programSeriesEncoder)
 import Records.Reservation exposing (Reservation, reservationDecoder, reservationEncoder)
 import Dict exposing (Dict)
 import Json.Decode.Pipeline exposing (decode,optional,required)
@@ -50,7 +50,7 @@ mkEntityDecoder maybe_id decoder =
     
     
 rIndex : String -> String -> D.Decoder a -> Maybe Int -> Cmd (Result Http.Error (List (Entity a)))
-rIndex domain path decoder mlimit = httpGet (join "/" [domain,path,"index"]) (D.list <| mkEntityDecoder Nothing decoder)
+rIndex domain path decoder mlimit = httpGet (join "/" [domain,path,""]) (D.list <| mkEntityDecoder Nothing decoder)
                                            
 rGet : String -> String -> D.Decoder a -> Int -> Cmd (Result Http.Error a)
 rGet domain path decoder id  = httpGet (join "/" [domain,path,(toString id)]) decoder
@@ -85,7 +85,7 @@ mkAllEntityDecoder =
     |> optional "channels"               (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing channelDecoder            ) Nothing
     |> optional "epg_programs"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramDecoder         ) Nothing
     |> optional "epg_program_categories" (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing epgProgramCategoryDecoder ) Nothing
-    |> optional "program_titles"         (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing programTitleDecoder       ) Nothing
+    |> optional "program_titles"         (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing programSeriesDecoder       ) Nothing
     |> optional "reservations"           (D.map (Just << entitiesToDict) <| D.list <| mkEntityDecoder Nothing reservationDecoder        ) Nothing
         
 mkSystemI : String -> T.SystemI
@@ -109,8 +109,8 @@ mkEpgProgramsI domain = mkResourcesI domain "epg_programs" epgProgramDecoder epg
 mkEpgProgramCategoriesI : String -> T.EpgProgramCategoriesI
 mkEpgProgramCategoriesI domain = mkResourcesI domain "epg_program_categories" epgProgramCategoryDecoder epgProgramCategoryEncoder
 
-mkProgramTitlesI : String -> T.ProgramTitlesI
-mkProgramTitlesI domain = mkResourcesI domain "program_titles" programTitleDecoder programTitleEncoder
+mkProgramSeriesI : String -> T.ProgramSeriesI
+mkProgramSeriesI domain = mkResourcesI domain "program_series" programSeriesDecoder programSeriesEncoder
 
 mkReservationsI : String -> T.ReservationsI
 mkReservationsI domain = mkResourcesI domain "reservations" reservationDecoder reservationEncoder
@@ -121,7 +121,7 @@ getImpl domain = { system   = mkSystemI   domain
                  , channels = mkChannelsI domain
                  , epgPrograms = mkEpgProgramsI domain
                  , epgProgramCategories = mkEpgProgramCategoriesI domain
-                 , programTitles = mkProgramTitlesI domain
+                 , programSeries = mkProgramSeriesI domain
                  , reservations  = mkReservationsI domain
                  }
 
