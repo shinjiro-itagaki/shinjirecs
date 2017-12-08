@@ -33,12 +33,8 @@ class ApplicationController < ActionController::API
 
   # GET /${record}s
   def index
-    @records = self.index_records_proxy.to_a
+    @records = @proxy.to_a
     render_data @records
-  end
-
-  def index_records_proxy
-    @proxy
   end
 
   # GET /${record}s/1

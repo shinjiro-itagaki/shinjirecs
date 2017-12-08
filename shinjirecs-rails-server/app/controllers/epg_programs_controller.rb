@@ -38,9 +38,4 @@ class EpgProgramsController < ApplicationController
   def self.permitted_params
     [:start_time, :stop_time, :channel_id, :title, :desc, :epg_program_category_id]
   end
-
-  protected
-  def index_records_proxy
-    @proxy.default
-  end
 end

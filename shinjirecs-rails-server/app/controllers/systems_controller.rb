@@ -4,12 +4,12 @@ class SystemsController < ApplicationController
     # render_data system: System.instance
     render_data ({
       :system                 => System.instance,
-      :areas                  => Area.all,
-      :channels               => Channel.all,
-      :epg_programs           => EpgProgram.all,
-      :epg_program_categories => EpgProgramCategory.all,
-      :program_titles         => ProgramTitle.all,
-      :reservations           => Reservation.all
+      :areas                  => Area.default_all_proxy,
+      :channels               => Channel.default_all_proxy,
+      :epg_programs           => EpgProgram.default_all_proxy,
+      :epg_program_categories => EpgProgramCategory.default_all_proxy,
+      :program_titles         => ProgramTitle.default_all_proxy,
+      :reservations           => Reservation.default_all_proxy
     })
   end
 

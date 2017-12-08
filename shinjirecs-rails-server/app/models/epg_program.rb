@@ -42,7 +42,7 @@ class EpgProgram < ApplicationRecord
   end
 
   def self.default_all_proxy
-    super.where(["start_time > ?", Time.now - 1.week])
+    super.default
   end
 
   def self.import_epg(json, chnumber=nil)
