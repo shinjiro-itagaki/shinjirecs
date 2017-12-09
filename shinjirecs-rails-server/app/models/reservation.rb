@@ -94,6 +94,19 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def self.default_all_proxy
+    super.order(start_time: :desc)
+  end
+
+  def filesize
+    path = self.filepath_fix
+    if (not self.waiting?) and File.exists? path then
+      File.size(path)
+    else
+      nil
+    end
+  end
+
   def self.video_dir
     Rails.application.config.video_path
   end
@@ -691,7 +704,7 @@ class Reservation < ApplicationRecord
   end
 
   def as_json(options = nil)
-    {filepath: self.filepath, start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s }.merge(super(options))
+    {filepath: self.filepath, start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s, filesize: self.filesize }.merge(super(options))
   end
 
   # def recording_tried?
