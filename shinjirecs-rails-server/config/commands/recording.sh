@@ -12,8 +12,7 @@ fi
 #tmp=${out}.tmp
 
 #mkfifo ${tmp}
-(recpt1 ${opt_sid} --b25 --strip ${ch} ${sec} ${tmp} 1>&2) &
-# (recpt1 ${opt_sid} --b25 --strip ${ch} ${sec} ${out} 1>&2) &
+(recpt1 ${opt_sid} --b25 --strip ${ch} ${sec} ${out} 1>&2) &
 pid=$!
 echo $pid
 #cat ${tmp} | tee ${out} | ffmpeg -i - ${out}.mpeg
