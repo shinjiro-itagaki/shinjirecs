@@ -33,11 +33,12 @@ type alias Cache = { system               : Maybe (Entity System)
                    , channels             : Maybe (Dict Int (Entity Channel))
                    , epgPrograms          : Maybe (Dict Int (Entity EpgProgram))
                    , epgProgramCategories : Maybe (Dict Int (Entity EpgProgramCategory))
+                   , epgProgramMediumCategories : Maybe (Dict Int (Entity EpgProgramCategory))
                    , programSeries        : Maybe (Dict Int (Entity ProgramSeries))
                    , reservations         : Maybe (Dict Int (Entity Reservation))
                    }
 
-emptyCache = Cache Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyCache = Cache Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     
 type alias API =
     { system            : SystemI

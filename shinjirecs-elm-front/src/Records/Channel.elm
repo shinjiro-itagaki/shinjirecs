@@ -20,7 +20,7 @@ typeToString t =
                 
 type ChannelId = ChannelId Int
 type alias Channel =
-    { number : Int
+    { number : String
     , area_id : Int
     , ctype : ChannelType
     , display_name : String
@@ -35,7 +35,7 @@ channelTypeDecoder = D.string |> D.andThen (D.succeed << toType)
 channelDecoder : D.Decoder Channel
 channelDecoder =
     decode Channel
-        |> required "number"        D.int
+        |> required "number"        D.string
         |> required "area_id"       D.int
         |> required "ctype"         channelTypeDecoder
         |> required "display_name"  D.string
@@ -46,7 +46,7 @@ channelDecoder =
 channelEncoder : Encoder Channel
 channelEncoder x =
     E.object
-        [ ("number"       , E.int x.number)
+        [ ("number"       , E.string x.number)
         , ("area_id"      , E.int x.area_id)
         , ("ctype"        , E.string <| typeToString x.ctype)
         , ("display_name" , E.string x.display_name)

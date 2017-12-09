@@ -145,4 +145,4 @@ init address =
     in (x, Cmd.none)
 
 subscriptions : PrivateModel -> Sub RootMsg
-subscriptions m = Sub.none            
+subscriptions m = Sub.none
