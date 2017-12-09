@@ -552,7 +552,7 @@ class Reservation < ApplicationRecord
       pid = o.gets.to_i # first line of stdout is pid of recording process
       puts "pid=#{pid}"
       rsv.update(command_pid: pid, command_str: cmd, state: "recording")
-      enc_th = self.class.start_encoding_thread(outputfpath)
+      enc_th = self.start_encoding_thread(outputfpath)
       while line = e.gets # stderr is used for message
         puts line
         reslog += line
