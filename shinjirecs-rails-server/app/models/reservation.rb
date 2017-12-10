@@ -504,6 +504,10 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def encoded?
+    File.exists? enc_filepath
+  end
+
   def enc_filepath
     self.filepath + ".mpeg"
   end
