@@ -554,6 +554,10 @@ class Reservation < ApplicationRecord
   end
 
   def encoding(force=true)
+    if self.recording? and (not force) then
+      return false
+    end
+
     if File.exists?(path = self.enc_filepath) and not force then
       true
     else
