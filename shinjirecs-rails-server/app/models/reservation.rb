@@ -524,7 +524,7 @@ class Reservation < ApplicationRecord
     end
 
     if File.exists?(outputtmpfpath) then
-      File.rename outputtmpfpath out
+      File.rename outputtmpfpath,out
       true
     else
       File.unlink outputtmpfpath
