@@ -512,6 +512,10 @@ class Reservation < ApplicationRecord
     self.filepath + ".mpeg"
   end
 
+  def enc_filesize
+    File.size enc_filepath
+  end
+
   def encoding
     self.class.encoding(self.filepath,"",self.enc_filepath)
   end
@@ -706,7 +710,13 @@ class Reservation < ApplicationRecord
   end
 
   def as_json(options = nil)
-    {filepath: self.filepath, start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s, filesize: self.filesize }.merge(super(options))
+    { filepath: self.filepath,
+      start_time_str: self.start_time.to_s,
+      stop_time_str: self.stop_time.to_s,
+      filesize: self.filesize,
+      enc_filepath: self.encoded? ? self.enc_filepath : nil,
+      enc_filesize: self.encoded? ? self.enc_filesize : nil
+    }.merge(super(options))
   end
 
   # def recording_tried?
