@@ -493,15 +493,27 @@ class Reservation < ApplicationRecord
     false
   end
 
-  def self.encoding(inn,options="",out=nil)
-    # inn ||= "pipe:0"
-    res,cmd,cmdfpath,outputfpath,msg = mk_encoding_cmd(inn,options,out || inn+".mpeg")
+  def encoding_tmpfilepath
+    if (path = self.enc_filepath).empty? then
+      ""
+    else
+      path + ".encoding.mpeg"
+    end
+  end
+
+  def self.encoding(inn,options="",out=nil,tmpfile=nil)
+    out ||= inn+".mpeg"
+    tmpfile ||= out + ".encoding.mpeg"
+    res,cmd,cmdfpath,outputtmpfpath,msg = mk_encoding_cmd(inn,options,tmpfile)
     if not res then
       puts "command not found"
       return nil
     end
 
     if not File.exists?(inn) then
+      puts cmd
+      puts ""
+      puts "'#{inn}' is not found"
       return nil
     end
 
@@ -509,6 +521,14 @@ class Reservation < ApplicationRecord
       puts "start #{cmd}"
       puts e.read
       puts o.read
+    end
+
+    if File.exists?(outputtmpfpath) then
+      File.rename outputtmpfpath out
+      true
+    else
+      File.unlink outputtmpfpath
+      false
     end
   end
 
@@ -537,7 +557,7 @@ class Reservation < ApplicationRecord
     if File.exists?(path = self.enc_filepath) and not force then
       true
     else
-      self.class.encoding(self.filepath,"",path)
+      self.class.encoding(self.filepath,"",path,self.encoding_tmpfilepath)
     end
   end
 
