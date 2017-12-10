@@ -100,7 +100,7 @@ class Reservation < ApplicationRecord
 
   def filesize
     path = self.filepath_fix
-    if (not self.waiting?) and File.exists? path then
+    if (not self.waiting?) and (not path.empty?) and (File.exists? path) then
       File.size(path)
     else
       nil
@@ -144,8 +144,13 @@ class Reservation < ApplicationRecord
     max <= count
   end
 
+  # if filename is empty, return ""
   def filepath_fix
-    (self.class.video_dir + "./" + self.filename).to_s
+    if (name = self.filename).empty? then
+      ""
+    else
+      (self.class.video_dir + "./" + name).to_s
+    end
   end
 
   def file_access_path
@@ -156,8 +161,11 @@ class Reservation < ApplicationRecord
     (base || self.filepath_fix) + ".part#{n}"
   end
 
+  # if filename is empty, return ""
   def filepath(add_suffix_if_exists=false)
     rtn = self.filepath_fix
+    return "" if rtn.empty?
+
     if add_suffix_if_exists then
       partnum = 0
       newrtn = rtn + ""
@@ -508,16 +516,29 @@ class Reservation < ApplicationRecord
     File.exists? enc_filepath
   end
 
+  # return "" if filepath is empty
   def enc_filepath
-    self.filepath + ".mpeg"
+    if (path = self.filepath).empty? then
+      ""
+    else
+      path + ".mpeg"
+    end
   end
 
   def enc_filesize
-    File.size enc_filepath
+    if (not (path = self.enc_filepath).empty?) and File.exists?(path) then
+      File.size path
+    else
+      nil
+    end
   end
 
-  def encoding
-    self.class.encoding(self.filepath,"",self.enc_filepath)
+  def encoding(force=true)
+    if File.exists?(path = self.enc_filepath) and not force then
+      true
+    else
+      self.class.encoding(self.filepath,"",path)
+    end
   end
 
   def self.run_record_thread_impl(rsv)
