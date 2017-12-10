@@ -485,31 +485,31 @@ class Reservation < ApplicationRecord
     false
   end
 
-  def self.start_encoding_thread(inn,options="",out=nil)
+  def self.encoding(inn,options="",out=nil)
     # inn ||= "pipe:0"
-    res,cmd,cmdfpath,_,msg = mk_encoding_cmd(inn,options,out || inn+".mpeg")
+    res,cmd,cmdfpath,outputfpath,msg = mk_encoding_cmd(inn,options,out || inn+".mpeg")
     if not res then
       puts "command not found"
       return nil
     end
 
-    Thread.start do
-      timeout = 20
-      if not File.exists?(inn) then
-        puts "sleep because #{inn} not found."
-        sleep 10
-      end
-
-      if not File.exists?(inn) then
-        next
-      end
-
-      Open3.popen3(cmd) do |i,o,e,w|
-        puts "start #{cmd}"
-        puts e.read
-        puts o.read
-      end
+    if not File.exists?(inn) then
+      return nil
     end
+
+    Open3.popen3(cmd) do |i,o,e,w|
+      puts "start #{cmd}"
+      puts e.read
+      puts o.read
+    end
+  end
+
+  def enc_filepath
+    self.filepath + ".mpeg"
+  end
+
+  def encoding
+    self.class.encoding(self.filepath,"",self.enc_filepath)
   end
 
   def self.run_record_thread_impl(rsv)
@@ -558,14 +558,12 @@ class Reservation < ApplicationRecord
 
     reslog = ""
     puts "start recording ..."
-    enc_th = nil
     now_recording = true
 
     Open3.popen3(cmd) do |i,o,e,w|
       pid = o.gets.to_i # first line of stdout is pid of recording process
       puts "pid=#{pid}"
       rsv.update(command_pid: pid, command_str: cmd, state: "recording")
-      enc_th = self.start_encoding_thread(outputfpath)
       while line = e.gets # stderr is used for message
         puts line
         reslog += line
