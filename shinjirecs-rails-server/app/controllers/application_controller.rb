@@ -10,10 +10,6 @@ class ApplicationController < ActionController::API
     def parent_fkey() @parent_fkey; end
   end
 
-  before_action do
-    Rails.application.wakeup_or_start_observer_thread
-  end
-
   before_action :set_models
   before_action :set_parent_record
   before_action :set_record, only: [:show, :update, :destroy]

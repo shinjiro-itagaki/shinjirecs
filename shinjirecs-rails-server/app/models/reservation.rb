@@ -711,7 +711,7 @@ class Reservation < ApplicationRecord
   after_commit :after_commit_impl
 
   def after_commit_impl
-    Rails.application.wakeup_or_start_observer_thread
+    # Rails.application.wakeup_or_start_observer_thread
     st = self.class.states
     case @state
     when st[:waiting] then
