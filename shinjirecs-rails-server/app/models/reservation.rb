@@ -247,6 +247,13 @@ class Reservation < ApplicationRecord
     use_tuner_state.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
   }
 
+  def self.exists_staging_updated_after?(time=nil)
+    if not time.kind_of? Time then
+      time = Time.now
+    end
+    self.where("updated_at > ? or created_at > ?", time, time).staging.exists?
+  end
+
   def self.random(chnumber=nil)
     channel = nil
 
@@ -296,6 +303,7 @@ class Reservation < ApplicationRecord
 
   @@do_check_staging_now = false
   @@staging = {}
+  @@last_check_time = Time.now
 
   def self.check_staging
     if @@do_check_staging_now then
@@ -303,7 +311,11 @@ class Reservation < ApplicationRecord
     end
     @@do_check_staging_now = true
 
-    @@staging = self.staging.to_a.inject(Hash.new){|h,e| h[e.id]=e;h}.merge(@@staging)
+    if self.exists_staging_updated_after?(@@last_check_time) then
+      @@last_check_time = Time.now
+      @@staging = self.staging.to_a.inject(Hash.new){|h,e| h[e.id]=e;h}.merge(@@staging)
+    end
+
     @@staging.values.sort_by{|a,b|
       self.compare(a,b)
     }.each do |r|
@@ -325,6 +337,10 @@ class Reservation < ApplicationRecord
 
   def self.stagings
     @@staging.values
+  end
+
+  def self.find_staging(id)
+    @@staging[id]
   end
 
   def self.next_check_staging_time
@@ -565,6 +581,10 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def self.reload_stating_span
+    5
+  end
+
   def self.run_record_thread_impl(rsv)
     if not rsv.will_record_state? then
       puts "this is not recordable state"
@@ -583,11 +603,15 @@ class Reservation < ApplicationRecord
     while true
       sleepsec = (wakeup_time = rsv.start_time - rsv.class.preparing_margin) - Time.now
       if sleepsec > 0 then
+        span = self.reload_stating_span
+        if sleepsec > span then
+          sleepsec = span
+        end
         puts "this reservation thread wakeup after #{sleepsec} (at #{wakeup_time})"
         sleep sleepsec
 
         # reload data because there is a possibility that data was changed while this thread slept
-        rsv.reload
+        rsv.reload b
       else
         puts "no need to sleep"
         break

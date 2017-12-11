@@ -42,14 +42,14 @@ module ShinjirecsRailsServer
         end
       end
 
-      @observer_thread ||= Thread.start(Thread.current) do |pth|
+      @observer_thread ||= Thread.start(Thread.current) do |parent_thread|
         while true
           if ActiveRecord::Base.connection.pool.connected? then
             ActiveRecord::Base.connection_pool.with_connection do
-              if not pth.status or pth.status == "aborting" then
-                break
+              if not parent_thread.status or parent_thread.status == "aborting" then
+                break # because parent thread is aborted ( maybe server was shutdown )
               end
-              self.class.once_observe_reservations(pth)
+              self.class.once_observe_reservations(parent_thread)
             end
           else
             sleep 1
@@ -60,26 +60,23 @@ module ShinjirecsRailsServer
 
     def self.once_observe_reservations(pth)
       begin
-        sleepsec = nil
+        sleepsec = 2
         if ActiveRecord::Base.connection.pool.connected? then
-          if (next_check_time = Reservation.check_staging).kind_of? Time and (sec = next_check_time - Time.now) > 0 then
+          if (next_check_time = Reservation.check_staging).kind_of? Time then
+            sec = next_check_time - Time.now
+            sec = 2 if sec and sec > 2
             sleepsec = sec
           end
         else
           sleepsec = 3
         end
-
-        if sleepsec then
-          sleep sleepsec
-        else
-          sleep
-        end
+        sleep sleepsec
       rescue => e
         puts e
       end
 
-      puts "on staging reservations"
-      puts Reservation.stagings.map{|r| ["id=#{r.id}", "stop_time=" + r.stop_time.to_s].join ",  "}
+      # puts "on staging reservations"
+      # puts Reservation.stagings.map{|r| ["id=#{r.id}", "stop_time=" + r.stop_time.to_s].join ",  "}
     end
   end
 end
