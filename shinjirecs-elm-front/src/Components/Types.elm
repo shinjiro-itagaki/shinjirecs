@@ -25,4 +25,6 @@ type PublicRootMsg = DirectMsg Models (Models -> Html PublicRootMsg) | HasCmd (C
 redirectTo : Request -> PublicRootMsg
 redirectTo = SendRequest
 
-type alias Component m act = { init : m, accept : (act -> Models -> PublicRootMsg) }
+type alias Component m act = { init : m
+                             , accept : (act -> Models -> PublicRootMsg)
+                             , subscriptions : (Models -> Sub PublicRootMsg)}

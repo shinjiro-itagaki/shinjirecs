@@ -16,7 +16,7 @@ import Utils.Either exposing (Either(Left,Right))
 import Components.Types exposing (Component)
 
 new : Component SystemModel ActionType
-new = { init = init, accept = accept }
+new = { init = init, accept = accept, subscriptions = subscriptions }
 
 linkToButton : ActionType -> String -> Html SystemMsg
 linkToButton tgt label = button [ onClick <| DoAction tgt ] [text label]
@@ -163,3 +163,6 @@ editViewImpl rec scm models =
         ,button [ onClick <| SendRequest <| ToSystemReq ModifyAction ] [text "保存"]
              -- UpdateModel Models
         ]
+
+subscriptions : Models -> Sub PublicRootMsg
+subscriptions m = Sub.none

@@ -7,7 +7,7 @@ import Html.Events exposing (onClick)
 import Html as H
 
 new : Component EpgProgramsModel ActionType
-new = { init = init, accept = accept }
+new = { init = init, accept = accept, subscriptions = subscriptions }
 
 init : EpgProgramsModel
 init = { programs = Nothing
@@ -77,3 +77,6 @@ listView m =
         ,H.div [] [text <| if m.epgPrograms.nowLoading then "読み込み中..." else "" ]
 --        ,button [onClick <| SendRequest <| ToEpgProgramsReq IndexAction] [text "EPGプログラム一覧へ"]
         ]        
+
+subscriptions : Models -> Sub PublicRootMsg
+subscriptions m = Sub.none

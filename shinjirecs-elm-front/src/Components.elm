@@ -145,4 +145,9 @@ init address =
     in (x, Cmd.none)
 
 subscriptions : PrivateModel -> Sub RootMsg
-subscriptions m = Sub.none
+subscriptions m =
+    Sub.batch <| List.map
+        (\f -> Sub.map Public (f m.m))
+        [ m.components.system.subscriptions
+        , m.components.epgPrograms.subscriptions
+        ]
