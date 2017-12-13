@@ -25,46 +25,46 @@ httpCommon d mkReq =
     let req = mkReq <| D.field "body" d
     in Http.send (\res -> res) req
 
-httpCommonAsync : (Progress a -> Result Http.Error a) -> D.Decoder a -> (D.Decoder a -> Http.Request a) -> Sub (Result Http.Error a)
-httpCommonAsync callback d mkReq =
+httpCommonAsync : D.Decoder a -> (D.Decoder a -> Http.Request a) -> Sub (Progress a)
+httpCommonAsync d mkReq =
     let req = mkReq <| D.field "body" d
-    in track "" callback req
+    in track "" (\x -> x) req
 
 httpHead : String -> D.Decoder a -> Cmd (Result Http.Error a)
 httpHead s d = httpCommon d <| Http.head s
 
-httpHeadAsync : (Progress a -> Result Http.Error a) -> String -> D.Decoder a -> Sub (Result Http.Error a)
-httpHeadAsync cb s d = httpCommonAsync cb d <| Http.head s
+httpHeadAsync : String -> D.Decoder a -> Sub (Progress a)
+httpHeadAsync s d = httpCommonAsync d <| Http.head s
           
 httpOptions : String -> D.Decoder a -> Cmd (Result Http.Error a)
 httpOptions s d = httpCommon d <| Http.options s
 
-httpOptionsAsync : (Progress a -> Result Http.Error a) -> String -> D.Decoder a -> Sub (Result Http.Error a)
-httpOptionsAsync cb s d = httpCommonAsync cb d <| Http.options s
+httpOptionsAsync : String -> D.Decoder a -> Sub (Progress a)
+httpOptionsAsync s d = httpCommonAsync d <| Http.options s
           
 httpGet : String -> D.Decoder a -> Cmd (Result Http.Error a)
 httpGet s d = httpCommon d <| Http.get s
 
-httpGetAsync : (Progress a -> Result Http.Error a) -> String -> D.Decoder a -> Sub (Result Http.Error a)
-httpGetAsync cb s d = httpCommonAsync cb d <| Http.get s
+httpGetAsync : String -> D.Decoder a -> Sub (Progress a)
+httpGetAsync s d = httpCommonAsync d <| Http.get s
           
 httpPost : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
 httpPost s b d = httpCommon d <| Http.post s b
 
-httpPostAsync : (Progress a -> Result Http.Error a) -> String -> Http.Body -> D.Decoder a -> Sub (Result Http.Error a)
-httpPostAsync cb s b d = httpCommonAsync cb d <| Http.post s b
+httpPostAsync : String -> Http.Body -> D.Decoder a -> Sub (Progress a)
+httpPostAsync s b d = httpCommonAsync d <| Http.post s b
           
 httpPatch : String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
 httpPatch s b d = httpCommon d <| Http.patch s b
 
-httpPatchAsync : (Progress a -> Result Http.Error a) -> String -> Http.Body -> D.Decoder a -> Sub (Result Http.Error a)
-httpPatchAsync cb s b d = httpCommonAsync cb d <| Http.patch s b
+httpPatchAsync : String -> Http.Body -> D.Decoder a -> Sub (Progress a)
+httpPatchAsync s b d = httpCommonAsync d <| Http.patch s b
 
 httpDelete : String -> D.Decoder a -> Cmd (Result Http.Error a)
 httpDelete s d = httpCommon d <| Http.delete s
 
-httpDeleteAsync : (Progress a -> Result Http.Error a) -> String -> D.Decoder a -> Sub (Result Http.Error a)
-httpDeleteAsync cb s d = httpCommonAsync cb d <| Http.delete s
+httpDeleteAsync : String -> D.Decoder a -> Sub (Progress a)
+httpDeleteAsync s d = httpCommonAsync d <| Http.delete s
 
 mkEntityDecoder : Maybe Int -> D.Decoder a -> D.Decoder (Entity a)
 mkEntityDecoder maybe_id decoder =
@@ -76,37 +76,37 @@ mkEntityDecoder maybe_id decoder =
 rIndex : String -> String -> D.Decoder a -> Maybe Int -> Cmd (Result Http.Error (List (Entity a)))
 rIndex domain path decoder mlimit = httpGet (join "/" [domain,path,""]) (D.list <| mkEntityDecoder Nothing decoder)
 
-rIndexAsync : String -> String -> D.Decoder a -> Maybe Int -> (Progress (List (Entity a)) -> Result Http.Error (List (Entity a))) -> Sub (Result Http.Error (List (Entity a)))
-rIndexAsync domain path decoder mlimit cb = httpGetAsync cb (join "/" [domain,path,""]) (D.list <| mkEntityDecoder Nothing decoder)
+rIndexAsync : String -> String -> D.Decoder a -> Maybe Int -> Sub (Progress (List (Entity a)))
+rIndexAsync domain path decoder mlimit = httpGetAsync (join "/" [domain,path,""]) (D.list <| mkEntityDecoder Nothing decoder)
                                            
 rGet : String -> String -> D.Decoder a -> Int -> Cmd (Result Http.Error a)
 rGet domain path decoder id  = httpGet (join "/" [domain,path,(toString id)]) decoder
 
-rGetAsync : String -> String -> D.Decoder a -> Int -> (Progress a -> Result Http.Error a) -> Sub (Result Http.Error a)
-rGetAsync domain path decoder id cb = httpGetAsync cb (join "/" [domain,path,(toString id)]) decoder
+rGetAsync : String -> String -> D.Decoder a -> Int -> Sub (Progress a)
+rGetAsync domain path decoder id = httpGetAsync (join "/" [domain,path,(toString id)]) decoder
                                
 rCreate : String -> String -> D.Decoder a -> Encoder a -> a -> Cmd (Result Http.Error (Entity a))
 rCreate domain path decoder encoder val = httpPost (join "/" [domain,path]) (jsonBody <| E.object[("record",encoder val)]) (mkEntityDecoder Nothing decoder)
 
-rCreateAsync : String -> String -> D.Decoder a -> Encoder a -> a -> (Progress (Entity a) -> Result Http.Error (Entity a)) -> Sub (Result Http.Error (Entity a))
-rCreateAsync domain path decoder encoder val cb = httpPostAsync cb (join "/" [domain,path]) (jsonBody <| E.object[("record",encoder val)]) (mkEntityDecoder Nothing decoder)
+rCreateAsync : String -> String -> D.Decoder a -> Encoder a -> a -> Sub (Progress (Entity a))
+rCreateAsync domain path decoder encoder val = httpPostAsync (join "/" [domain,path]) (jsonBody <| E.object[("record",encoder val)]) (mkEntityDecoder Nothing decoder)
                                           
 rModify : String -> String -> D.Decoder a -> Encoder a -> Entity a -> Cmd (Result Http.Error a)
 rModify domain path decoder encoder e = httpPatch (join "/" [domain,path,(toString e.id)]) (jsonBody <| E.object[("record", encoder e.val)]) decoder
 
-rModifyAsync : String -> String -> D.Decoder a -> Encoder a -> Entity a -> (Progress a -> Result Http.Error a) -> Sub (Result Http.Error a)
-rModifyAsync domain path decoder encoder e cb = httpPatchAsync cb (join "/" [domain,path,(toString e.id)]) (jsonBody <| E.object[("record", encoder e.val)]) decoder                                                                               
+rModifyAsync : String -> String -> D.Decoder a -> Encoder a -> Entity a -> Sub (Progress a)
+rModifyAsync domain path decoder encoder e = httpPatchAsync (join "/" [domain,path,(toString e.id)]) (jsonBody <| E.object[("record", encoder e.val)]) decoder                                                                               
 rDestroy : String -> String -> D.Decoder a -> Entity a -> Cmd (Result Http.Error Bool)
 rDestroy domain path decoder e = httpDelete (join "/" [domain,path,(toString e.id)]) D.bool
 
-rDestroyAsync : String -> String -> D.Decoder a -> Entity a -> (Progress Bool -> Result Http.Error Bool) -> Sub (Result Http.Error Bool)
-rDestroyAsync domain path decoder e cb = httpDeleteAsync cb (join "/" [domain,path,(toString e.id)]) D.bool
+rDestroyAsync : String -> String -> D.Decoder a -> Entity a -> Sub (Progress Bool)
+rDestroyAsync domain path decoder e = httpDeleteAsync (join "/" [domain,path,(toString e.id)]) D.bool
 
 rInfo : String -> String -> D.Decoder ColumnInfo -> Cmd (Result Http.Error (Dict String ColumnInfo))
 rInfo domain path decoder = httpGet (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
 
-rInfoAsync : String -> String -> D.Decoder ColumnInfo -> (Progress (Dict String ColumnInfo) -> Result Http.Error (Dict String ColumnInfo)) -> Sub (Result Http.Error (Dict String ColumnInfo))
-rInfoAsync domain path decoder cb = httpGetAsync cb (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
+rInfoAsync : String -> String -> D.Decoder ColumnInfo -> Sub (Progress (Dict String ColumnInfo))
+rInfoAsync domain path decoder = httpGetAsync (join "/" [domain,path,"params_info"]) (D.dict columnInfoDecoder)
            
 mkResourcesI : String -> String -> D.Decoder a -> Encoder a -> T.ResourcesI a
 mkResourcesI domain path decoder encoder =
@@ -143,10 +143,10 @@ mkSystemI domain =
        , modify = rModify domain path systemDecoder systemEncoder
        , info   = rInfo   domain path columnInfoDecoder
        , all    = httpGet (join "/" [domain,path,"all"]) mkAllEntityDecoder
-       , getAsync    = (\cb -> httpGetAsync cb (join "/" [domain,path]) (mkEntityDecoder Nothing systemDecoder))
+       , getAsync    = httpGetAsync (join "/" [domain,path]) (mkEntityDecoder Nothing systemDecoder)
        , modifyAsync = rModifyAsync domain path systemDecoder systemEncoder
        , infoAsync   = rInfoAsync   domain path columnInfoDecoder
-       , allAsync    = (\cb -> httpGetAsync cb (join "/" [domain,path,"all"]) mkAllEntityDecoder)
+       , allAsync    = httpGetAsync (join "/" [domain,path,"all"]) mkAllEntityDecoder
        }
 
 mkAreasI : String -> T.AreasI
