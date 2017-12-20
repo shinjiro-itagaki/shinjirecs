@@ -10,6 +10,7 @@ import Http.Progress exposing(Progress(Done,None,Some,Fail))
 import Records.Types exposing (Entity)
 import Records.EpgProgram exposing (EpgProgram)
 import Records.Channel exposing (Channel)
+import Time exposing (every,second)
 
 new : Component EpgProgramsModel ActionType
 new = { init = init, accept = accept, subscriptions = subscriptions }
@@ -42,11 +43,14 @@ cmdMapIfOk f cmd = HasCmd
 execIndexAction : Models -> PublicRootMsg
 execIndexAction m =
     let model = m.epgPrograms
-    in case ((model.startProgramsLoading,model.programs),(model.startChannelsLoading,model.channels)) of
-           ((False, Nothing),(False, Nothing)) -> UpdateModel { m | epgPrograms = {model | startProgramsLoading = True, startChannelsLoading = True }}           
-           ((False, Nothing), _              ) -> UpdateModel { m | epgPrograms = {model | startProgramsLoading = True }}
-           (_               ,(False, Nothing)) -> UpdateModel { m | epgPrograms = {model | startChannelsLoading = True }}
-           _                                   -> DoNothing
+        rw    = m.editable
+    in case ((model.startProgramsLoading,model.programs,model.programsLoading),(model.startChannelsLoading,model.channels,model.channelsLoading)) of
+--           ((False, Nothing,_),(False, Nothing,_)) -> UpdateModel { m | epgPrograms = {model | startProgramsLoading = True, startChannelsLoading = True }}           
+           ((False, Nothing,_), _                ) -> execIndexAction { m | epgPrograms = {model | startProgramsLoading = True }}
+           (_                 ,(False, Nothing,_)) -> execIndexAction { m | epgPrograms = {model | startChannelsLoading = True }}
+           ((_,_,Done list)   ,_                 ) -> execIndexAction { m | epgPrograms = {model | programs = Just list, programsLoading = None, startProgramsLoading = False }, editable = {rw| counter = -3 }}
+           (_                 ,(_,_,Done list)   ) -> execIndexAction { m | epgPrograms = {model | channels = Just list, channelsLoading = None, startChannelsLoading = False }, editable = {rw| counter = -4 }}
+           _                                       -> DirectMsg m listView
 
 loadEpgPrograms : Models -> Cmd (Result Models Models)
 loadEpgPrograms m =
@@ -77,10 +81,14 @@ loadChannels m =
 listView : Models -> Html PublicRootMsg
 listView m =
     div [] [
-         H.span [] [text <| "件数：" ++ (case m.epgPrograms.programs of
-                                             Just recs -> (\s -> s ++ "件") <| toString <| List.length recs
-                                             Nothing -> "不明（データが読み込まれていません）"
-                                        )]
+         H.div [] [text <| "プログラム件数：" ++ (case m.epgPrograms.programs of
+                                                      Just recs -> (\s -> s ++ "件") <| toString <| List.length recs
+                                                      Nothing -> "不明（データが読み込まれていません）"
+                                                 )]
+        ,H.div [] [text <| "チャンネル件数：" ++ (case m.epgPrograms.channels of
+                                                      Just recs -> (\s -> s ++ "件") <| toString <| List.length recs
+                                                      Nothing -> "不明（データが読み込まれていません）"
+                                                 )]
         ,H.div [] [ listViewProgramsLoading m.epgPrograms.programsLoading
                   , listViewChannelsLoading m.epgPrograms.channelsLoading
                   ]
@@ -105,7 +113,7 @@ listViewChannelsLoading p =
                      
 listViewWhenNone : Html PublicRootMsg
 listViewWhenNone =
-    H.span [] [text ""]
+    H.span [] [text "動作なし"]
         
 listViewWhenSome : { bytes : Int, bytesExpected : Int } -> Html PublicRootMsg
 listViewWhenSome {bytes, bytesExpected} =
@@ -120,12 +128,28 @@ listViewWhenDone =
     H.span [] [text "読み込み完了"]
     
 --    None | Some { bytes : Int, bytesExpected : Int } | Fail Error | Done data
-            
+
+updateProgramsByProgress : Models -> Progress (List (Entity EpgProgram)) -> Models
+updateProgramsByProgress m p =
+    let model_ = m.epgPrograms
+        model  = { model_ | programsLoading = p }
+    in case p of
+           Done list -> {m| epgPrograms = { model | programs = Just list, startProgramsLoading = False }}
+           _         -> {m| epgPrograms = model }
+                        
+updateChannelsByProgress : Models -> Progress (List (Entity Channel)) -> Models
+updateChannelsByProgress m p =
+    let model_ = m.epgPrograms
+        model  = { model_ | channelsLoading = p }
+    in case p of
+           Done list -> {m| epgPrograms = { model | channels = Just list, startChannelsLoading = False }}
+           _         -> {m| epgPrograms = model }
+
 subscriptions : Models -> Sub PublicRootMsg
 subscriptions m =
     let model = m.epgPrograms
-        {programs,channels,startProgramsLoading,startChannelsLoading,programsLoading,channelsLoading} = model
-    in case ((startProgramsLoading,programs,programsLoading),(startChannelsLoading,channels,channelsLoading)) of
-           ((True,_,None),_            ) -> Sub.map (\p -> UpdateModel {m| epgPrograms = { model | programsLoading = p}} ) <| m.readonly.api.epgPrograms.indexAsync Nothing
-           (_            ,(True,_,None)) -> Sub.map (\p -> UpdateModel {m| epgPrograms = { model | channelsLoading = p}} ) <| m.readonly.api.channels.indexAsync Nothing
-           _                             -> Sub.none
+        rw = m.editable
+    in case (model.startProgramsLoading, model.startChannelsLoading) of
+           (True,_   ) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
+           (_   ,True) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing
+           _           -> Sub.none
