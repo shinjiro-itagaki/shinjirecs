@@ -1,4 +1,4 @@
-module API.Types exposing (API,AreasI,ChannelsI,EpgProgramsI,EpgProgramCategoriesI,ProgramSeriesI,ReservationsI,SystemI,ResourcesI,Cache,emptyCache)
+module API.Types exposing (..)
 import Dict exposing (Dict)
 import Http
 import Http.Progress exposing (Progress)
@@ -46,6 +46,7 @@ type alias API =
     , areas             : AreasI
     , channels          : ChannelsI
     , epgPrograms       : EpgProgramsI
+    , epgProgramsEx     : EpgProgramsExI                          
     , epgProgramCategories : EpgProgramCategoriesI
     , programSeries     : ProgramSeriesI
     , reservations      : ReservationsI
@@ -68,9 +69,12 @@ type alias ResourcesI a =
     , infoAsync    : Sub (Progress (Dict String ColumnInfo))
     }
 
-type alias AreasI             = ResourcesI Area
-type alias ChannelsI          = ResourcesI Channel
-type alias EpgProgramsI          = ResourcesI EpgProgram
+type alias AreasI         = ResourcesI Area
+type alias ChannelsI      = ResourcesI Channel
+type alias EpgProgramsI   = ResourcesI EpgProgram
+type alias EpgProgramsExI = { epgdump : Cmd (Result Http.Error Bool) -- post "epg_programs/epgdump"
+                            , newReservation : Entity EpgProgram -> Cmd (Result Http.Error (Entity Reservation)) -- post "epg_programs/:id/new_reservation"
+                            }
 type alias EpgProgramCategoriesI = ResourcesI EpgProgramCategory
 type alias ProgramSeriesI     = ResourcesI ProgramSeries
 type alias ReservationsI      = ResourcesI Reservation

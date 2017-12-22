@@ -80,6 +80,7 @@ loadChannels m =
 listView : Models -> Html PublicRootMsg
 listView m =
     div [] [
+--         button [onClick <| HasCmd (Cmd PublicRootMsg) SendRequest <| ToSystemReq EditAction] [text "Epgdomp"]
          H.div [] [text <| "プログラム件数：" ++ (case m.epgPrograms.programs of
                                                       Just recs -> (\s -> s ++ "件") <| toString <| List.length recs
                                                       Nothing -> "不明（データが読み込まれていません）"
@@ -194,7 +195,7 @@ updateChannelsByProgress m p =
 subscriptions : Models -> Sub PublicRootMsg
 subscriptions m =
     let model = m.epgPrograms
-    in case (model.startProgramsLoading, model.startChannelsLoading) of
-           (True,_   ) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
-           (_   ,True) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing
-           _           -> Sub.none
+    in case (model.startProgramsLoading, model.startChannelsLoading,model.programsLoading,model.channelsLoading) of
+           (True,_   ,_,_) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
+           (_   ,True,_,_) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing
+           _ -> Sub.none

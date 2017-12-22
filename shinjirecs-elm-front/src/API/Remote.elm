@@ -155,8 +155,17 @@ mkAreasI domain = mkResourcesI domain "areas" areaDecoder areaEncoder
 mkChannelsI : String -> T.ChannelsI                   
 mkChannelsI domain = mkResourcesI domain "channels" channelDecoder channelEncoder
 
+-- httpPost (join "/" [domain,path]) (jsonBody <| E.object[("record",encoder val)]) (mkEntityDecoder Nothing decoder)
+-- String -> Http.Body -> D.Decoder a -> Cmd (Result Http.Error a)
+mkEpgProgramsExI : String -> T.EpgProgramsExI
+mkEpgProgramsExI domain =
+    let path = join "/" [domain,"epg_programs"]
+    in { epgdump        = httpPost (join "/" [path,"epgdump"]) Http.emptyBody D.bool
+       , newReservation = (\ep -> httpPost (join "/" [path,toString ep.id,"new_reservation"]) Http.emptyBody (mkEntityDecoder Nothing reservationDecoder))
+       }
+
 mkEpgProgramsI : String -> T.EpgProgramsI
-mkEpgProgramsI domain = mkResourcesI domain "epg_programs" epgProgramDecoder epgProgramEncoder
+mkEpgProgramsI domain = mkResourcesI domain "epg_programs" epgProgramDecoder epgProgramEncoder                        
 
 mkEpgProgramCategoriesI : String -> T.EpgProgramCategoriesI
 mkEpgProgramCategoriesI domain = mkResourcesI domain "epg_program_categories" epgProgramCategoryDecoder epgProgramCategoryEncoder
@@ -172,8 +181,8 @@ getImpl domain = { system   = mkSystemI   domain
                  , areas    = mkAreasI    domain
                  , channels = mkChannelsI domain
                  , epgPrograms = mkEpgProgramsI domain
+                 , epgProgramsEx = mkEpgProgramsExI domain
                  , epgProgramCategories = mkEpgProgramCategoriesI domain
                  , programSeries = mkProgramSeriesI domain
                  , reservations  = mkReservationsI domain
                  }
-
