@@ -1,9 +1,10 @@
-module Records.EpgProgram exposing (EpgProgram,EpgProgramId,epgProgramDecoder,epgProgramEncoder)
+module Records.EpgProgram exposing (EpgProgram,EpgProgramId,epgProgramDecoder,epgProgramEncoder,asc,desc)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
 import Utils.Json exposing (Encoder)
 import Json.Decode.Pipeline exposing (decode,required,optional)
+import Records.Types exposing (Entity)
 
 type EpgProgramId = EpgProgramId Int
 type alias EpgProgram =
@@ -46,3 +47,8 @@ epgProgramEncoder x = E.object []
                   -- , ("updated_at", E.float x.updated_at)
                   -- ]
            
+desc : List (Entity EpgProgram) -> List (Entity EpgProgram)
+desc = List.sortBy (\e -> -e.val.start_time)
+       
+asc : List (Entity EpgProgram) -> List (Entity EpgProgram)       
+asc = List.sortBy (\e -> e.val.start_time)

@@ -2,17 +2,19 @@ module Components.EpgProgramsC exposing (new)
 import Components.EpgProgramsMsg exposing (ActionType(IndexAction,SearchAction,MakeReservationAction))
 import Components.EpgProgramsModel exposing (EpgProgramsModel,enableChannels,shownChannels,channelPrograms)
 import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToEpgProgramsReq),redirectTo,countUp,countDown)
-import Html exposing (Html,div,input,text,li,Attribute,button)
+import Html exposing (Html,div,input,text,li,Attribute,button,ol)
+import Html as H
 import Html.Events exposing (onClick,onCheck)
 import Html.Attributes exposing (type_,name,value)
-import Html as H
 import Http exposing(Error)
 import Http.Progress exposing(Progress(Done,None,Some,Fail))
 import Records.Types exposing (Entity)
-import Records.EpgProgram exposing (EpgProgram)
+import Records.EpgProgram exposing (EpgProgram,asc,desc)
 import Records.Channel exposing (Channel,enables)
 import Time exposing (every,second)
 import Utils.List as List
+import Utils.DateTime exposing (timeToStringJa)
+import String exposing (join,concat)
 
 new : Component EpgProgramsModel ActionType
 new = { init = init, accept = accept, subscriptions = subscriptions }
@@ -116,13 +118,29 @@ listViewMain m =
                                  ]
                             ) channels
         ,div [] <| List.map (\c ->
-                                 div
+                                 ol
                                  [ name "channel_id", value (toString c.id) ] 
-                                 [ text c.val.display_name
-                                 ]
+                                 (List.map (\p -> li [] [viewProgram p]) <| asc <| channelPrograms model c)
                             ) shown
         ]
-            
+
+viewProgram : Entity EpgProgram -> Html PublicRootMsg
+viewProgram ep =
+    let p = ep.val
+    in H.dl
+        []
+        [ (H.dt [] [text <| "日時"])
+        , (H.dd [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]])
+        , (H.dt [] [text <| "タイトル"])
+        , (H.dd [] [text <| p.title])
+        , (H.dt [] [text <| "内容"])
+        , (H.dd [] [text <| p.desc])            
+        ]
+    -- , channel_id : Int 
+    -- , event_id : Int
+    -- , epg_program_categories : List Int
+    -- , epg_program_medium_categories : List Int
+                    
 listViewProgramsLoading : Progress (List (Entity EpgProgram)) -> Html PublicRootMsg
 listViewProgramsLoading p =
     case p of

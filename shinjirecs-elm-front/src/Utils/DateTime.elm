@@ -2,7 +2,9 @@ module Utils.DateTime exposing (..)
 import List exposing (filter)
 import Utils.List exposing (mapWithIndex)
 import Bitwise exposing (shiftLeftBy, and)
-import Date exposing (Day(Sun,Mon,Tue,Wed,Thu,Fri,Sat),Month(Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec))
+import Date exposing (Day(Sun,Mon,Tue,Wed,Thu,Fri,Sat),Month(Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec),fromTime,year,month,day,hour,minute,second,dayOfWeek)
+import String exposing (join)
+import Time exposing (Time)
 
 type alias WeekdayFlags  = { sun : Bool, mon : Bool, tue : Bool, wed : Bool, thu : Bool, fri : Bool, sat : Bool }
 
@@ -72,3 +74,8 @@ intToWeekdayFlags i =
         , fri = f Fri
         , sat = f Sat
         }
+
+timeToStringJa : Time -> String
+timeToStringJa t =
+    let d = fromTime (t * 1000)
+    in join "" [toString <| year d,"年", toString <| monthToInt <| month d, "月",toString <| day d,"日","（",(weekdayLabel <| dayOfWeek d).ja,"）",toString <| hour d,"時",toString <| minute d,"分",toString <| second d,"秒"]
