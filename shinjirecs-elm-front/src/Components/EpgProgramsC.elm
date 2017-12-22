@@ -1,16 +1,18 @@
 module Components.EpgProgramsC exposing (new)
 import Components.EpgProgramsMsg exposing (ActionType(IndexAction,SearchAction,MakeReservationAction))
-import Components.EpgProgramsModel exposing (EpgProgramsModel)
-import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToEpgProgramsReq),redirectTo)
+import Components.EpgProgramsModel exposing (EpgProgramsModel,enableChannels,shownChannels,channelPrograms)
+import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToEpgProgramsReq),redirectTo,countUp,countDown)
 import Html exposing (Html,div,input,text,li,Attribute,button)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick,onCheck)
+import Html.Attributes exposing (type_,name,value)
 import Html as H
 import Http exposing(Error)
 import Http.Progress exposing(Progress(Done,None,Some,Fail))
 import Records.Types exposing (Entity)
 import Records.EpgProgram exposing (EpgProgram)
-import Records.Channel exposing (Channel)
+import Records.Channel exposing (Channel,enables)
 import Time exposing (every,second)
+import Utils.List as List
 
 new : Component EpgProgramsModel ActionType
 new = { init = init, accept = accept, subscriptions = subscriptions }
@@ -18,6 +20,7 @@ new = { init = init, accept = accept, subscriptions = subscriptions }
 init : EpgProgramsModel
 init = { programs = Nothing
        , channels = Nothing
+       , shownChannelsList = []
        , startProgramsLoading = False
        , startChannelsLoading = False
        , programsLoading = None
@@ -44,13 +47,7 @@ execIndexAction : Models -> PublicRootMsg
 execIndexAction m =
     let model = m.epgPrograms
         rw    = m.editable
-    in case ((model.startProgramsLoading,model.programs,model.programsLoading),(model.startChannelsLoading,model.channels,model.channelsLoading)) of
---           ((False, Nothing,_),(False, Nothing,_)) -> UpdateModel { m | epgPrograms = {model | startProgramsLoading = True, startChannelsLoading = True }}           
-           ((False, Nothing,_), _                ) -> execIndexAction { m | epgPrograms = {model | startProgramsLoading = True }}
-           (_                 ,(False, Nothing,_)) -> execIndexAction { m | epgPrograms = {model | startChannelsLoading = True }}
-           ((_,_,Done list)   ,_                 ) -> execIndexAction { m | epgPrograms = {model | programs = Just list, programsLoading = None, startProgramsLoading = False }, editable = {rw| counter = -3 }}
-           (_                 ,(_,_,Done list)   ) -> execIndexAction { m | epgPrograms = {model | channels = Just list, channelsLoading = None, startChannelsLoading = False }, editable = {rw| counter = -4 }}
-           _                                       -> DirectMsg m listView
+    in DirectMsg {m| epgPrograms = {model | startProgramsLoading = True, startChannelsLoading = True }} listView
 
 loadEpgPrograms : Models -> Cmd (Result Models Models)
 loadEpgPrograms m =
@@ -89,12 +86,43 @@ listView m =
                                                       Just recs -> (\s -> s ++ "件") <| toString <| List.length recs
                                                       Nothing -> "不明（データが読み込まれていません）"
                                                  )]
+        ,H.div [] [listViewMain m]
         ,H.div [] [ listViewProgramsLoading m.epgPrograms.programsLoading
                   , listViewChannelsLoading m.epgPrograms.channelsLoading
                   ]
 --        ,button [onClick <| SendRequest <| ToEpgProgramsReq IndexAction] [text "EPGプログラム一覧へ"]
         ]        
 
+msgOnCheckChannel : Entity Channel -> Models -> Bool -> PublicRootMsg
+msgOnCheckChannel c m b =
+    let model   = m.epgPrograms
+        shown  = model.shownChannelsList
+        shown2 = if b then (c.id :: shown) else List.filter ((/=) c.id) shown
+    in UpdateModel <| (if b then countUp else countDown) <| {m|epgPrograms = {model|shownChannelsList = shown2 }}
+            
+listViewMain : Models -> Html PublicRootMsg
+listViewMain m =
+    let model = m.epgPrograms
+        channels = enableChannels m.epgPrograms
+        shown    = shownChannels m.epgPrograms
+        programs = model.programs
+        r  = m.readonly
+        rw = m.editable
+    in div [] [
+         div [] <| List.map (\c -> H.label
+                                 [ onCheck (msgOnCheckChannel c m)]
+                                 [ input [ type_ "checkbox", name "shownChannels"] []
+                                 , text c.val.display_name
+                                 ]
+                            ) channels
+        ,div [] <| List.map (\c ->
+                                 div
+                                 [ name "channel_id", value (toString c.id) ] 
+                                 [ text c.val.display_name
+                                 ]
+                            ) shown
+        ]
+            
 listViewProgramsLoading : Progress (List (Entity EpgProgram)) -> Html PublicRootMsg
 listViewProgramsLoading p =
     case p of
@@ -148,7 +176,6 @@ updateChannelsByProgress m p =
 subscriptions : Models -> Sub PublicRootMsg
 subscriptions m =
     let model = m.epgPrograms
-        rw = m.editable
     in case (model.startProgramsLoading, model.startChannelsLoading) of
            (True,_   ) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
            (_   ,True) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing

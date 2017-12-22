@@ -28,3 +28,12 @@ redirectTo = SendRequest
 type alias Component m act = { init : m
                              , accept : (act -> Models -> PublicRootMsg)
                              , subscriptions : (Models -> Sub PublicRootMsg)}
+
+countUp : Models -> Models
+countUp = countPlus 1
+          
+countDown : Models -> Models
+countDown = countPlus -1
+
+countPlus : Int -> Models -> Models
+countPlus i m = let e = m.editable in {m|editable = {e|counter = e.counter + i}}
