@@ -1,4 +1,4 @@
-module Records.EpgProgram exposing (EpgProgram,EpgProgramId,epgProgramDecoder,epgProgramEncoder,asc,desc)
+module Records.EpgProgram exposing (EpgProgram,EpgProgramId,epgProgramDecoder,epgProgramEncoder,asc,desc,durationS,durationMS)
 import Time exposing (Time)
 import Json.Decode as D
 import Json.Encode as E
@@ -52,3 +52,9 @@ desc = List.sortBy (\e -> -e.val.start_time)
        
 asc : List (Entity EpgProgram) -> List (Entity EpgProgram)       
 asc = List.sortBy (\e -> e.val.start_time)
+
+durationS : EpgProgram -> Int
+durationS p = truncate <| p.stop_time - p.start_time
+
+durationMS : EpgProgram -> (Int,Int)
+durationMS p = let sec = durationS p in (sec // 60, sec % 60)
