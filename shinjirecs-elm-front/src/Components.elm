@@ -20,6 +20,7 @@ import Http exposing (Error(BadUrl,Timeout,NetworkError,BadStatus,BadPayload))
 import Result exposing (Result(Ok,Err))
 import Json.Decode as D
 import Utils.Either exposing (Either(Left,Right))
+import MainCssImpl as CSS
 
 type PrivateRootMsg = ReplaceAPICache (Result Http.Error Cache)
 type RootMsg = Private PrivateRootMsg | Public PublicRootMsg
@@ -110,18 +111,19 @@ update msg oldpm =
 
 view : PrivateModel -> Html RootMsg
 view pm = H.div [class [NavBar]] [
-            H.header [] [
-                 H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
-                ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| Public <| SendRequest NoSelect] [H.text "選択解除へ"]
-                ,H.button [E.onClick <| Public <| SendRequest <| ToSystemReq SystemMsg.IndexAction] [H.text "システム設定へ"]
-                ,H.button [E.onClick <| Public <| SendRequest <| ToEpgProgramsReq EpgProgramsMsg.IndexAction] [H.text "EPG番組一覧へ"]
-                ]
-           ,Html.map Public <| pm.f pm.m
-           ,H.div [] <| case pm.m.editable.errmsg of
-                            ""     -> []
-                            errmsg -> [H.text <| errmsg]
-           ,H.footer [] []
-           ]
+           CSS.root
+          ,H.header [] [
+                H.div [][H.text <| (++) "カウンター : " <| toString pm.m.editable.counter]
+               ,if pm.req == NoSelect then H.span [] [H.text <| "何も選択されていない"] else H.button [E.onClick <| Public <| SendRequest NoSelect] [H.text "選択解除へ"]
+               ,H.button [E.onClick <| Public <| SendRequest <| ToSystemReq SystemMsg.IndexAction] [H.text "システム設定へ"]
+               ,H.button [E.onClick <| Public <| SendRequest <| ToEpgProgramsReq EpgProgramsMsg.IndexAction] [H.text "EPG番組一覧へ"]
+               ]
+          ,Html.map Public <| pm.f pm.m
+          ,H.div [] <| case pm.m.editable.errmsg of
+                           ""     -> []
+                           errmsg -> [H.text <| errmsg]
+          ,H.footer [] []
+          ]
 
 
 

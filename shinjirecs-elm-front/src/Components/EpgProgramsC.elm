@@ -1,7 +1,7 @@
 module Components.EpgProgramsC exposing (new)
 import Components.EpgProgramsMsg exposing (ActionType(IndexAction,SearchAction,MakeReservationAction))
 import Components.EpgProgramsModel exposing (EpgProgramsModel,enableChannels,shownChannels,channelPrograms)
-import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToEpgProgramsReq),redirectTo,countUp,countDown)
+import Components.Types exposing (Component,Models,CommonModelReadOnly,CommonModelEditable,PublicRootMsg(DirectMsg,HasCmd,SendRequest,DoNothing,UpdateModel),Request(NoSelect,ToEpgProgramsReq),redirectTo,countUp,countDown,countPlus)
 import Html exposing (Html,div,input,text,li,Attribute,button,ol)
 import Html as H
 import Html.Events exposing (onClick,onCheck)
@@ -9,12 +9,17 @@ import Html.Attributes exposing (type_,name,value)
 import Http exposing(Error)
 import Http.Progress exposing(Progress(Done,None,Some,Fail))
 import Records.Types exposing (Entity)
-import Records.EpgProgram exposing (EpgProgram,asc,desc)
+import Records.EpgProgram exposing (EpgProgram,asc,desc,durationS,durationMS)
 import Records.Channel exposing (Channel,enables)
 import Time exposing (every,second)
 import Utils.List as List
 import Utils.DateTime exposing (timeToStringJa)
 import String exposing (join,concat)
+import MainCssInterface exposing (CssClasses(EpgHovered),CssIds(..))
+import Html.CssHelpers exposing (withNamespace)
+import Css.Foreign exposing (class,id,selector,everything,media) -- http://package.elm-lang.org/packages/rtfeldman/elm-css/13.0.1/Css-Foreign
+
+{ id, class, classList } = withNamespace ""
 
 new : Component EpgProgramsModel ActionType
 new = { init = init, accept = accept, subscriptions = subscriptions }
@@ -121,17 +126,20 @@ listViewMain m =
         ,div [] <| List.map (\c ->
                                  ol
                                  [ name "channel_id", value (toString c.id) ] 
-                                 (List.map (\p -> li [] [viewProgram p]) <| asc <| channelPrograms model c)
+                                 (List.map (\p -> li [] [viewProgram p]) <| desc <| channelPrograms model c)
                             ) shown
         ]
 
 viewProgram : Entity EpgProgram -> Html PublicRootMsg
 viewProgram ep =
     let p = ep.val
+        (m,s) = durationMS p
     in H.dl
-        []
+        [class [EpgHovered]]
         [ (H.dt [] [text <| "日時"])
-        , (H.dd [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]])
+        , (H.dd [] [H.div [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]]
+                   ,H.div [] [text <| concat ["(",toString m,"分",toString s,"秒)"]]
+                   ])
         , (H.dt [] [text <| "タイトル"])
         , (H.dd [] [text <| p.title])
         , (H.dt [] [text <| "内容"])
@@ -198,4 +206,4 @@ subscriptions m =
     in case (model.startProgramsLoading, model.startChannelsLoading,model.programsLoading,model.channelsLoading) of
            (True,_   ,_,_) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
            (_   ,True,_,_) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing
-           _ -> Sub.none
+           _ -> Sub.map (\_ -> UpdateModel <| countPlus 1000 m) Sub.none

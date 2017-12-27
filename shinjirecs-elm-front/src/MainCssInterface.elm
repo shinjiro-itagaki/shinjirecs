@@ -9,7 +9,7 @@ cssFileName = "main.css"
 mainCssLink = stylesheetLink cssFileName
               
 type CssClasses
-    = NavBar
+    = NavBar | EpgHovered
 
 type CssIds
     = Page
