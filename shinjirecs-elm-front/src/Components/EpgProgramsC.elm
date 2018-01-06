@@ -153,7 +153,6 @@ viewProgram ep =
             , (H.dt [] [text <| "内容"])
             , (H.dd [] [text <| p.desc])            
             ]
--- , channel_id : Int 
     -- , event_id : Int
     -- , epg_program_categories : List Int
     -- , epg_program_medium_categories : List Int
