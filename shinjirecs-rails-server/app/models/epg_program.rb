@@ -257,6 +257,11 @@ class EpgProgram < ApplicationRecord
       proxy = where("\`title\` LIKE ?","%#{w}%").or(self.where("\`desc\` LIKE ? ","%#{w}%"))
     end
     proxy = (proxy || self).default(params["start_time"])
+    if (inn = params["start_in"].to_i) and inn > 0 then
+      st = Time.now
+      ed = st + inn
+      proxy = self.where("start_time >= ?", st).where("start_time <= ?", ed)
+    end
     proxy.all
   end
 
