@@ -40,10 +40,10 @@ css_root =
               ]
         ]
     , class EpgHovered
-        [ hover
-              [
-               margin zero
-              ,backgroundColor <| hex "ffcc00"
-              ]
+        [hover
+             [margin zero
+             ,backgroundColor <| hex "ffcc00"
+             ]
+        ,Css.overflowY Css.scroll
         ]
     ]

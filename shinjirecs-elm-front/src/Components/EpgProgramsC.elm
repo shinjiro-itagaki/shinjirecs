@@ -17,7 +17,11 @@ import Utils.DateTime exposing (timeToStringJa)
 import String exposing (join,concat)
 import MainCssInterface exposing (CssClasses(EpgHovered),CssIds(..))
 import Html.CssHelpers exposing (withNamespace)
+import Css exposing (height,px,em)
 import Css.Foreign exposing (class,id,selector,everything,media) -- http://package.elm-lang.org/packages/rtfeldman/elm-css/13.0.1/Css-Foreign
+import Html.Styled.Attributes exposing (css)
+import Html.Styled exposing (toUnstyled,styled)
+import Html.Styled as HS
 
 { id, class, classList } = withNamespace ""
 
@@ -124,9 +128,9 @@ listViewMain m =
                                  ]
                             ) channels
         ,div [] <| List.map (\c ->
-                                 ol
-                                 [ name "channel_id", value (toString c.id) ] 
-                                 (List.map (\p -> li [] [viewProgram p]) <| desc <| channelPrograms model c)
+                                 let programs = desc <| channelPrograms model c
+                                 in ol [ name "channel_id", value (toString c.id) ]
+                                     <| (div [] [text <| (\s -> s++"件") <| toString <| List.length programs]) :: (List.map (\p -> li [] [viewProgram p]) <| programs)
                             ) shown
         ]
 
@@ -134,18 +138,22 @@ viewProgram : Entity EpgProgram -> Html PublicRootMsg
 viewProgram ep =
     let p = ep.val
         (m,s) = durationMS p
-    in H.dl
-        [class [EpgHovered]]
-        [ (H.dt [] [text <| "日時"])
-        , (H.dd [] [H.div [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]]
-                   ,H.div [] [text <| concat ["(",toString m,"分",toString s,"秒)"]]
-                   ])
-        , (H.dt [] [text <| "タイトル"])
-        , (H.dd [] [text <| p.title])
-        , (H.dt [] [text <| "内容"])
-        , (H.dd [] [text <| p.desc])            
-        ]
-    -- , channel_id : Int 
+    in  HS.toUnstyled
+        <| styled
+            HS.dl
+            [height (em <| toFloat m)]
+            [Html.Styled.Attributes.fromUnstyled (class [EpgHovered])]
+        <| List.map HS.fromUnstyled
+            [(H.dt [] [text <| "日時"])
+            ,(H.dd [] [H.div [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]]
+                      ,H.div [] [text <| concat ["(",toString m,"分",toString s,"秒)"]]
+                      ])
+            , (H.dt [] [text <| "タイトル"])
+            , (H.dd [] [text <| p.title])
+            , (H.dt [] [text <| "内容"])
+            , (H.dd [] [text <| p.desc])            
+            ]
+-- , channel_id : Int 
     -- , event_id : Int
     -- , epg_program_categories : List Int
     -- , epg_program_medium_categories : List Int
@@ -206,4 +214,4 @@ subscriptions m =
     in case (model.startProgramsLoading, model.startChannelsLoading,model.programsLoading,model.channelsLoading) of
            (True,_   ,_,_) -> Sub.map (\p -> UpdateModel <| updateProgramsByProgress m p) <| m.readonly.api.epgPrograms.indexAsync Nothing
            (_   ,True,_,_) -> Sub.map (\p -> UpdateModel <| updateChannelsByProgress m p) <| m.readonly.api.channels.indexAsync Nothing
-           _ -> Sub.map (\_ -> UpdateModel <| countPlus 1000 m) Sub.none
+           _ -> Sub.none
