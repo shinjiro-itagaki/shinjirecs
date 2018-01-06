@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   get  "epg_programs/search", to: "epg_programs#search" #
 
   post "channels/scan", to: "channels#scan" #
+  get  "epg_programs/epgdump", to: "epg_programs#epgdump" #
   post "epg_programs/epgdump", to: "epg_programs#epgdump" #
   post "epg_programs/:id/new_reservation", to: "epg_programs#new_reservation" #
 

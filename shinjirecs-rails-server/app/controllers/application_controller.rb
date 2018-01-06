@@ -133,6 +133,14 @@ class ApplicationController < ActionController::API
     end
   end
 
+  def self.thread_status(namespace)
+    if (th = @@threads[namespace]) and th.alive? then
+      th.status.to_sym
+    else
+      :none
+    end
+  end
+  
   def self.run_thread(namespace,*args,&block)
     if (th = @@threads[namespace]) then
       if th.alive? then

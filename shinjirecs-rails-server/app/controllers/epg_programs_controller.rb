@@ -12,12 +12,16 @@ class EpgProgramsController < ApplicationController
   def epgdump
     namespace = "epg_programs_controller#epgdump"
     res = nil
-    if params["stop"] then
-      res = self.class.stop_thread namespace
-    else
-      res = self.class.run_thread(namespace, params["in"], params["sec"]) do |inn, sec|
-        EpgProgram.epgdump(inn,sec)
+    if request.post? then
+      if params["stop"] then
+        res = self.class.stop_thread namespace
+      else
+        res = self.class.run_thread(namespace, params["in"], params["sec"]) do |inn, sec|
+          EpgProgram.epgdump(inn,sec)
+        end
       end
+    else
+      res = self.class.thread_status namespace
     end
     render_data result: res
   end
