@@ -144,14 +144,18 @@ viewProgram ep =
             [height (em <| toFloat m)]
             [Html.Styled.Attributes.fromUnstyled (class [EpgHovered])]
         <| List.map HS.fromUnstyled
-            [(H.dt [] [text <| "日時"])
-            ,(H.dd [] [H.div [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]]
-                      ,H.div [] [text <| concat ["(",toString m,"分",toString s,"秒)"]]
-                      ])
-            , (H.dt [] [text <| "タイトル"])
+            [ (H.dt [] [text <| "タイトル"])
             , (H.dd [] [text <| p.title])
+            , (H.dt [] [text <| "日時"])
+            , (H.dd [] [H.div [] [text <| concat [timeToStringJa p.start_time, "〜", timeToStringJa p.stop_time]]
+                       ,H.div [] [text <| concat ["(",toString m,"分",toString s,"秒)"]]
+                       ])                
             , (H.dt [] [text <| "内容"])
-            , (H.dd [] [text <| p.desc])            
+            , (H.dd [] [text <| p.desc])
+            , (H.dt [] [text <| "event_id"])
+            , (H.dd [] [text <| toString <| p.event_id])
+            , (H.dt [] [text <| "id"])
+            , (H.dd [] [text <| toString <| ep.id])
             ]
     -- , event_id : Int
     -- , epg_program_categories : List Int
