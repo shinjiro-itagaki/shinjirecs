@@ -203,7 +203,7 @@ class EpgProgram < ApplicationRecord
                     counter: series.next_episode_number)
   end
 
-  def self.epgdump(channel_numbers_or_filepaths=nil, sec=120)
+  def self.epgdump(channel_numbers_or_filepaths=nil, sec=240)
     channel_numbers_or_filepaths ||= Channel.default_all_numbers
 
     if not channel_numbers_or_filepaths.kind_of? Array then

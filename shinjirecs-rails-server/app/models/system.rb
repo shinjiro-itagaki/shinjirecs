@@ -151,6 +151,10 @@ class System < ApplicationRecord
     recs.select(&:destroyed?).map(&:id)
   end
 
+  def todays_epgdump_times
+    EpgdumpSchedule.today_times(self.id)
+  end
+  
   private
   def refresh_instance
     if @@instance and !(@@instance.object_id == self.object_id)

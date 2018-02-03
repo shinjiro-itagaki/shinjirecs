@@ -49,7 +49,7 @@ module ShinjirecsRailsServer
               if not parent_thread.status or parent_thread.status == "aborting" then
                 break # because parent thread is aborted ( maybe server was shutdown )
               end
-              self.class.once_observe_reservations(parent_thread)
+              self.class.once_observe_reservations
             end
           else
             sleep 1
@@ -58,7 +58,32 @@ module ShinjirecsRailsServer
       end
     end
 
-    def self.once_observe_reservations(pth)
+    def wakeup_or_start_epgdump_thread
+      if @epgdump_thread then
+        if @epgdump_thread.alive? and @epgdump_thread.status != "aborting" then
+          @epgdump_thread.wakeup
+        else
+          @epgdump_thread = nil
+        end
+      end
+
+      @epgdump_thread ||= Thread.start(Thread.current) do |parent_thread|
+        while true
+          if ActiveRecord::Base.connection.pool.connected? then
+            ActiveRecord::Base.connection_pool.with_connection do
+              if not parent_thread.status or parent_thread.status == "aborting" then
+                break # because parent thread is aborted ( maybe server was shutdown )
+              end
+              self.class.once_observe_epgdump
+            end
+          else
+            sleep 1
+          end
+        end
+      end
+    end
+    
+    def self.once_observe_reservations
       begin
         sleepsec = 2
         if ActiveRecord::Base.connection.pool.connected? then
@@ -69,6 +94,40 @@ module ShinjirecsRailsServer
           end
         else
           sleepsec = 3
+        end
+        sleep sleepsec
+      rescue => e
+        puts e
+      end
+
+      # puts "on staging reservations"
+      # puts Reservation.stagings.map{|r| ["id=#{r.id}", "stop_time=" + r.stop_time.to_s].join ",  "}
+    end
+
+    @@last_epgdumped_date = nil
+    @@last_epgdumped_time = nil
+    
+    def self.once_observe_epgdump
+      begin
+        sleepsec = 60
+        if ActiveRecord::Base.connection.pool.connected? then
+          nowd = Date.new
+          if nowd != @@last_epgdumped_date then
+            @@last_epgdumped_time = nil
+          end
+          times = System.instance.todays_epgdump_times
+          if not times.present? then
+            times = [3 * 3600]
+          end
+
+          times.each do |t|
+            currd = Date.new
+            if (currd == nowd) and ((@@last_epgdumped_time || -1) < t) then
+              EpgProgram.epgdump
+              @@last_epgdumped_date = nowd
+              @@last_epgdumped_time = t
+            end
+          end
         end
         sleep sleepsec
       rescue => e

@@ -11,3 +11,4 @@ else
   puts "no connection now"
 end
 Rails.application.wakeup_or_start_observer_thread
+Rails.application.wakeup_or_start_epgdump_thread
