@@ -87,11 +87,12 @@ module ShinjirecsRailsServer
       begin
         sleepsec = 2
         if ActiveRecord::Base.connection.pool.connected? then
-          if (next_check_time = Reservation.check_staging).kind_of? Time then
-            sec = next_check_time - Time.now
-            sec = 2 if sec and sec > 2
-            sleepsec = sec
-          end
+          Reservation.check_staging
+        # if (next_check_time = Reservation.check_staging).kind_of? Time then
+        #   sec = next_check_time - Time.now
+        #   sec = 2 if sec and sec > 2
+        #   sleepsec = sec
+        # end
         else
           sleepsec = 3
         end
