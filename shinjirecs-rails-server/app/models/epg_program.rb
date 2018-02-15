@@ -275,7 +275,7 @@ class EpgProgram < ApplicationRecord
       ed = st + inn
       proxy = self.where("start_time >= ?", st).where("start_time <= ?", ed)
     end
-    proxy.all
+    proxy.joins(:channel).merge(Channel.enables)
   end
 
   def as_json(options = nil)
