@@ -39,7 +39,8 @@ class ProgramSeries < ApplicationRecord
   end
 
   def label
-    self.label_format || self.name
+    # not completely implemented 
+    self.label_format.non_empty || self.name
   end
 
   def self.find_by(channel_id, st, duration_sec,  wday_mask)
@@ -78,5 +79,15 @@ class ProgramSeries < ApplicationRecord
                     desc: desc,
                     event_id: event_id,
                     counter: self.next_episode_number)
+  end
+
+  def guess_title
+    all = self.reservations.map(&:title)
+    fst = all.shift
+    res = all.inject(fst){|res,e| res & e }
+    if res then
+      res = res.strip
+    end
+    res
   end
 end
