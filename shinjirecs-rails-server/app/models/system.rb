@@ -26,7 +26,9 @@ class System < ApplicationRecord
 
   def self.instance()
     res = @@instance || self.reload_instance
-    res.modify_db_connection_pools_count_if_need
+    if res then
+      res.modify_db_connection_pools_count_if_need
+    end
     res
   end
   def self.ins() self.instance end
