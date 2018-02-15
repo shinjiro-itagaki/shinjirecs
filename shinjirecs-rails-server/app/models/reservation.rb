@@ -266,7 +266,9 @@ class Reservation < ApplicationRecord
     ed = Time.now + 35
     duration_sec = ed - st
     wday_mask = Weekdays.to_mask(st.wday)
-    ps = ProgramSeries.find_or_create_by(channel.id, st, duration_sec,  wday_mask)
+    name = "random title #{st} channel=#{channel.id}"
+    desc = "random desc #{st} channel=#{channel.id}"
+    ps = ProgramSeries.find_or_create_by(channel.id, st, duration_sec,  wday_mask, name, desc)
     self.new(program_series_id: ps.id, start_time: st, stop_time: ed, channel_id: channel.id, title: ps.label, desc: ps.desc)
   end
 
