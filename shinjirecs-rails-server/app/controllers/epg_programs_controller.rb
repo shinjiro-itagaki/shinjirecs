@@ -27,7 +27,7 @@ class EpgProgramsController < ApplicationController
   end
 
   def new_reservation
-    @record = @record.new_reservation
+    @record = @record.new_reservation(params)
     if @record.save
       render_data @record, status: :created, location: @record
     else

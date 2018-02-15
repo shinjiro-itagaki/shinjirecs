@@ -613,7 +613,7 @@ class Reservation < ApplicationRecord
     end
 
     if rsv.waiting?
-      rsv.preparing!
+      rsv.preparing2!
       puts "set preparing ..."
     end
 
@@ -667,6 +667,26 @@ class Reservation < ApplicationRecord
     rsv.save!
   end
 
+  def same_reservation
+    self.class.where(channel_id: self.channel_id, start_time: self.start_time).first
+  end
+  
+  def preparing2!
+    r = self.preparing!
+    self.prepare_next_reservation
+    r
+  end
+
+  def prepare_next_reservation
+    newrsv = self.program_series.new_next_reservation
+    if newrsv and (not newrsv.same_reservation) then
+      newrsv.save!
+      newrsv
+    else
+      nil
+    end
+  end
+  
   def record_thread_finished!
     if @recth then
       @recth.exit

@@ -186,13 +186,26 @@ class EpgProgram < ApplicationRecord
     ProgramSeries.find_or_create_by_epg_program(self)
   end
 
-  def new_reservation
+  def new_reservation(params={})
     if self.stop_time <= Time.now
       return nil
     end
 
     series = self.find_or_create_program_series
 
+    wd = nil
+    if x = params["weekdays"] then
+      wd = x.to_i
+    end
+
+    if params["everyweek"] then
+      wd = Weekdays.to_mask(self.start_time.wday)
+    end
+
+    if wd then
+      series.update(weekdays: wd)
+    end
+    
     Reservation.new(start_time: self.start_time,
                     stop_time: self.stop_time,
                     channel_id: self.channel_id,

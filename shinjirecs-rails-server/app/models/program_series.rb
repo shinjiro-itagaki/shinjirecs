@@ -29,13 +29,12 @@ class ProgramSeries < ApplicationRecord
     end
   }
 
-  def next_datetime(include_today=true)
-    now = Time.now
-    t = now.beginning_of_day + self.start_at
-    if Weekdays.include?(now.wday, self.weekdays) and (now < t)
-      t
+  def next_datetime(from=Time.now)
+    d = Weekdays.nearest_date(from,self.weekdays)
+    if d then
+      d.to_time.beginning_of_day + self.start_at
     else
-      Weekdays.nearest_date(t,self.weekdays).to_time.beginning_of_day + self.start_at
+      nil
     end
   end
 
@@ -62,8 +61,8 @@ class ProgramSeries < ApplicationRecord
     self.find_or_create_by(ep.channel_id, ep.start_time, ep.duration_sec, Weekdays.to_mask(ep.start_time.wday), ep.title, ep.desc)
   end
 
-  def new_next_reservation
-    st = self.next_datetime true
+  def new_next_reservation(from=Time.now)
+    st = self.next_datetime(from)
     return nil if not st
     epg = EpgProgram.where(channel_id: self.channel_id, start_time: st).first
     ed = st + self.duration
