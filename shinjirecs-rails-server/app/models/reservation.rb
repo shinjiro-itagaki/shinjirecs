@@ -686,6 +686,12 @@ class Reservation < ApplicationRecord
       nil
     end
   end
+
+  def to_everyweek!
+    ps = self.program_series
+    ps.update(weekdays: Weekdays.to_mask(self.start_time.wday))
+    ps
+  end
   
   def record_thread_finished!
     if @recth then
