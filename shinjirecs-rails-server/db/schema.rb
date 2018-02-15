@@ -111,6 +111,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "weekdays", limit: 1, default: 127, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["system_id", "time"], name: "index_epgdump_schedules_on_system_id_and_time", unique: true
   end
 
   create_table "program_series", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
