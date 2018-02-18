@@ -134,6 +134,13 @@ class EpgProgram < ApplicationRecord
     return if not Thread.current.status
 
     prec.save!
+    
+    if rsv = Reservation.find_by_channel_id_and_time(prec.channel_id, prec.start_time) then
+      rsv.event_id = prec.event_id
+      rsv.title = prec.title
+      rsv.desc = prec.desc
+      rsv.save
+    end
     prec
   end
 

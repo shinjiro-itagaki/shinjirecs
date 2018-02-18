@@ -1,14 +1,14 @@
-      # t.integer    "start_at"             , null: false
-      # t.integer    "duration"             , null: false
-      # t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
-      # t.string     "name"                 , null: false
-      # t.boolean    "repeat"               , null: false , default: false
-      # t.text       "desc"                 , null: false
-      # t.integer    "next_episode_number"  , null: false , default: 1
-      # t.integer    "last_episode_number"  , null: false , default: 0
-      # t.integer    "weekdays"             , null: false , default: 0, limit: 1 # byte
-      # t.boolean    "auto_next"            , null: false , default: true
-      # t.string     "label_format"         , null: false , default: ''
+# t.integer    "start_at"             , null: false
+# t.integer    "duration"             , null: false
+# t.integer    "channel_id"           , null: false , foreign_key: {on_delete: :restrict, on_update: :cascade}
+# t.string     "name"                 , null: false
+# t.boolean    "repeat"               , null: false , default: false
+# t.text       "desc"                 , null: false
+# t.integer    "next_episode_number"  , null: false , default: 1
+# t.integer    "last_episode_number"  , null: false , default: 0
+# t.integer    "weekdays"             , null: false , default: 0, limit: 1 # byte
+# t.boolean    "auto_next"            , null: false , default: true
+# t.string     "label_format"         , null: false , default: ''
 class ProgramSeries < ApplicationRecord
   self.table_name="program_series"
 
@@ -63,6 +63,8 @@ class ProgramSeries < ApplicationRecord
   end
 
   def new_next_reservation(from=Time.now)
+    return nil if not self.auto_next
+    
     st = self.next_datetime(from)
     return nil if not st
     epg = EpgProgram.where(channel_id: self.channel_id, start_time: st).first
@@ -84,7 +86,7 @@ class ProgramSeries < ApplicationRecord
   def guess_title
     all = self.reservations.map(&:title)
     fst = all.shift
-    res = all.inject(fst){|res,e| res & e }
+    res = all.inject(fst){|res,e| e.empty? ? res : res & e }
     if res then
       res = res.strip
     end

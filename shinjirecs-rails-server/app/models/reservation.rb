@@ -94,6 +94,10 @@ class Reservation < ApplicationRecord
     end
   end
 
+  def self.find_by_channel_id_and_time(channel_id, t)
+    self.in_time(t).where(channel_id: channel_id).first
+  end
+  
   def self.default_all_proxy
     super.order(start_time: :desc)
   end
@@ -247,6 +251,10 @@ class Reservation < ApplicationRecord
     use_tuner_state.where("stop_time > ? and start_time < ?", now, now + self.preparing_margin).order(start_time: :asc, id: :asc)
   }
 
+  scope :in_time, ->(t) {
+    where("start_time <= ?", t ).where("stop_time >= ?", t)
+  }
+  
   def self.random(chnumber=nil)
     channel = nil
 
