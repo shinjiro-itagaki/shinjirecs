@@ -34,6 +34,9 @@ class String
   end
   
   def &(str)
+    if !str then
+      return self
+    end
     xs = self.split(//)
     ys = str.split(//)
     self.class.get_max_common_words(xs,ys).reverse.sort_by(&:length).last
