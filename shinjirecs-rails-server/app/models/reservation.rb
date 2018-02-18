@@ -28,13 +28,13 @@ class Reservation < ApplicationRecord
 
   validate do |rec|
     rec.errors[:stop_time] << "inconsistent stop_time" if not rec.start_time < rec.stop_time
-    rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
     rec.errors[:start_time] << "will not use tuner,because count of overrapped reservations is over than tuner's count" if not rec.will_recordable?
 
     # check whether other reservation will be impossible to record, or not
     if self.will_record_state?
       if self.new_record? then
-        msg = "invalid insert , because other reservation will be imppossible to record by this insert."
+        rec.errors[:stop_time] << "this reservation will not record" if not Time.now < rec.stop_time
+        # msg = "invalid insert , because other reservation will be imppossible to record by this insert."
         # if (overlapped_count = self.class.select_overlapped_proxy(self.start_time, self.stop_time, ctype).count) <
       else
         if self.start_time_changed? or self.stop_time_changed? then

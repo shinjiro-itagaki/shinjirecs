@@ -90,4 +90,25 @@ class ProgramSeries < ApplicationRecord
     end
     res
   end
+
+  def self.move_to_new_series(rsvs,name=nil)
+    rsvs = rsvs.sort_by(&:start_time)
+    fst = rsvs.first
+    lst = rsvs.last
+    channel_id = lst.channel_id
+    itime = lst.start_time.get_itime
+    wday_mask = rsvs.map{|r| Weekdays.to_mask(r.start_time.wday) }.inject(0){|res,e| res | e }
+    begin_on = fst.start_time
+    duration_sec = lst.duration_sec
+    name ||= rsvs.map(&:title).inject(nil){|res,e| res & e }
+    desc = ''
+    ps = nil
+    self.transaction do
+      ps = self.create(channel_id: channel_id, start_at: itime, weekdays: wday_mask, begin_on: begin_on, duration: duration_sec, name: name, desc: desc)
+      rsvs.each do |r|
+        r.update(program_series_id: ps.id)
+      end
+    end
+    ps
+  end
 end
