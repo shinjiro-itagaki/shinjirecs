@@ -252,7 +252,7 @@ class Reservation < ApplicationRecord
   }
 
   scope :in_time, ->(t) {
-    where("start_time <= ?", t ).where("stop_time >= ?", t)
+    where("start_time <= ?", t ).where("stop_time > ?", t)
   }
   
   def self.random(chnumber=nil)
