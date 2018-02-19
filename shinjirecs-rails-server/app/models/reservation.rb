@@ -183,7 +183,7 @@ class Reservation < ApplicationRecord
   end
 
   def file
-    File.exists?(paht = self.filepath) ? File.new(path) : nil
+    File.exists?(path = self.filepath) ? File.new(path) : nil
   end
 
   def select_overlapped_proxy(exclude_self=true)
