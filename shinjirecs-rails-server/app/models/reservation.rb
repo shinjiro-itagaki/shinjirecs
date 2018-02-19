@@ -808,13 +808,21 @@ class Reservation < ApplicationRecord
     end
     proxy.to_a
   end
+  
+  def file_url
+    self.class.url_to(self.filepath)
+  end
 
+  def enc_file_url
+    self.class.url_to(self.enc_filepath)
+  end
+  
   def as_json(options = nil)
-    { filepath: self.filepath,
+    { filepath: self.file_url,
       start_time_str: self.start_time.to_s,
       stop_time_str: self.stop_time.to_s,
       filesize: self.filesize,
-      enc_filepath: self.encoded? ? self.enc_filepath : nil,
+      enc_filepath: self.encoded? ? self.enc_file_url : nil,
       enc_filesize: self.encoded? ? self.enc_filesize : nil
     }.merge(super(options))
   end

@@ -2,9 +2,14 @@ class ApplicationRecord < ActiveRecord::Base
   self.abstract_class = true
 
   class << self
+    attr_accessor :base_url
     def maximums; @maximums ||= {}; end
     def minimums; @minimums ||= {}; end
     def tasks;    @tasks    ||= {}; end
+
+    def url_to(path)
+      "#{ApplicationRecord.base_url}/#{Pathname.new(path).relative_path_from(Rails.public_path)}"
+    end
   end
 
   def self.register_task(*args,&block)

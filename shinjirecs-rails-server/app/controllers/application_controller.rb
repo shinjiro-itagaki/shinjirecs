@@ -10,6 +10,7 @@ class ApplicationController < ActionController::API
     def parent_fkey() @parent_fkey; end
   end
 
+  before_action :set_base_url
   before_action :set_models
   before_action :set_parent_record
   before_action :set_record, only: [:show, :update, :destroy]
@@ -77,6 +78,10 @@ class ApplicationController < ActionController::API
     render status: status, json: obj
   end
 
+  def set_base_url
+    ApplicationRecord.base_url = request.base_url
+  end
+  
   def set_models
     @model = self.class.model
     @proxy = @model.default_all_proxy
