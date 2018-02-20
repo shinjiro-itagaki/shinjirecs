@@ -487,7 +487,7 @@ class Reservation < ApplicationRecord
   end
 
   def self.end_margin
-    self.start_margin + 5.0
+    self.start_margin - 1
   end
 
   def in_preparing_time?
@@ -786,7 +786,7 @@ class Reservation < ApplicationRecord
 
   # sec
   def duration_sec
-    ( self.stop_time - self.start_time - self.class.end_margin).to_i
+    ( self.stop_time - self.start_time + self.class.end_margin).to_i
   end
 
   def duration_min
