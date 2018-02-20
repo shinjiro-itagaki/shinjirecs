@@ -286,6 +286,6 @@ class EpgProgram < ApplicationRecord
   end
 
   def as_json(options = nil)
-    {start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s }.merge(super(options))
+    {start_time_str: self.start_time.to_s, stop_time_str: self.stop_time.to_s, channel_display_name: self.channel.display_name }.merge(super(options))
   end
 end
