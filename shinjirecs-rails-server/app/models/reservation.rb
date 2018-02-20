@@ -599,7 +599,7 @@ class Reservation < ApplicationRecord
         if not msge.empty? then
           self.error_log = self.error_log.to_s + "\n#{msge}"
         end
-        self.save!
+        # self.save!
       end
     end
   end
