@@ -11,6 +11,9 @@ class ReservationsController < ApplicationController
     if fl.include? "recently" then
       proxy = proxy.recently
     end
+    if fl.include? "waiting" then
+      proxy = proxy.will_record
+    end    
     proxy
   end
 
