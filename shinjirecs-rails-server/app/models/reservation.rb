@@ -594,10 +594,10 @@ class Reservation < ApplicationRecord
     else
       self.class.encoding(self.filepath,"",path,self.encoding_tmpfilepath) do |msgo, msge|
         if not msgo.empty? then
-          self.log += "\n#{msgo}"
+          self.log = self.log.to_s + "\n#{msgo}"
         end
         if not msge.empty? then
-          self.error_log += "\n#{msge}"
+          self.error_log = self.error_log.to_s + "\n#{msge}"
         end
         self.save!
       end
