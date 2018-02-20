@@ -10,7 +10,7 @@
 # t.text       "command_str"         , null: false
 # t.integer    "command_pid"         , null: false
 # t.text       "log"                 , null: false
-# t.text       "errror_log"          , null: false
+# t.text       "error_log"           , null: false
 # t.string     "filename"            , null: false
 class Reservation < ApplicationRecord
   require "open3"
@@ -526,7 +526,7 @@ class Reservation < ApplicationRecord
     end
   end
 
-  def self.encoding(inn,options="",out=nil,tmpfile=nil)
+  def self.encoding(inn,options="",out=nil,tmpfile=nil,&block)
     out ||= inn+".mpeg"
     tmpfile ||= out + ".encoding.mpeg"
     res,cmd,cmdfpath,outputtmpfpath,msg = mk_encoding_cmd(inn,options,tmpfile)
@@ -544,8 +544,14 @@ class Reservation < ApplicationRecord
 
     Open3.popen3(cmd) do |i,o,e,w|
       puts "start #{cmd}"
-      puts e.read
-      puts o.read
+      msge = e.read
+      msgo = o.read
+      if block then
+        block.call msgo, msge
+      else
+        puts msge
+        puts msgo
+      end
     end
 
     if File.exists?(outputtmpfpath) then
@@ -586,7 +592,15 @@ class Reservation < ApplicationRecord
     if File.exists?(path = self.enc_filepath) and not force then
       true
     else
-      self.class.encoding(self.filepath,"",path,self.encoding_tmpfilepath)
+      self.class.encoding(self.filepath,"",path,self.encoding_tmpfilepath) do |msgo, msge|
+        if not msgo.empty? then
+          self.log += "\n#{msgo}"
+        end
+        if not msge.empty? then
+          self.error_log += "\n#{msge}"
+        end
+        self.save!
+      end
     end
   end
 
@@ -730,7 +744,7 @@ class Reservation < ApplicationRecord
       begin
         ActiveRecord::Base.connection_pool.with_connection do
           self.class.run_record_thread_impl(rsv)
-          rsv.encoding          
+          rsv.encoding
           rsv.record_thread_finished!
         end
       rescue => e
