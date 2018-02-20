@@ -730,8 +730,8 @@ class Reservation < ApplicationRecord
       begin
         ActiveRecord::Base.connection_pool.with_connection do
           self.class.run_record_thread_impl(rsv)
+          rsv.encoding          
           rsv.record_thread_finished!
-          rsv.encoding
         end
       rescue => e
         puts e
