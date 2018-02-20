@@ -80,6 +80,11 @@ class Reservation < ApplicationRecord
     self.use_tuner_state.future_stop_time
   }
 
+  scope :recently, -> {
+    now = Time.now
+    self.where("start_time < ?", now).order(start_time: :asc)
+  }
+  
   before_create do
     self.filename = SecureRandom.hex(10) + ".ts"
   end
@@ -810,11 +815,11 @@ class Reservation < ApplicationRecord
   end
   
   def file_url
-    self.class.url_to(self.filepath)
+    self.class.url_to(self.filepath.available?{|url| File.exists?(url)})
   end
 
   def enc_file_url
-    self.class.url_to(self.enc_filepath)
+    self.class.url_to(self.enc_filepath.available?{|url| File.exists?(url)})
   end
   
   def as_json(options = nil)
@@ -823,10 +828,19 @@ class Reservation < ApplicationRecord
       stop_time_str: self.stop_time.to_s,
       filesize: self.filesize,
       enc_filepath: self.encoded? ? self.enc_file_url : nil,
-      enc_filesize: self.encoded? ? self.enc_filesize : nil
+      enc_filesize: self.encoded? ? self.enc_filesize : nil,
+      watch_path: self.watchable_url
     }.merge(super(options))
   end
 
+  def watchable_url
+    self.enc_file_url || self.file_url
+  end
+  
+  def watchable?
+    !!self.watchable_url
+  end
+  
   # def recording_tried?
   #   self.success? || self.failed?
   # end

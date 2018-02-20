@@ -3,4 +3,26 @@ class ReservationsController < ApplicationController
   def self.permitted_params
     [:start_time,:duration,:channel_id,:program_title_id,:title,:desc,:counter,:state,:filename]
   end
+
+  protected
+  
+  def index_records_proxy(proxy)
+    fl = filter
+    if fl.include? "recently" then
+      proxy = proxy.recently
+    end
+    proxy
+  end
+
+  def index_records(records)
+    fl = filter
+    if fl.include? "watchable" then
+      records = records.select(&:watchable?)
+    end
+    records
+  end
+
+  def filter
+    params["filter"].to_s.downcase
+  end
 end

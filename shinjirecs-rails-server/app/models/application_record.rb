@@ -8,6 +8,9 @@ class ApplicationRecord < ActiveRecord::Base
     def tasks;    @tasks    ||= {}; end
 
     def url_to(path)
+      if !path or path.to_s.empty? then
+        return nil
+      end
       "#{ApplicationRecord.base_url}/#{Pathname.new(path).relative_path_from(Rails.public_path)}"
     end
   end
