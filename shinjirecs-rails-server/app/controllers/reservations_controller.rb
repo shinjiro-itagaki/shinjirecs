@@ -12,7 +12,7 @@ class ReservationsController < ApplicationController
       proxy = proxy.recently
     end
     if fl.include? "waiting" then
-      proxy = proxy.will_record.order(start_time: :asc)
+      proxy = proxy.will_record.reorder(start_time: :asc)
     end    
     proxy
   end
