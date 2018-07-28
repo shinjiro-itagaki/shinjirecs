@@ -10,6 +10,7 @@ class ApplicationController < ActionController::API
     def parent_fkey() @parent_fkey; end
   end
 
+  before_action :set_base_url
   before_action :set_models
   before_action :set_parent_record
   before_action :set_record, only: [:show, :update, :destroy]
@@ -29,7 +30,7 @@ class ApplicationController < ActionController::API
 
   # GET /${record}s
   def index
-    @records = @model.all
+    @records = index_records(index_records_proxy(@proxy).to_a)
     render_data @records
   end
 
@@ -77,8 +78,13 @@ class ApplicationController < ActionController::API
     render status: status, json: obj
   end
 
+  def set_base_url
+    ApplicationRecord.base_url = request.base_url
+  end
+  
   def set_models
     @model = self.class.model
+    @proxy = @model.default_all_proxy
     @parent_model = self.class.parent_model
     @parent_fkey  = self.class.parent_fkey
   end
@@ -92,9 +98,9 @@ class ApplicationController < ActionController::API
   # Use callbacks to share common setup or constraints between actions.
   def set_record
     if @parent_model && @parent_fkey then
-      @record = @model.where(:id => params[:id], @parent_fkey => @parent_record.id).first
+      @record = @proxy.where(:id => params[:id], @parent_fkey => @parent_record.id).first
     else
-      @record = @model.find(params[:id])
+      @record = @proxy.find(params[:id])
     end
   end
 
@@ -108,5 +114,59 @@ class ApplicationController < ActionController::API
     if not (ins && ins.setup?) then
       render_data nil, system: ins, setup: false
     end
+  end
+
+  class WorkingThread < Thread
+    attr_accessor :please_stop
+    def status
+      (self.please_stop) ? nil : super
+    end
+  end
+
+  @@threads = {}
+
+  def self.stop_thread(namespace)
+    if (th = @@threads[namespace]) then
+      th.please_stop = true
+      if th.alive? then
+        th.exit
+        @@threads.delete namespace
+      end
+      return :stop
+    else
+      return :not_found
+    end
+  end
+
+  def self.thread_status(namespace)
+    if (th = @@threads[namespace]) and th.alive? then
+      th.status.to_sym
+    else
+      :none
+    end
+  end
+  
+  def self.run_thread(namespace,*args,&block)
+    if (th = @@threads[namespace]) then
+      if th.alive? then
+        puts "now working"
+        return :working
+      else
+        @@threads.delete(namespace)
+      end
+    end
+
+    @@threads[namespace] ||= WorkingThread.start do
+      block.call *args
+    end
+    :start
+  end
+
+  def index_records_proxy(proxy)
+    proxy
+  end
+
+  def index_records(records)
+    records
   end
 end

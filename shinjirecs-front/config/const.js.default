@@ -1,7 +1,0 @@
-const Config = {
-  api_server: {
-    url: "https://localhost:4430",
-    movie_url: "http://localhost:4431"
-  },
-  logging:true,  //true:ログ出力する　　false：ログ出さない
-};

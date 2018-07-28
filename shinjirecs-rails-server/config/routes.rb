@@ -1,6 +1,15 @@
 Rails.application.routes.draw do
   # root to: "systems#all"
   get "systems/all", to: "systems#all"
+  get    "systems/epgdump_schedules",  to: "systems#epgdump_schedules"
+  post   "systems/add_epgdump_schedule",  to: "systems#add_epgdump_schedule"
+  delete "systems/del_epgdump_schedules", to: "systems#del_epgdump_schedules"
+  get  "epg_programs/search", to: "epg_programs#search" #
+
+  post "channels/scan", to: "channels#scan" #
+  get  "epg_programs/epgdump", to: "epg_programs#epgdump" #
+  post "epg_programs/epgdump", to: "epg_programs#epgdump" #
+  post "epg_programs/:id/new_reservation", to: "epg_programs#new_reservation" #
 
   [ :systems,
     :areas,
@@ -8,7 +17,7 @@ Rails.application.routes.draw do
     :reservations,
     :epg_programs,
     :channels,
-    :epgdump_schedules
+    :program_series
   ].each do |sym|
     resources sym do
       collection do
@@ -16,27 +25,6 @@ Rails.application.routes.draw do
       end
     end
   end
-
-  resources :program_titles do
-    [ :program_title_dayoffs,
-      :program_title_terms].each do |sym|
-      resources sym
-    end
-
-    collection do
-      get :params_info
-    end
-  end
-
-  [ :program_title_dayoffs,
-    :program_title_terms].each do |sym|
-    namespace sym do
-      get :params_info
-    end
-  end
-
-  post "channels/scan", to: "channels#scan" #
-  post "epg_program/epgdump", to: "epg_program#epgdump" #
 
   # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 end

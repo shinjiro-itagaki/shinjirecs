@@ -1,7 +1,19 @@
 class ApplicationRecord < ActiveRecord::Base
   self.abstract_class = true
 
-  @@tasks = {}
+  class << self
+    attr_accessor :base_url
+    def maximums; @maximums ||= {}; end
+    def minimums; @minimums ||= {}; end
+    def tasks;    @tasks    ||= {}; end
+
+    def url_to(path)
+      if !path or path.to_s.empty? then
+        return nil
+      end
+      "#{ApplicationRecord.base_url}/#{Pathname.new(path).relative_path_from(Rails.public_path)}"
+    end
+  end
 
   def self.register_task(*args,&block)
     t = Thread.new do
@@ -9,37 +21,34 @@ class ApplicationRecord < ActiveRecord::Base
         block.call args
       rescue
       ensure
-        @@tasks[self.id]=nil
+        self.tasks[self.id]=nil
       end
     end
-    @@tasks[t.id]=nil
+    self.tasks[t.id]=nil
   end
 
   after_initialize :set_default, if: :new_record?
 
-  @@maximums = {}
-  @@minimums = {}
-
   def self.maximum(column,value)
     column = column.to_sym
-    @@maximums[column] = value.to_i
+    self.maximums[column] = value.to_i
     validates column, length: { maximum: value }, numericality: { only_integer: true }
   end
 
   def self.maximum_of(column)
     column = column.to_sym
-    @@maximums[column]
+    self.maximums[column]
   end
 
   def self.minimum(column,value)
     column = column.to_sym
-    @@minimums[column] = value.to_i
+    self.minimums[column] = value.to_i
     validates column, length: { minimum: value }, numericality: { only_integer: true }
   end
 
   def self.minimum_of(column)
     column = column.to_sym
-    @@minimums[column]
+    self.minimums[column]
   end
 
   # nil -> permitted all default params
@@ -89,11 +98,35 @@ class ApplicationRecord < ActiveRecord::Base
     info
   end
 
+  def self.output_reflections?
+    false
+  end
+
+  def self.output_reflections(ins)
+    false
+  end
+
+  def self.default_all_proxy
+    if self.output_reflections? then
+      keys = self.reflections.keys.map(&:to_sym)
+      self.all.includes(*keys)
+    else
+      self.all
+    end
+  end
+
+  alias_method :orig_as_json, :as_json
+
   def as_json(options = nil)
     res = super(options)
     res.keys.each do |k|
       v = res[k]
       res[k] = v.to_f if v.kind_of? Time
+    end
+
+    ref=self.class.output_reflections(self)
+    if ref.kind_of? Hash then
+      res = res.merge ref
     end
     res
   end

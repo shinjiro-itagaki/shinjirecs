@@ -13,14 +13,22 @@ module Weekdays
 
   def self.none() 0 end
 
+  def self.to_mask(wday)
+    1 << wday
+  end
+
+  def self.include?(wday,weekdays_mask)
+    (self.to_mask(wday) & weekdays_mask > 0)
+  end
+
   def self.get_weekdays(i)
     return [] if not i.kind_of? Integer
     Weekdays.all.map {|wday|
-      mask = 1 << wday
-      (mask & i > 0) ? wday : nil
+      (self.to_mask(wday) & i > 0) ? wday : nil
     }.compact
   end
 
+  # does not include today, only after today
   def self.nearest_date(t,i)
     return nil if not t.kind_of? Time
     return nil if not i.kind_of? Integer

@@ -1,8 +1,10 @@
 #!/usr/bin/env sh
 ch=$1
-sec=$2
-if [ "$sec" = "" ]
-then
-    sec=1
+timeout_sec=$2
+tempfile=$3
+if type recpt1; then
+    echo "" > /dev/null
+else
+    exit 1; # not scaned scan was not done
 fi
-recpt1 --b25 --strip ${ch} ${sec} /dev/null
+timeout ${timeout_sec} recpt1 --b25 --strip ${ch} 1 ${tempfile}

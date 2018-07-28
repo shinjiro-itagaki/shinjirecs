@@ -1,8 +1,9 @@
-module MainCssImpl exposing (css)
-import Css exposing (Style,property,property,hex,color,important,inlineBlock,display,children,zero,padding,margin,class,px,borderBox,boxSizing,pct,height,width,rgb,backgroundColor,minWidth,id,overflowX,auto,stylesheet)
-import MainCssInterface exposing (CssClasses(NavBar),CssIds(Page))
-import Css.Namespace exposing (namespace)
-import Css.Elements exposing (body, li)
+module MainCssImpl exposing (root)
+import Css exposing (Style,property,property,hex,color,important,inlineBlock,display,zero,padding,margin,px,borderBox,boxSizing,pct,height,width,rgb,backgroundColor,minWidth,overflowX,auto,hover)
+import MainCssInterface exposing (CssClasses(NavBar,EpgHovered),CssIds(Page))
+import Css.Foreign exposing (global,body, li, id, class, children)
+import Html exposing (Html)
+import Html.Styled exposing (toUnstyled)
 
 zIndex : Int -> Style
 zIndex i =
@@ -10,9 +11,11 @@ zIndex i =
 
 primaryAccentColor =
     hex "ccffaa"
-              
-css =
-    (stylesheet << namespace "dreamwriter")
+
+root : Html msg
+root = toUnstyled <| global css_root
+      
+css_root = 
     [ body
           [ overflowX auto
           , minWidth (px 1280)
@@ -36,5 +39,11 @@ css =
                 ]
               ]
         ]
-    ]        
-
+    , class EpgHovered
+        [hover
+             [margin zero
+             ,backgroundColor <| hex "ffcc00"
+             ]
+        ,Css.overflowY Css.scroll
+        ]
+    ]

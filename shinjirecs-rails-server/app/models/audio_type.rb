@@ -1,0 +1,2 @@
+class AudioType < ApplicationRecord
+end

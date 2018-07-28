@@ -20,18 +20,42 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.index ["label"], name: "index_areas_on_label", unique: true
   end
 
+  create_table "attachinfos", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "desc", null: false
+  end
+
+  create_table "audio_types", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "typ", null: false
+    t.string "langcode", null: false
+    t.string "extdesc", default: "", null: false
+  end
+
   create_table "channels", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.string "number", null: false
+    t.integer "service_id", null: false
     t.integer "area_id", default: 0, null: false
     t.string "ctype", default: "gr", null: false
     t.string "display_name", null: false
+    t.boolean "display_name_locked", default: false, null: false
     t.integer "order", default: 0, null: false
-    t.boolean "enable", default: true, null: false
-    t.boolean "scaned", default: true, null: false
+    t.boolean "enable", default: false, null: false
+    t.boolean "exist", default: false, null: false
+    t.boolean "scaned", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["area_id", "display_name"], name: "index_channels_on_area_id_and_display_name", unique: true
-    t.index ["area_id", "number", "ctype"], name: "index_channels_on_area_id_and_number_and_ctype", unique: true
+    t.index ["area_id", "service_id"], name: "index_channels_on_area_id_and_service_id", unique: true
+  end
+
+  create_table "epg_program_attachinfo_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "attachinfo_id", null: false
+    t.index ["program_id", "attachinfo_id"], name: "unique_epg_program_attachinfo_maps", unique: true
+  end
+
+  create_table "epg_program_audio_type_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "audio_type_id", null: false
+    t.index ["program_id", "audio_type_id"], name: "unique_epg_program_audio_type_maps", unique: true
   end
 
   create_table "epg_program_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -45,7 +69,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
   create_table "epg_program_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "program_id", null: false
     t.integer "category_id", null: false
-    t.index ["program_id", "category_id"], name: "index_epg_program_category_maps_on_program_id_and_category_id", unique: true
+    t.index ["program_id", "category_id"], name: "unique_epg_program_category_maps", unique: true
   end
 
   create_table "epg_program_medium_categories", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -54,7 +78,7 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.integer "parent_id", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["label_ja", "label_en"], name: "index_epg_program_medium_categories_on_label_ja_and_label_en", unique: true
+    t.index ["parent_id", "label_ja", "label_en"], name: "unique_epg_program_medium_categories", unique: true
   end
 
   create_table "epg_program_medium_category_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
@@ -63,69 +87,75 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.index ["program_id", "category_id"], name: "unique_epg_program_medium_category_maps", unique: true
   end
 
+  create_table "epg_program_video_type_maps", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_id", null: false
+    t.integer "video_type_id", null: false
+    t.index ["program_id", "video_type_id"], name: "unique_epg_program_video_type_maps", unique: true
+  end
+
   create_table "epg_programs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.timestamp "stop_time", null: false
+    t.datetime "start_time", null: false
+    t.datetime "stop_time", null: false
     t.integer "channel_id", null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
-    t.integer "epg_program_category_id", default: 0, null: false
+    t.boolean "freeCA", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["start_time", "channel_id"], name: "index_epg_programs_on_start_time_and_channel_id", unique: true
   end
 
   create_table "epgdump_schedules", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
     t.integer "system_id", null: false
-    t.time "time", default: "2000-01-01 00:00:00", null: false
+    t.integer "time", default: 0, null: false
     t.integer "weekdays", limit: 1, default: 127, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["system_id", "time"], name: "index_epgdump_schedules_on_system_id_and_time", unique: true
   end
 
-  create_table "program_title_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "program_title_id", null: false
-    t.date "on", null: false
-    t.index ["program_title_id", "on"], name: "index_program_title_dayoffs_on_program_title_id_and_on", unique: true
-  end
-
-  create_table "program_title_terms", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.integer "program_title_id", null: false
-    t.date "begin_on", null: false
-    t.date "finish_on", null: false
-    t.index ["program_title_id"], name: "index_program_title_terms_on_program_title_id", unique: true
-  end
-
-  create_table "program_titles", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.time "start_at", null: false
+  create_table "program_series", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "start_at", null: false
     t.integer "duration", null: false
     t.integer "channel_id", null: false
-    t.string "title", null: false
+    t.datetime "begin_on", null: false
+    t.datetime "expire_date", null: false
+    t.boolean "expire_date_enable", default: false, null: false
+    t.string "name", null: false
+    t.boolean "repeat", default: false, null: false
     t.text "desc", null: false
-    t.integer "next_counter", default: 1, null: false
+    t.integer "next_episode_number", default: 1, null: false
+    t.integer "last_episode_number", default: 0, null: false
     t.integer "weekdays", limit: 1, default: 0, null: false
     t.boolean "auto_next", default: true, null: false
     t.string "label_format", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["start_at", "channel_id", "begin_on"], name: "idx_unique_program_series", unique: true
+  end
+
+  create_table "program_series_dayoffs", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.integer "program_series_id", null: false
+    t.datetime "on", null: false
+    t.index ["program_series_id", "on"], name: "index_program_series_dayoffs_on_program_series_id_and_on", unique: true
   end
 
   create_table "reservations", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
-    t.timestamp "start_time", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.integer "duration", null: false
+    t.datetime "start_time", null: false
+    t.datetime "stop_time", null: false
     t.integer "channel_id", default: 0, null: false
-    t.integer "program_title_id", default: 0, null: false
+    t.integer "program_series_id", default: 0, null: false
     t.string "title", null: false
     t.text "desc", null: false
     t.integer "event_id", default: 0, null: false
     t.integer "counter", default: 0, null: false
     t.integer "state", limit: 1, default: 0, null: false
     t.text "command_str", null: false
-    t.integer "command_pid", null: false
+    t.integer "command_pid", default: 0, null: false
     t.text "log", null: false
-    t.text "errror_log", null: false
-    t.string "filename", null: false
+    t.text "error_log", null: false
+    t.string "filename", default: "", null: false
+    t.integer "retried_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -136,11 +166,16 @@ ActiveRecord::Schema.define(version: 20171109170533) do
     t.boolean "setup", default: false, null: false
     t.integer "gr_tuner_count", limit: 1, default: 1, null: false
     t.integer "bs_tuner_count", limit: 1, default: 0, null: false
-    t.integer "rest_gr_tuner_count", limit: 1, default: 1, null: false
-    t.integer "rest_bs_tuner_count", limit: 1, default: 0, null: false
+    t.integer "busy_gr_tuner_count", default: 0, null: false
+    t.integer "busy_bs_tuner_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["active"], name: "index_systems_on_active", unique: true
+  end
+
+  create_table "video_types", id: :bigint, unsigned: true, force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8" do |t|
+    t.string "resolution", null: false
+    t.string "aspect", null: false
   end
 
 end

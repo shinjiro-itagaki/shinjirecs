@@ -1,11 +1,12 @@
-module API.Types exposing (API,AreasI,ChannelsI,EpgProgramsI,EpgProgramCategoriesI,ProgramTitlesI,ReservationsI,SystemI,ResourcesI,Cache,emptyCache)
+module API.Types exposing (..)
 import Dict exposing (Dict)
 import Http
+import Http.Progress exposing (Progress)
 import Records.Types exposing (Entity)
 import Records.ColumnInfo exposing (ColumnInfo,columnInfoDecoder)
 import Records.Area exposing (Area)
 import Records.EpgProgram exposing (EpgProgram)
-import Records.ProgramTitle exposing (ProgramTitle)
+import Records.ProgramSeries exposing (ProgramSeries)
 import Records.System exposing (System)
 import Records.Channel exposing (Channel)
 import Records.EpgProgramCategory exposing (EpgProgramCategory)
@@ -33,19 +34,21 @@ type alias Cache = { system               : Maybe (Entity System)
                    , channels             : Maybe (Dict Int (Entity Channel))
                    , epgPrograms          : Maybe (Dict Int (Entity EpgProgram))
                    , epgProgramCategories : Maybe (Dict Int (Entity EpgProgramCategory))
-                   , programTitles        : Maybe (Dict Int (Entity ProgramTitle))
+                   , epgProgramMediumCategories : Maybe (Dict Int (Entity EpgProgramCategory))
+                   , programSeries        : Maybe (Dict Int (Entity ProgramSeries))
                    , reservations         : Maybe (Dict Int (Entity Reservation))
                    }
 
-emptyCache = Cache Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyCache = Cache Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     
 type alias API =
     { system            : SystemI
     , areas             : AreasI
     , channels          : ChannelsI
     , epgPrograms       : EpgProgramsI
+    , epgProgramsEx     : EpgProgramsExI                          
     , epgProgramCategories : EpgProgramCategoriesI
-    , programTitles     : ProgramTitlesI
+    , programSeries     : ProgramSeriesI
     , reservations      : ReservationsI
     }
 
@@ -58,16 +61,29 @@ type alias ResourcesI a =
     , modify  : Entity a  -> Cmd (Result Http.Error a)
     , destroy : Entity a  -> Cmd (Result Http.Error Bool)
     , info    : Cmd (Result Http.Error (Dict String ColumnInfo))
+    , indexAsync   : Maybe Int -> Sub (Progress (List (Entity a))) -- Int => limit
+    , getAsync     : Int       -> Sub (Progress a) 
+    , createAsync  : a         -> Sub (Progress (Entity a)) 
+    , modifyAsync  : Entity a  -> Sub (Progress a)
+    , destroyAsync : Entity a  -> Sub (Progress Bool)
+    , infoAsync    : Sub (Progress (Dict String ColumnInfo))
     }
 
-type alias AreasI             = ResourcesI Area
-type alias ChannelsI          = ResourcesI Channel
-type alias EpgProgramsI          = ResourcesI EpgProgram
+type alias AreasI         = ResourcesI Area
+type alias ChannelsI      = ResourcesI Channel
+type alias EpgProgramsI   = ResourcesI EpgProgram
+type alias EpgProgramsExI = { epgdump : Cmd (Result Http.Error Bool) -- post "epg_programs/epgdump"
+                            , newReservation : Entity EpgProgram -> Cmd (Result Http.Error (Entity Reservation)) -- post "epg_programs/:id/new_reservation"
+                            }
 type alias EpgProgramCategoriesI = ResourcesI EpgProgramCategory
-type alias ProgramTitlesI     = ResourcesI ProgramTitle
+type alias ProgramSeriesI     = ResourcesI ProgramSeries
 type alias ReservationsI      = ResourcesI Reservation
 type alias SystemI            = { get    : Cmd (Result Http.Error (Entity System))
                                 , modify : Entity System -> Cmd (Result Http.Error System)
                                 , info   : Cmd (Result Http.Error (Dict String ColumnInfo))
                                 , all    : Cmd (Result Http.Error Cache)
+                                , getAsync    : Sub (Progress (Entity System))
+                                , modifyAsync : Entity System -> Sub (Progress System)
+                                , infoAsync   : Sub (Progress (Dict String ColumnInfo))
+                                , allAsync    : Sub (Progress Cache)
                                 }-- ResourcesI System
